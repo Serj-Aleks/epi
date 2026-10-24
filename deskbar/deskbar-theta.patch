@@ -1,0 +1,86 @@
+diff --git a/src/apps/deskbar/BarMenuBar.cpp b/src/apps/deskbar/BarMenuBar.cpp
+index 19e21c3546..a899de1de3 100644
+--- a/src/apps/deskbar/BarMenuBar.cpp
++++ b/src/apps/deskbar/BarMenuBar.cpp
+@@ -122,10 +122,10 @@ TBarMenuBar::TBarMenuBar(BRect frame, const char* name, TBarView* barView)
+ 	const void* data = AppResSet()->FindResource(B_VECTOR_ICON_TYPE,
+ 		R_LeafLogoBitmap, &dataSize);
+ 	if (data != NULL) {
+-		// seems valid, scale bitmap according to be_bold_font size
+-		float width = std::max(63.f, ceilf(63 * be_bold_font->Size() / 12.f));
+-		float height = std::max(22.f, ceilf(22 * be_bold_font->Size() / 12.f));
+-		icon = new BBitmap(BRect(0, 0, width - 1, height - 1), B_RGBA32);
++		// EPI: square icon, rendered large once and scaled down when drawn
++		// (see TBarMenuTitle::DrawContent())
++		const float side = 128;
++		icon = new BBitmap(BRect(0, 0, side - 1, side - 1), B_RGBA32);
+ 		if (icon->InitCheck() != B_OK
+ 			|| BIconUtils::GetVectorIcon((const uint8*)data, dataSize, icon)
+ 					!= B_OK) {
+diff --git a/src/apps/deskbar/BarMenuTitle.cpp b/src/apps/deskbar/BarMenuTitle.cpp
+index 3d82e432c5..84b0cc4668 100644
+--- a/src/apps/deskbar/BarMenuTitle.cpp
++++ b/src/apps/deskbar/BarMenuTitle.cpp
+@@ -36,6 +36,8 @@ All rights reserved.
+ 
+ #include "BarMenuTitle.h"
+ 
++#include <algorithm>
++
+ #include <Bitmap.h>
+ #include <ControlLook.h>
+ #include <Debug.h>
+@@ -134,12 +136,21 @@ TBarMenuTitle::DrawContent()
+ 	float widthOffset = rintf((frame.Width() - iconRect.Width()) / 2);
+ 	float heightOffset = rintf((frame.Height() - iconRect.Height()) / 2);
+ 
+-	// cut-off the leaf
+ 	bool isLeafMenu = dynamic_cast<TDeskbarMenu*>(fMenu) != NULL;
+-	if (isLeafMenu)
+-		iconRect.OffsetBy(widthOffset, frame.Height() - iconRect.Height() + 2);
+-	else
+-		iconRect.OffsetBy(widthOffset, heightOffset);
++	if (isLeafMenu) {
++		// EPI: draw the logo at the size of the application icons,
++		// centered in the button
++		float side = static_cast<TBarApp*>(be_app)->TeamIconSize();
++		side = std::min(side, std::min(frame.Width(), frame.Height()) - 2);
++		BRect logoRect(0, 0, side - 1, side - 1);
++		logoRect.OffsetTo(frame.left + rintf((frame.Width() - side + 1) / 2),
++			frame.top + rintf((frame.Height() - side + 1) / 2));
++		menu->DrawBitmapAsync(fIcon, fIcon->Bounds(), logoRect,
++			B_FILTER_BITMAP_BILINEAR);
++		return;
++	}
++
++	iconRect.OffsetBy(widthOffset, heightOffset);
+ 
+ 	// clip to menu item frame
+ 	if (iconRect.Width() > frame.Width()) {
+diff --git a/src/apps/deskbar/icons.rdef b/src/apps/deskbar/icons.rdef
+index be29cc2e5f..b51ed168e3 100644
+--- a/src/apps/deskbar/icons.rdef
++++ b/src/apps/deskbar/icons.rdef
+@@ -2,17 +2,11 @@
+ #include "icons.h"
+ 
+ resource(R_LeafLogoBitmap) vector_icon {
+-	$"6E6369660102010602438798C0E5A13DF937406BAE4D330E4CA0420000AAFFFF"
+-	$"00337F010216C676C7BCC676C7BCCDE4CEECDD2DCFB2D596D105DBF0CEC5DAD9"
+-	$"CCB5DB59CDA2E352D196EA2CC98EE790CB83E947C8D3E65EC72EE82DC964E8B0"
+-	$"C781EC54C75DEA32C760EDACC61DF0EEC3A2EFB0C520F275C1CDF601BD33F468"
+-	$"BF49F4FCBC92F462BB37F4C7BC01F552BB76F736BB8DF646BB93F879B921FBD3"
+-	$"B6F6FA7BB79CF63725E9D3B656EF07B542E819B7D5E796BCFDE824B9C7E67FBB"
+-	$"8DE6A6B743E602B9C1E2FCB86CDBFCBBA2DF6DBA00DAA7BC42D578BF61D75FBE"
+-	$"A3D491C0BFD330C351D3CDC211D327C229D30FBFD4D2FAC106CCC4C0D3C565C6"
+-	$"0EC952C285BCFAC614B3A0C121B38EC270B3A0C121B373C436B373C436B373C4"
+-	$"36C67BC7BFBDF1C83CC67BC7BF010A000100023CB85D0000000000003CB85D3E"
+-	$"FEBEC1A530"
++	$"6E63696601031F2933030204BFC0B3CCBA07B3CCC579B3CCCA1CBFC0CA1CB926"
++	$"CA1CC65ABFC0CBB4C579CBB4BA07CBB4B564BFC0B564C65AB564B9260204B894"
++	$"BFC0B894BAE9B894C497BFC0C884BBCAC884C3B6C884C6ECBFC0C6ECC497C6EC"
++	$"BAE9BFC0B6FCC3B6B6FCBBCAB6FC0A04BB5EBE28C422BE28C422C158BB5EC158"
++	$"010A000300010200"
+ };
+ 
+ resource(R_LargeNewGroupIcon) archive(, 0x00000000) BBitmap {

@@ -1,0 +1,3 @@
+service x-vnd.Be-TSKB {
+	launch /boot/home/config/non-packaged/apps/Deskbar
+}
