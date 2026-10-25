@@ -1,7 +1,11 @@
 #!/bin/sh
 # EPI: браузер при загрузке — страница ожидания сети (сама переходит на
 # ui.center, когда сеть есть) и окно над полосой Deskbar.
-firefox file:///boot/home/epi/start.html &
+# профиль EPI задаётся явно: Firefox не выбирает профиль сам, а берёт этот,
+# с настройками EPI (без автономного режима и без запоминания неудачных
+# поисков адресов, иначе запущенный без сети Firefox не откроет ui.center)
+firefox -profile "$HOME/config/settings/Mozilla/Firefox/epi.default" \
+	file:///boot/home/epi/start.html &
 for i in $(seq 1 60); do
 	hey Firefox get Frame of Window 0 >/dev/null 2>&1 && break
 	sleep 1
