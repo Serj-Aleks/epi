@@ -41,3 +41,9 @@ AddFilesToHaikuImage home config settings Mozilla Firefox epi.default
 # Настройки: полоса, панель, файловый менеджер, раскладка, язык, мышь
 CopyDirectoryToHaikuImage home config : [ FDirName $(epiLocal) epi-settings ]
 	: settings ;
+
+# Рабочий стол: логотип APOTHEOS в правом верхнем углу (как на эталонной машине).
+# Картинка лежит в ~/Desktop, настройка фона — атрибут be:bgndimginfo папки.
+AddFilesToHaikuImage home Desktop : [ FDirName $(epi) desktop apotheos-desktop.png ] ;
+SEARCH on epi-desktop.rdef += [ FDirName $(epi) desktop ] ;
+AddDirectoryToHaikuImage home Desktop : epi-desktop.rdef ;
