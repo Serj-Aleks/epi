@@ -22,10 +22,13 @@ LOCAL = os.path.join(DEV, "epi-local")
 PK = os.path.join(LOCAL, "epi-packages")
 ISO = os.path.join(GEN, "haiku-nightly-anyboot.iso")
 HERE = os.path.dirname(os.path.abspath(__file__))
+import fnmatch
+EXCL = [l.strip() for l in open(os.path.join(HERE, "packages-exclude.txt"))
+        if l.strip() and not l.startswith("#")]
+def excluded(n):
+    return any(fnmatch.fnmatch(n, e) for e in EXCL)
 def reference_roots():
-    import fnmatch
-    excl = [l.strip() for l in open(os.path.join(HERE, "packages-exclude.txt"))
-            if l.strip() and not l.startswith("#")]
+    excl = EXCL
     roots = []
     for l in open(os.path.join(HERE, "packages-reference.txt")):
         n = name_of(l.strip())
@@ -123,7 +126,8 @@ while todo:
     need.append(p)
     for r in requires[p]:
         q = pick(r)
-        if q and q not in need and q not in base:
+        # исключённое не попадает в образ и как зависимость
+        if q and q not in need and q not in base and not excluded(q):
             todo.append(q)
 
 by_name, by_file = [], []
@@ -140,9 +144,11 @@ for p in need:
 
 with open(JAM, "w") as f:
     f.write("# создано image/fetch-deps\n")
-    f.write("# names: " + " ".join(sorted(need)) + "\n")
+    for i in range(0, len(need), 10):
+        f.write("# names: " + " ".join(sorted(need)[i:i+10]) + "\n")
+    # по одному имени в строке: jam не принимает слишком длинные строки
     if by_name:
-        f.write("AddHaikuImageSystemPackages " + " ".join(sorted(by_name)) + " ;\n")
+        f.write("AddHaikuImageSystemPackages\n\t" + "\n\t".join(sorted(by_name)) + " ;\n")
     if by_file:
         f.write("AddFilesToHaikuImage system packages :\n\t"
                 + "\n\t".join(sorted(by_file)) + " ;\n")
