@@ -22,6 +22,9 @@ nets() { [ -f "$conf" ] && sed -n 's/^network[[:space:]]\{1,\}\(.*[^[:space:]]\)
 connected() { ifconfig "$1" 2>/dev/null | grep -q 'Network:'; }
 where() { ifconfig "$1" 2>/dev/null | grep -E 'Network:|inet addr:' | sed 's/^[[:space:]]*//' | tr '\n' ' '; }
 seen() { ifconfig "$1" list 2>/dev/null | tail -n +2 | awk '{printf "%s ", $0}'; }
+# Строка Network: на мгновение пропадает и при живой связи (фоновое сканирование
+# драйвера), поэтому обрыв засчитывается, только если связи нет 3 проверки за 5 с.
+steady() { connected "$1" || { sleep 2; connected "$1"; } || { sleep 3; connected "$1"; }; }
 wait_link() { i=0; while [ $i -lt "$2" ]; do connected "$1" && return 0; sleep 1; i=$((i+1)); done; return 1; }
 
 devs=""
@@ -35,7 +38,7 @@ state=""
 pause=15
 while :; do
 	for d in $devs; do
-		if connected "$d"; then
+		if steady "$d"; then
 			[ "$state" != up ] && say "есть связь: $(where "$d")"
 			state=up; pause=15
 			continue
