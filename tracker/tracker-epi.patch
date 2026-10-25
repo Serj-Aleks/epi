@@ -1,0 +1,29 @@
+diff --git a/src/kits/tracker/Model.cpp b/src/kits/tracker/Model.cpp
+index 1aefbcac15..9a5a17092d 100644
+--- a/src/kits/tracker/Model.cpp
++++ b/src/kits/tracker/Model.cpp
+@@ -374,13 +374,12 @@ Model::CompareFolderNamesFirst(const Model* compare) const
+ const char*
+ Model::Name() const
+ {
+-	static const char* kRootNodeName = B_TRANSLATE_MARK(B_DISKS_DIR_NAME);
+-	static const char* kTrashNodeName = B_TRANSLATE_MARK(B_TRASH_DIR_NAME);
+ 	static const char* kDesktopNodeName = B_TRANSLATE_MARK(B_DESKTOP_DIR_NAME);
+ 
+ 	switch (fBaseType) {
+ 		case kRootNode:
+-			return B_TRANSLATE_NOCOLLECT(kRootNodeName);
++			// EPI: own names for the special folders, Latin, not translated
++			return "DISKS";
+ 
+ 		case kVolumeNode:
+ 			if (fVolumeName != NULL)
+@@ -388,7 +387,7 @@ Model::Name() const
+ 			break;
+ 
+ 		case kTrashNode:
+-			return B_TRANSLATE_NOCOLLECT(kTrashNodeName);
++			return "URNA";
+ 
+ 		case kDesktopNode:
+ 			return B_TRANSLATE_NOCOLLECT(kDesktopNodeName);
