@@ -27,11 +27,18 @@ seen() { ifconfig "$1" list 2>/dev/null | tail -n +2 | awk '{printf "%s ", $0}';
 steady() { connected "$1" || { sleep 2; connected "$1"; } || { sleep 3; connected "$1"; }; }
 wait_link() { i=0; while [ $i -lt "$2" ]; do connected "$1" && return 0; sleep 1; i=$((i+1)); done; return 1; }
 
+# При загрузке драйвер Wi-Fi может подняться позже сторожа: ждём его, не выходим.
 devs=""
-for d in /dev/net/*/0; do
-	ifconfig "$d" list >/dev/null 2>&1 && devs="$devs $d"
+said=""
+while [ -z "$devs" ]; do
+	for d in /dev/net/*/0; do
+		ifconfig "$d" list >/dev/null 2>&1 && devs="$devs $d"
+	done
+	if [ -z "$devs" ]; then
+		[ -z "$said" ] && say "Wi-Fi устройство ещё не готово, жду" && said=1
+		sleep 5
+	fi
 done
-[ -n "$devs" ] || { say "нет Wi-Fi устройств, выход"; exit 0; }
 say "старт, устройства:$devs"
 
 state=""
