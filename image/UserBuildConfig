@@ -23,7 +23,8 @@ AddFilesToHaikuImage system settings : [ FDirName $(epi) system packages ] ;
 
 # Программы и страница EPI
 AddFilesToHaikuImage home config non-packaged bin
-	: [ FDirName $(epi) net epi-net ] [ FDirName $(epi) menu epi-menu ] ;
+	: [ FDirName $(epi) net epi-net ] [ FDirName $(epi) menu epi-menu ]
+	[ FDirName $(epi) shell epi-browser ] ;
 AddFilesToHaikuImage home epi : [ FDirName $(epi) shell start.html ] ;
 
 # Переключатель раскладок: US-International и Russian

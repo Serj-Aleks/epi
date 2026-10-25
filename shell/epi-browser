@@ -1,0 +1,36 @@
+#!/bin/sh
+# EPI: браузер при загрузке.
+# Открывает страницу ожидания сети. Когда сеть появилась, а страница так и не
+# перешла на ui.center сама (Firefox, запущенный без сети, уходит в автономный
+# режим и из него не выходит), перезапускает браузер сразу на ui.center.
+URL=https://ui.center/
+
+place() {
+	for i in $(seq 1 60); do
+		hey Firefox get Frame of Window 0 >/dev/null 2>&1 && break
+		sleep 1
+	done
+	sleep 3
+	# окно над полосой Deskbar; координаты под 1920x1080
+	hey Firefox set Frame of Window 0 to "BRect(5,30,1914,1029)" >/dev/null 2>&1
+}
+online() {
+	for d in /dev/net/*/0; do
+		ifconfig "$d" 2>/dev/null | grep -q 'Network:' && return 0
+	done
+	return 1
+}
+
+firefox file:///boot/home/epi/start.html &
+place
+until online; do sleep 2; done
+sleep 10
+if hey Firefox get Title of Window 0 2>/dev/null | grep -q APOTHEOS; then
+	hey Firefox quit >/dev/null 2>&1
+	for i in $(seq 1 20); do
+		hey Firefox get Frame of Window 0 >/dev/null 2>&1 || break
+		sleep 1
+	done
+	firefox "$URL" &
+	place
+fi
