@@ -1,0 +1,35 @@
+# EPI (APOTHEOS): настройки сборки образа Haiku.
+# Кладётся в haiku/build/jam/UserBuildConfig.
+# Рядом с деревом haiku ожидаются:
+#   ../epi        — этот репозиторий;
+#   ../epi-local  — epi-packages (пакеты не из репозитория сборки) и
+#                   epi-settings (настройки с эталонной машины, без личных данных).
+
+# Debian 12: offsetof в хост-инструментах
+HOST_C++FLAGS += -include cstddef ;
+
+local epi = [ FDirName $(HAIKU_TOP) .. epi ] ;
+local epiLocal = [ FDirName $(HAIKU_TOP) .. epi-local ] ;
+
+# Зависимости Firefox, которые есть в репозитории сборки
+AddHaikuImageSystemPackages fontconfig freetype bzip2 tar unzip libpng16
+	libxml2 sqlite giflib ;
+
+# Firefox и зависимости, которых нет в репозитории сборки
+# (собраны image/collect-packages с эталонной машины)
+local epiPackages = [ Glob [ FDirName $(epiLocal) epi-packages ] :
+	firefox-*.hpkg cairo-*.hpkg libevent-*.hpkg media_helpers-*.hpkg
+	nspr-*.hpkg nss-*.hpkg libvpx-*.hpkg glib2-*.hpkg pixman-*.hpkg ] ;
+AddFilesToHaikuImage system packages : $(epiPackages) ;
+
+# Скрыть демо и лишние программы
+AddFilesToHaikuImage system settings : [ FDirName $(epi) system packages ] ;
+
+# Программы и страница EPI
+AddFilesToHaikuImage home config non-packaged bin
+	: [ FDirName $(epi) net epi-net ] [ FDirName $(epi) menu epi-menu ] ;
+AddFilesToHaikuImage home epi : [ FDirName $(epi) shell start.html ] ;
+
+# Настройки: полоса, панель, файловый менеджер, раскладка, язык, мышь
+CopyDirectoryToHaikuImage home config : [ FDirName $(epiLocal) epi-settings ]
+	: settings ;

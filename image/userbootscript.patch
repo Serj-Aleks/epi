@@ -1,0 +1,20 @@
+diff --git a/data/config/boot/UserBootscript b/data/config/boot/UserBootscript
+index f1dfc88b1a..0165f49577 100644
+--- a/data/config/boot/UserBootscript
++++ b/data/config/boot/UserBootscript
+@@ -22,3 +22,15 @@ done
+ # To launch certain applications at boot-up, put links to those applications in
+ # the above boot launch directory.
+ 
++
++#=====================================================================
++# EPI (APOTHEOS)
++# меню EPI создаётся при первой загрузке (ссылки на программы системы)
++[ -d "$HOME/config/settings/deskbar/menu_entries" ] || /boot/home/config/non-packaged/bin/epi-menu
++# сторож сети
++/boot/home/config/non-packaged/bin/epi-net &
++# панель (LaunchBox) поверх полосы, внизу справа; координаты под 1920x1080
++(for i in $(seq 1 30); do hey LaunchBox get Frame of Window 0 >/dev/null 2>&1 && break; sleep 1; done; hey LaunchBox set Feel of Window 0 to 6; hey LaunchBox set Frame of Window 0 to "BRect(1495,1035,1740,1082)") >/dev/null 2>&1 &
++# браузер со стартовой страницей и его окно над полосой
++firefox file:///boot/home/epi/start.html &
++(for i in $(seq 1 60); do hey Firefox get Frame of Window 0 >/dev/null 2>&1 && break; sleep 1; done; sleep 3; hey Firefox set Frame of Window 0 to "BRect(5,30,1914,1029)") >/dev/null 2>&1 &
