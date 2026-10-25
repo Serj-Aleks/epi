@@ -58,7 +58,7 @@ index 3d82e432c5..84b0cc4668 100644
  	// clip to menu item frame
  	if (iconRect.Width() > frame.Width()) {
 diff --git a/src/apps/deskbar/DeskbarMenu.cpp b/src/apps/deskbar/DeskbarMenu.cpp
-index ff6160a228..1205b8820b 100644
+index ff6160a228..f5cafa6c92 100644
 --- a/src/apps/deskbar/DeskbarMenu.cpp
 +++ b/src/apps/deskbar/DeskbarMenu.cpp
 @@ -43,7 +43,10 @@ All rights reserved.
@@ -77,7 +77,7 @@ index ff6160a228..1205b8820b 100644
  	if (fItemList->CountItems() <= 0) {
  		BMenuItem* item
 -			= new BMenuItem(B_TRANSLATE("<Deskbar folder is empty>"), 0);
-+			= new BMenuItem("Subpanel - vacant", 0);
++			= new BMenuItem("Directory - vacant", 0);
  		item->SetEnabled(false);
  		AddItem(item);
  	} else
@@ -259,6 +259,19 @@ index ff6160a228..1205b8820b 100644
  void
  TDeskbarMenu::ClearMenuBuildingState()
  {
+@@ -621,6 +653,12 @@ TRecentsMenu::DoneBuildingItemList()
+ 
+ 	if (CountItems() > 0)
+ 		SetTargetForItems(Target());
++	else {
++		// EPI: own empty label instead of the system's translated "<empty>"
++		BMenuItem* item = new BMenuItem("Directory - vacant", NULL);
++		item->SetEnabled(false);
++		AddItem(item);
++	}
+ }
+ 
+ 
 diff --git a/src/apps/deskbar/DeskbarMenu.h b/src/apps/deskbar/DeskbarMenu.h
 index 3737a32fb9..5a2c91ccd8 100644
 --- a/src/apps/deskbar/DeskbarMenu.h

@@ -1,7 +1,7 @@
 # Deskbar EPI
 
 - Кнопка Θ (знак APOTHEOS) вместо пера Haiku, размером с иконки приложений, по центру кнопки.
-- Своя терминология постоянных пунктов меню, латиницей и без перевода: Haiku, Qwest, Fragments, INTEGRATION, STOP (Finish, Restart, Pause), RELEVANT (DOCUMENTS, DIRECTORIES, APPLICATIONS), «Subpanel - vacant».
+- Своя терминология постоянных пунктов меню, латиницей и без перевода: Haiku, Qwest, Fragments, INTEGRATION, STOP (Finish, Restart, Pause), RELEVANT (DOCUMENTS, DIRECTORIES, APPLICATIONS), «Directory - vacant» (пустая папка меню и пустые подменю RELEVANT).
 - Папки из `~/config/settings/deskbar/menu_top` (DESKBAR, DESKTOP) стоят сразу после INTEGRATION; встроенного пункта настроек Deskbar нет — он в DESKBAR.
 - Содержимое меню создаёт скрипт `menu/epi-menu`.
 
