@@ -1,0 +1,34 @@
+# Пакеты эталонной машины, которые в образ EPI не идут (по одному имени или
+# шаблону fnmatch в строке). Инструменты разработки, Qt/Kaze/Falkon, WebPositive.
+*_devel
+haiku_devel
+makefile_engine
+gcc
+binutils
+autoconf
+automake
+bison
+flex
+m4
+make
+jam
+golang
+nasm
+mkdepend
+texinfo
+pkgconfig
+libtool_libltdl
+qt5
+qt6_*
+qtwebengine_bin
+qsystray
+qthaikuplugins
+haikuwebkit
+gstreamer
+gst_plugins_*
+libnice
+libsrtp2
+tcpdump
+libpcap
+netcat
+python3.14

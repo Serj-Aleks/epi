@@ -7,7 +7,10 @@ HaikuPorts, проходит по зависимостям от корневых
 Недостающее: если пакет есть в репозитории сборки — в список
 AddHaikuImageSystemPackages, иначе файл скачивается в epi-local/epi-packages.
 Результат: epi-local/epi-packages.jam (подключается из UserBuildConfig).
-Использование: fetch-deps [пакет ...]   (по умолчанию firefox keymapswitcher)
+Использование: fetch-deps [пакет ...]
+По умолчанию корни — набор эталонной машины (image/packages-reference.txt,
+проверено: Firefox на ней работает) за вычетом image/packages-exclude.txt;
+так в образ попадает и то, что программы подгружают на ходу, не объявляя.
 """
 import os, re, subprocess, sys, urllib.request
 
@@ -18,7 +21,18 @@ GEN = os.path.join(HAIKU, "generated.x86_64")
 LOCAL = os.path.join(DEV, "epi-local")
 PK = os.path.join(LOCAL, "epi-packages")
 ISO = os.path.join(GEN, "haiku-nightly-anyboot.iso")
-ROOTS = sys.argv[1:] or ["firefox", "keymapswitcher"]
+HERE = os.path.dirname(os.path.abspath(__file__))
+def reference_roots():
+    import fnmatch
+    excl = [l.strip() for l in open(os.path.join(HERE, "packages-exclude.txt"))
+            if l.strip() and not l.startswith("#")]
+    roots = []
+    for l in open(os.path.join(HERE, "packages-reference.txt")):
+        n = name_of(l.strip())
+        if n and not any(fnmatch.fnmatch(n, e) for e in excl):
+            roots.append(n)
+    return roots
+FROM_REFERENCE = not sys.argv[1:]
 NAME_RE = re.compile(r"^([a-z0-9_]+)-[0-9][^-]*-[0-9]+-(?:x86_64|any)\.hpkg$")
 
 def name_of(fn):
@@ -96,6 +110,9 @@ def pick(req):
                 return c
     return cands[0] if cands else None
 
+ROOTS = reference_roots() if FROM_REFERENCE else sys.argv[1:]
+# корни, которые и так есть в базовом образе, не добавляем (иначе — дубли)
+ROOTS = [r for r in ROOTS if r not in base]
 need, todo = [], list(ROOTS)
 while todo:
     p = todo.pop(0)

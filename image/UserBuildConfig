@@ -8,6 +8,9 @@
 # Debian 12: offsetof в хост-инструментах
 HOST_C++FLAGS += -include cstddef ;
 
+# Размер образа (МБ): набор пакетов эталонной машины больше стандартного
+HAIKU_IMAGE_SIZE = 2400 ;
+
 local epi = [ FDirName $(HAIKU_TOP) .. epi ] ;
 local epiLocal = [ FDirName $(HAIKU_TOP) .. epi-local ] ;
 
