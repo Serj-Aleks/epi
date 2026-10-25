@@ -70,8 +70,14 @@ for line in out.splitlines():
 data = open(ISO, "rb").read()
 in_image = set(m.decode() for m in re.findall(
     rb"([a-z0-9_]+)-[0-9][A-Za-z0-9_.~+]*-[0-9]+-(?:x86_64|any)\.hpkg", data))
-# что добавили мы сами (не считается базой)
+# что добавили мы сами (не считается базой): наши файлы и всё, что прошлый
+# запуск записал в epi-packages.jam (иначе база «плавает» от сборки к сборке)
+JAM = os.path.join(LOCAL, "epi-packages.jam")
 ours = set(filter(None, (name_of(f) for f in os.listdir(PK))))
+if os.path.exists(JAM):
+    for line in open(JAM):
+        if line.startswith("# names:"):
+            ours.update(line.split()[2:])
 base = in_image - ours
 
 # репозиторий сборки: эти пакеты добавляются по имени
@@ -115,8 +121,9 @@ for p in need:
     urllib.request.urlretrieve(BASE + "/packages/" + fn, os.path.join(PK, fn))
     by_file.append(os.path.join(PK, fn))
 
-with open(os.path.join(LOCAL, "epi-packages.jam"), "w") as f:
+with open(JAM, "w") as f:
     f.write("# создано image/fetch-deps\n")
+    f.write("# names: " + " ".join(sorted(need)) + "\n")
     if by_name:
         f.write("AddHaikuImageSystemPackages " + " ".join(sorted(by_name)) + " ;\n")
     if by_file:
