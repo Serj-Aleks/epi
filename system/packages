@@ -1,0 +1,40 @@
+Package haiku {
+    BlockedEntries {
+        demos
+        data/deskbar/menu/Demos
+        "data/deskbar/menu/Preferences/E-mail"
+        preferences/E-mail
+        apps/SoundRecorder
+        apps/SerialConnect
+        apps/PoorMan
+        apps/People
+        apps/MediaPlayer
+        apps/MediaConverter
+        apps/Mail
+        apps/CodyCam
+        apps/DiskUsage
+        apps/DeskCalc
+        apps/CharacterMap
+        data/deskbar/menu/Applications/SoundRecorder
+        data/deskbar/menu/Applications/SerialConnect
+        data/deskbar/menu/Applications/PoorMan
+        data/deskbar/menu/Applications/People
+        data/deskbar/menu/Applications/MediaPlayer
+        data/deskbar/menu/Applications/MediaConverter
+        data/deskbar/menu/Applications/Mail
+        data/deskbar/menu/Applications/CodyCam
+        data/deskbar/menu/Applications/DiskUsage
+        data/deskbar/menu/Applications/DeskCalc
+        data/deskbar/menu/Applications/CharacterMap
+    }
+}
+Package qthaikuplugins {
+    BlockedEntries {
+        "data/deskbar/menu/Preferences/Qt Configurator"
+    }
+}
+Package qt6_base {
+    BlockedEntries {
+        "data/deskbar/menu/Preferences/Qt6 Configurator"
+    }
+}

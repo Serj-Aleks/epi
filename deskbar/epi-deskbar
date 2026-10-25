@@ -1,3 +1,6 @@
 service x-vnd.Be-TSKB {
 	launch /boot/home/config/non-packaged/apps/Deskbar
 }
+service x-vnd.Be-TRAK {
+	launch /boot/home/config/non-packaged/apps/Tracker
+}

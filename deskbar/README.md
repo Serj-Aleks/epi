@@ -9,7 +9,7 @@
 ## Файлы
 
 - `deskbar-epi.patch` — все правки Deskbar EPI относительно эталонного коммита `874f0cea9d`: `icons.rdef` (иконка Θ, HVIF), `BarMenuBar.cpp`, `BarMenuTitle.cpp` (размер и центровка Θ), `DeskbarMenu.cpp`, `DeskbarMenu.h` (терминология, папки menu_top, RELEVANT), `BarApp.cpp`, `BarApp.h` (имена программ в полосе по меню EPI).
-- `epi-deskbar` — настройка launch_daemon: запускать Deskbar EPI вместо системного.
+- `epi-deskbar` — настройка launch_daemon: запускать Deskbar и файловый менеджер EPI вместо системных (`~/config/settings/launch/epi-deskbar`).
 
 ## Сборка (Debian)
 

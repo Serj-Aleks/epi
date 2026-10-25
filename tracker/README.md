@@ -16,19 +16,17 @@ jam -q -j10 libtracker.so
 
 ## Установка на установленную Haiku
 
-Системная библиотека не меняется: Haiku сначала ищет библиотеки в `~/config/non-packaged/lib`.
+Системные файлы не меняются. Файловый менеджер, лежащий в `/boot/system`, всегда берёт библиотеку из `/boot/system/lib` (первой в поиске стоит папка самой программы, `%A/lib`). Поэтому запускается своя копия файлового менеджера, а рядом с ней, в `lib`, — наша библиотека.
 
 ```
-mkdir -p ~/config/non-packaged/lib
-cp libtracker.so ~/config/non-packaged/lib/
-hey Tracker quit
+mkdir -p ~/config/non-packaged/apps/lib
+cp /boot/system/Tracker ~/config/non-packaged/apps/Tracker
+mimeset -f ~/config/non-packaged/apps/Tracker
+cp libtracker.so ~/config/non-packaged/apps/lib/
 ```
 
-Tracker перезапускается сам с новой библиотекой. Deskbar подхватит её при следующей загрузке.
+Запуск копии вместо системного — блок `x-vnd.Be-TRAK` в `deskbar/epi-deskbar`. Deskbar EPI лежит в той же папке и тоже берёт эту библиотеку. Затем перезагрузка.
 
 ## Откат
 
-```
-rm ~/config/non-packaged/lib/libtracker.so
-hey Tracker quit
-```
+Убрать блок `x-vnd.Be-TRAK` из `~/config/settings/launch/epi-deskbar` и перезагрузиться.

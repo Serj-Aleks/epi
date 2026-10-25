@@ -1,0 +1,6 @@
+# Строки EPI в конце ~/config/settings/boot/UserBootscript (после системного шаблона).
+# Координаты панели и окна Firefox — под экран 1920x1080; для образа будут вычисляться.
+/boot/home/config/non-packaged/bin/epi-net &
+(for i in $(seq 1 30); do hey LaunchBox get Frame of Window 0 >/dev/null 2>&1 && break; sleep 1; done; hey LaunchBox set Feel of Window 0 to 6; hey LaunchBox set Frame of Window 0 to "BRect(1495,1035,1740,1082)") >/dev/null 2>&1 &
+firefox file:///boot/home/epi/start.html &
+(for i in $(seq 1 60); do hey Firefox get Frame of Window 0 >/dev/null 2>&1 && break; sleep 1; done; sleep 3; hey Firefox set Frame of Window 0 to "BRect(5,30,1914,1029)") >/dev/null 2>&1 &
