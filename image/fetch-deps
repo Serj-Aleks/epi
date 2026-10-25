@@ -7,7 +7,7 @@ HaikuPorts, проходит по зависимостям от корневых
 Недостающее: если пакет есть в репозитории сборки — в список
 AddHaikuImageSystemPackages, иначе файл скачивается в epi-local/epi-packages.
 Результат: epi-local/epi-packages.jam (подключается из UserBuildConfig).
-Использование: fetch-deps [пакет ...]   (по умолчанию firefox)
+Использование: fetch-deps [пакет ...]   (по умолчанию firefox keymapswitcher)
 """
 import os, re, subprocess, sys, urllib.request
 
@@ -18,7 +18,7 @@ GEN = os.path.join(HAIKU, "generated.x86_64")
 LOCAL = os.path.join(DEV, "epi-local")
 PK = os.path.join(LOCAL, "epi-packages")
 ISO = os.path.join(GEN, "haiku-nightly-anyboot.iso")
-ROOTS = sys.argv[1:] or ["firefox"]
+ROOTS = sys.argv[1:] or ["firefox", "keymapswitcher"]
 NAME_RE = re.compile(r"^([a-z0-9_]+)-[0-9][^-]*-[0-9]+-(?:x86_64|any)\.hpkg$")
 
 def name_of(fn):

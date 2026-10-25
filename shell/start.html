@@ -17,11 +17,11 @@
 <body>
 <div class="box">
   <div>Подключение к сети<span class="dots"></span></div>
-  <div class="hint" id="hint">Подключение идёт дольше обычного.<br>
-    Состояние сети — значок внизу справа.</div>
+  <div class="hint" id="hint">Сеть не подключена.<br>
+    Выберите сеть: значок сети внизу справа.</div>
 </div>
 <script>
-  // EPI: ждём сеть и переходим на ui.center. Подсказка — только если долго.
+  // EPI: ждём сеть и переходим на ui.center. Если за 15 с сети нет — подсказка.
   var TARGET = "https://ui.center/";
   var started = Date.now();
   function check() {
@@ -30,7 +30,7 @@
     fetch(TARGET, { mode: "no-cors", cache: "no-store", signal: ctrl.signal })
       .then(function () { location.replace(TARGET); })
       .catch(function () {
-        if (Date.now() - started > 60000)
+        if (Date.now() - started > 15000)
           document.getElementById("hint").style.visibility = "visible";
         setTimeout(check, 2000);
       })

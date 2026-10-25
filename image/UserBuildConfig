@@ -26,6 +26,15 @@ AddFilesToHaikuImage home config non-packaged bin
 	: [ FDirName $(epi) net epi-net ] [ FDirName $(epi) menu epi-menu ] ;
 AddFilesToHaikuImage home epi : [ FDirName $(epi) shell start.html ] ;
 
+# Переключатель раскладок: US-International и Russian
+AddFilesToHaikuImage home config settings : [ FDirName $(epi) settings Switcher ] ;
+
+# Firefox: готовый профиль (без автономного режима и приветствий)
+AddFilesToHaikuImage home config settings Mozilla Firefox
+	: [ FDirName $(epi) firefox profiles.ini ] ;
+AddFilesToHaikuImage home config settings Mozilla Firefox epi.default
+	: [ FDirName $(epi) firefox epi.default user.js ] ;
+
 # Настройки: полоса, панель, файловый менеджер, раскладка, язык, мышь
 CopyDirectoryToHaikuImage home config : [ FDirName $(epiLocal) epi-settings ]
 	: settings ;
