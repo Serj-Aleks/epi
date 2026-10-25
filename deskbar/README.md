@@ -1,22 +1,21 @@
 # Deskbar EPI
 
 - Кнопка Θ (знак APOTHEOS) вместо пера Haiku, размером с иконки приложений, по центру кнопки.
-- Своя терминология постоянных пунктов меню, латиницей и без перевода: Haiku, Qwest, Fragments, INTEGRATION, STOP (Finish, Restart, Pause), RELEVANT DOCUMENTS / DIRECTORIES / APPLICATIONS, «Subpanel - vacant».
+- Своя терминология постоянных пунктов меню, латиницей и без перевода: Haiku, Qwest, Fragments, INTEGRATION, STOP (Finish, Restart, Pause), RELEVANT (DOCUMENTS, DIRECTORIES, APPLICATIONS), «Subpanel - vacant».
 - Папки из `~/config/settings/deskbar/menu_top` (DESKBAR, DESKTOP) стоят сразу после INTEGRATION; встроенного пункта настроек Deskbar нет — он в DESKBAR.
 - Содержимое меню создаёт скрипт `menu/epi-menu`.
 
 ## Файлы
 
-- `deskbar-menu.patch` — терминология меню и папки menu_top (`DeskbarMenu.cpp`, `DeskbarMenu.h`); накладывается после `deskbar-theta.patch`.
-- `deskbar-theta.patch` — правка трёх файлов исходников Haiku относительно эталонного коммита `874f0cea9d`: `icons.rdef` (векторная иконка Θ, HVIF), `BarMenuBar.cpp` (квадратная иконка 128×128), `BarMenuTitle.cpp` (размер и центровка).
+- `deskbar-epi.patch` — все правки Deskbar EPI относительно эталонного коммита `874f0cea9d`: `icons.rdef` (иконка Θ, HVIF), `BarMenuBar.cpp`, `BarMenuTitle.cpp` (размер и центровка Θ), `DeskbarMenu.cpp`, `DeskbarMenu.h` (терминология, папки menu_top, RELEVANT).
 - `epi-deskbar` — настройка launch_daemon: запускать Deskbar EPI вместо системного.
 
 ## Сборка (Debian)
 
 ```
 cd ~/haiku-dev/haiku
-git apply <путь к репозиторию epi>/deskbar/deskbar-theta.patch
-git apply <путь к репозиторию epi>/deskbar/deskbar-menu.patch
+git checkout -- src/apps/deskbar
+git apply <путь к репозиторию epi>/deskbar/deskbar-epi.patch
 cd generated.x86_64
 jam -q -j10 Deskbar
 ```
