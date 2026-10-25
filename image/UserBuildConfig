@@ -11,16 +11,12 @@ HOST_C++FLAGS += -include cstddef ;
 local epi = [ FDirName $(HAIKU_TOP) .. epi ] ;
 local epiLocal = [ FDirName $(HAIKU_TOP) .. epi-local ] ;
 
-# Зависимости Firefox, которые есть в репозитории сборки
-AddHaikuImageSystemPackages fontconfig freetype bzip2 tar unzip libpng16
-	libxml2 sqlite giflib ;
-
-# Firefox и зависимости, которых нет в репозитории сборки
-# (собраны image/collect-packages с эталонной машины)
-local epiPackages = [ Glob [ FDirName $(epiLocal) epi-packages ] :
-	firefox-*.hpkg cairo-*.hpkg libevent-*.hpkg media_helpers-*.hpkg
-	nspr-*.hpkg nss-*.hpkg libvpx-*.hpkg glib2-*.hpkg pixman-*.hpkg ] ;
-AddFilesToHaikuImage system packages : $(epiPackages) ;
+# Firefox и все его зависимости, которых нет в базовом образе.
+# Файл создаёт image/fetch-deps (сверка с собранным образом).
+local epiPackagesJam = [ FDirName $(epiLocal) epi-packages.jam ] ;
+if [ Glob $(epiLocal) : epi-packages.jam ] {
+	include $(epiPackagesJam) ;
+}
 
 # Скрыть демо и лишние программы
 AddFilesToHaikuImage system settings : [ FDirName $(epi) system packages ] ;

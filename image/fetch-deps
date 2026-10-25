@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""EPI: дополнить образ пакетами, нужными Firefox (и другим программам).
+
+Запускается на машине сборки после сборки образа. Берёт индекс репозитория
+HaikuPorts, проходит по зависимостям от корневых пакетов и сверяет их с тем,
+что реально лежит в собранном образе (а не с чьей-то установленной системой).
+Недостающее: если пакет есть в репозитории сборки — в список
+AddHaikuImageSystemPackages, иначе файл скачивается в epi-local/epi-packages.
+Результат: epi-local/epi-packages.jam (подключается из UserBuildConfig).
+Использование: fetch-deps [пакет ...]   (по умолчанию firefox)
+"""
+import os, re, subprocess, sys, urllib.request
+
+BASE = "https://eu.hpkg.haiku-os.org/haikuports/master/x86_64/current"
+DEV = os.path.expanduser("~/haiku-dev")
+HAIKU = os.path.join(DEV, "haiku")
+GEN = os.path.join(HAIKU, "generated.x86_64")
+LOCAL = os.path.join(DEV, "epi-local")
+PK = os.path.join(LOCAL, "epi-packages")
+ISO = os.path.join(GEN, "haiku-nightly-anyboot.iso")
+ROOTS = sys.argv[1:] or ["firefox"]
+NAME_RE = re.compile(r"^([a-z0-9_]+)-[0-9][^-]*-[0-9]+-(?:x86_64|any)\.hpkg$")
+
+def name_of(fn):
+    m = NAME_RE.match(fn)
+    return m.group(1) if m else None
+
+# инструмент чтения индекса репозитория (собран системой сборки Haiku)
+tool = None
+for root, _, files in os.walk(os.path.join(GEN, "objects")):
+    if "package_repo" in files and os.access(os.path.join(root, "package_repo"), os.X_OK):
+        tool = os.path.join(root, "package_repo"); break
+if not tool:
+    sys.exit("не найден package_repo в generated.x86_64/objects")
+
+os.makedirs(PK, exist_ok=True)
+repo = os.path.join(LOCAL, "haikuports.repo")
+urllib.request.urlretrieve(BASE + "/repo", repo)
+out = subprocess.run([tool, "list", "-v", "-f", repo], capture_output=True,
+                     text=True, check=True).stdout
+
+# индекс: пакет -> файл, требования; возможность -> пакет
+files, requires, provider = {}, {}, {}
+cur = None
+for line in out.splitlines():
+    s = line.strip()
+    if s.startswith("name:"):
+        cur = s.split()[1]; requires[cur] = []
+    elif cur and s.startswith("provides:"):
+        provider.setdefault(re.split(r"[\s=<>]", s[9:].strip())[0], cur)
+    elif cur and s.startswith("requires:"):
+        requires[cur].append(re.split(r"[\s=<>]", s[9:].strip())[0])
+    elif cur and s.startswith("filename:"):
+        files[cur] = s.split()[1]
+
+# что в образе: имена пакетов, найденные в собранном образе
+data = open(ISO, "rb").read()
+in_image = set(m.decode() for m in re.findall(
+    rb"([a-z0-9_]+)-[0-9][A-Za-z0-9_.~+]*-[0-9]+-(?:x86_64|any)\.hpkg", data))
+# что добавили мы сами (не считается базой)
+ours = set(filter(None, (name_of(f) for f in os.listdir(PK))))
+base = in_image - ours
+
+# репозиторий сборки: эти пакеты добавляются по имени
+build_repo = set()
+for line in open(os.path.join(HAIKU, "build/jam/repositories/HaikuPorts/x86_64")):
+    m = re.match(r"\s+([a-z0-9_]+)-[0-9]", line)
+    if m: build_repo.add(m.group(1))
+
+need, todo = [], list(ROOTS)
+while todo:
+    p = todo.pop(0)
+    if p in need or (p in base and p not in ROOTS):
+        continue
+    if p not in requires:
+        print("нет в репозитории:", p); continue
+    need.append(p)
+    for r in requires[p]:
+        q = provider.get(r)
+        if q and q not in need and q not in base:
+            todo.append(q)
+
+by_name, by_file = [], []
+for p in need:
+    if p in build_repo:
+        by_name.append(p); continue
+    have = [f for f in os.listdir(PK) if name_of(f) == p]
+    if have:
+        by_file.append(os.path.join(PK, sorted(have)[-1])); continue
+    fn = files[p]
+    print("скачиваю", fn)
+    urllib.request.urlretrieve(BASE + "/packages/" + fn, os.path.join(PK, fn))
+    by_file.append(os.path.join(PK, fn))
+
+with open(os.path.join(LOCAL, "epi-packages.jam"), "w") as f:
+    f.write("# создано image/fetch-deps\n")
+    if by_name:
+        f.write("AddHaikuImageSystemPackages " + " ".join(sorted(by_name)) + " ;\n")
+    if by_file:
+        f.write("AddFilesToHaikuImage system packages :\n\t"
+                + "\n\t".join(sorted(by_file)) + " ;\n")
+print("по имени (%d): %s" % (len(by_name), " ".join(sorted(by_name))))
+print("файлами (%d): %s" % (len(by_file), " ".join(sorted(os.path.basename(x) for x in by_file))))
+missing = [p for p in need if p not in in_image]
+print("не хватало в образе (%d): %s" % (len(missing), " ".join(missing) or "-"))
