@@ -1,3 +1,101 @@
+diff --git a/src/apps/deskbar/BarApp.cpp b/src/apps/deskbar/BarApp.cpp
+index f41545d92e..dd09cbfb27 100644
+--- a/src/apps/deskbar/BarApp.cpp
++++ b/src/apps/deskbar/BarApp.cpp
+@@ -870,6 +870,59 @@ TBarApp::FetchWindowIcon(bool local, bool minimized)
+ }
+ 
+ 
++// EPI: an application shown in Deskbar carries the name of its link in the
++// EPI menu (~/config/settings/deskbar/menu_entries and menu_top), so the menu
++// and the bar speak one terminology. Returns false if the app is not there.
++static bool
++_EpiNameIn(const char* dirPath, const BPath& appPath, BString& name, int depth)
++{
++	BDirectory dir(dirPath);
++	if (dir.InitCheck() != B_OK)
++		return false;
++
++	BEntry entry;
++	while (dir.GetNextEntry(&entry) == B_OK) {
++		BPath path;
++		if (entry.GetPath(&path) != B_OK)
++			continue;
++		if (entry.IsSymLink()) {
++			BEntry target(path.Path(), true);
++			BPath targetPath;
++			if (target.GetPath(&targetPath) == B_OK
++				&& targetPath == appPath) {
++				name = path.Leaf();
++				return true;
++			}
++		} else if (entry.IsDirectory() && depth > 0) {
++			if (_EpiNameIn(path.Path(), appPath, name, depth - 1))
++				return true;
++		}
++	}
++	return false;
++}
++
++
++bool
++TBarApp::_EpiName(const entry_ref& ref, BString& name)
++{
++	BEntry appEntry(&ref, true);
++	BPath appPath;
++	BPath settings;
++	if (appEntry.GetPath(&appPath) != B_OK
++		|| GetDeskbarSettingsDirectory(settings) != B_OK)
++		return false;
++
++	const char* const kMenuDirs[] = { "menu_top", "menu_entries" };
++	for (int32 i = 0; i < 2; i++) {
++		BPath dir(settings);
++		if (dir.Append(kMenuDirs[i]) == B_OK
++			&& _EpiNameIn(dir.Path(), appPath, name, 3))
++			return true;
++	}
++	return false;
++}
++
++
+ void
+ TBarApp::AddTeam(team_id team, uint32 flags, const char* sig, entry_ref* ref)
+ {
+@@ -911,9 +964,10 @@ TBarApp::AddTeam(team_id team, uint32 flags, const char* sig, entry_ref* ref)
+ 	}
+ 
+ 	BString name;
+-	if (!gLocalizedNamePreferred
+-		|| BLocaleRoster::Default()->GetLocalizedFileName(name, *ref)
+-			!= B_OK) {
++	if (!_EpiName(*ref, name)
++		&& (!gLocalizedNamePreferred
++			|| BLocaleRoster::Default()->GetLocalizedFileName(name, *ref)
++				!= B_OK)) {
+ 		name = ref->name;
+ 	}
+ 
+diff --git a/src/apps/deskbar/BarApp.h b/src/apps/deskbar/BarApp.h
+index aea30938ff..f093b968ad 100644
+--- a/src/apps/deskbar/BarApp.h
++++ b/src/apps/deskbar/BarApp.h
+@@ -37,6 +37,7 @@ All rights reserved.
+ 
+ 
+ #include <Server.h>
++#include <String.h>
+ 
+ #include "BarSettings.h"
+ 
+@@ -175,6 +176,7 @@ private:
+ 			status_t				_CacheTeamIcon(BarTeamInfo* barInfo);
+ 			status_t				_CacheTeamIcon(BarTeamInfo* barInfo, int32 size);
+ 			status_t				_CacheWindowIcon(WindowIconCache* winCache);
++			bool					_EpiName(const entry_ref& ref, BString& name);
+ 
+ private:
+ 			TBarWindow*				fBarWindow;
 diff --git a/src/apps/deskbar/BarMenuBar.cpp b/src/apps/deskbar/BarMenuBar.cpp
 index 19e21c3546..a899de1de3 100644
 --- a/src/apps/deskbar/BarMenuBar.cpp

@@ -4,10 +4,11 @@
 - Своя терминология постоянных пунктов меню, латиницей и без перевода: Haiku, Qwest, Fragments, INTEGRATION, STOP (Finish, Restart, Pause), RELEVANT (DOCUMENTS, DIRECTORIES, APPLICATIONS), «Directory - vacant» (пустая папка меню и пустые подменю RELEVANT).
 - Папки из `~/config/settings/deskbar/menu_top` (DESKBAR, DESKTOP) стоят сразу после INTEGRATION; встроенного пункта настроек Deskbar нет — он в DESKBAR.
 - Содержимое меню создаёт скрипт `menu/epi-menu`.
+- Запущенные программы в полосе (значки, подсказки, списки окон) называются так же, как их ссылки в меню EPI: Tracker — Navigator, LaunchBox — Panel, StyledEdit — TextEditor и т. д. Одна терминология, источник — `menu/epi-menu`.
 
 ## Файлы
 
-- `deskbar-epi.patch` — все правки Deskbar EPI относительно эталонного коммита `874f0cea9d`: `icons.rdef` (иконка Θ, HVIF), `BarMenuBar.cpp`, `BarMenuTitle.cpp` (размер и центровка Θ), `DeskbarMenu.cpp`, `DeskbarMenu.h` (терминология, папки menu_top, RELEVANT).
+- `deskbar-epi.patch` — все правки Deskbar EPI относительно эталонного коммита `874f0cea9d`: `icons.rdef` (иконка Θ, HVIF), `BarMenuBar.cpp`, `BarMenuTitle.cpp` (размер и центровка Θ), `DeskbarMenu.cpp`, `DeskbarMenu.h` (терминология, папки menu_top, RELEVANT), `BarApp.cpp`, `BarApp.h` (имена программ в полосе по меню EPI).
 - `epi-deskbar` — настройка launch_daemon: запускать Deskbar EPI вместо системного.
 
 ## Сборка (Debian)
