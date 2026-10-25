@@ -25,19 +25,32 @@ def name_of(fn):
     m = NAME_RE.match(fn)
     return m.group(1) if m else None
 
-# инструмент чтения индекса репозитория (собран системой сборки Haiku)
-tool = None
-for root, _, files in os.walk(os.path.join(GEN, "objects")):
-    if "package_repo" in files and os.access(os.path.join(root, "package_repo"), os.X_OK):
-        tool = os.path.join(root, "package_repo"); break
+# инструмент чтения индекса репозитория: версия для машины сборки (Linux),
+# а не для Haiku; если её ещё нет, собираем
+def find_tool():
+    for root, _, files in os.walk(os.path.join(GEN, "objects", "linux")):
+        p = os.path.join(root, "package_repo")
+        if "package_repo" in files and os.access(p, os.X_OK):
+            return p
+tool = find_tool()
 if not tool:
-    sys.exit("не найден package_repo в generated.x86_64/objects")
+    subprocess.run(["jam", "-q", "<build>package_repo"], cwd=GEN, check=True)
+    tool = find_tool()
+if not tool:
+    sys.exit("не найден package_repo для Linux в generated.x86_64/objects/linux")
 
 os.makedirs(PK, exist_ok=True)
 repo = os.path.join(LOCAL, "haikuports.repo")
 urllib.request.urlretrieve(BASE + "/repo", repo)
+# инструменты сборки для Linux используют свои библиотеки (libbe_build.so и др.)
+libdirs = set()
+for root, _, fs in os.walk(os.path.join(GEN, "objects", "linux")):
+    if any(x.endswith("_build.so") for x in fs):
+        libdirs.add(root)
+env = dict(os.environ)
+env["LD_LIBRARY_PATH"] = ":".join(sorted(libdirs) + [env.get("LD_LIBRARY_PATH", "")])
 out = subprocess.run([tool, "list", "-v", "-f", repo], capture_output=True,
-                     text=True, check=True).stdout
+                     text=True, check=True, env=env).stdout
 
 # индекс: пакет -> файл, требования; возможность -> пакет
 files, requires, provider = {}, {}, {}
