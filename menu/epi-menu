@@ -1,0 +1,64 @@
+#!/bin/sh
+# EPI: своё меню Θ.
+# menu_entries — содержимое меню (Deskbar берёт его вместо системного, если папка есть);
+# menu_top — папки, которые Deskbar EPI ставит сразу после INTEGRATION.
+# Откат: удалить обе папки.
+M=$HOME/config/settings/deskbar/menu_entries
+T=$HOME/config/settings/deskbar/menu_top
+S=/boot/system/data/deskbar/menu
+rm -rf "$M" "$T"
+miss=0
+l() { # l <папка/имя в меню> <пункт системного меню>
+	t=$(readlink -f "$S/$2")
+	if [ -z "$t" ] || [ ! -e "$t" ]; then echo "НЕТ: $2"; miss=1; return; fi
+	mkdir -p "$R/$(dirname "$1")"
+	ln -s "$t" "$R/$1"
+}
+A=Applications P=Preferences D="Desktop applets"
+R=$T
+l "DESKTOP/Panel"                      "$D/LaunchBox"
+l "DESKTOP/Desktops"                   "$D/Workspaces"
+l "DESKTOP/Vid"                        "$P/Appearance"
+l "DESKTOP/Fon"                        "$P/Backgrounds"
+l "DESKTOP/Notifications"              "$P/Notifications"
+l "DESKTOP/ECRAN/Screen"               "$P/Screen"
+l "DESKTOP/ECRAN/ScreenSaver"          "$P/ScreenSaver"
+l "DESKBAR/Deskbar"                    "$P/Deskbar"
+l "DESKBAR/INTERNET/Network"           "$P/Network"
+l "DESKBAR/INTERNET/NetworkStatus"     "$D/NetworkStatus"
+l "DESKBAR/Battery"                    "$D/PowerStatus"
+l "DESKBAR/Controller"                 "$D/ProcessController"
+l "DESKBAR/Time"                       "$P/Time"
+R=$M
+l "APPLICATIONS/Monitor"               "$A/ActivityMonitor"
+l "APPLICATIONS/VirtualMemory"         "$P/VirtualMemory"
+l "APPLICATIONS/Debugger"              "$A/Debugger"
+l "APPLICATIONS/DiskEdit"              "$A/DiskProbe"
+l "APPLICATIONS/MarkUpDisk"            "$A/DriveSetup"
+l "APPLICATIONS/Archivator"            "$A/Expander"
+l "APPLICATIONS/Firefox"               "$A/Firefox"
+l "APPLICATIONS/Iconmatik"             "$A/Icon-O-Matic"
+l "APPLICATIONS/Installer"             "$A/Installer"
+l "APPLICATIONS/Optic"                 "$A/Magnify"
+l "APPLICATIONS/PEditor"               "$A/Pe"
+l "APPLICATIONS/TextEditor"            "$A/StyledEdit"
+l "APPLICATIONS/Terminal"              "$A/Terminal"
+l "APPLICATIONS/ImageEditor"           "$A/WonderBrush"
+l "APPLICATIONS/Input"                 "$P/Input"
+l "APPLICATIONS/DEPO/HaikuDepo"        "$A/HaikuDepot"
+l "APPLICATIONS/DEPO/Repositories"     "$P/Repositories"
+l "APPLICATIONS/DEPO/Update"           "$A/SoftwareUpdater"
+l "APPLICATIONS/NAVIGATOR/Navigator"   "$P/Tracker"
+l "APPLICATIONS/NAVIGATOR/FileFormats" "$P/FileTypes"
+l "APPLICATIONS/NAVIGATOR/DataTranslations" "$P/DataTranslations"
+l "APPLICATIONS/AUDIO/MidiPlayer"      "$A/MidiPlayer"
+l "APPLICATIONS/AUDIO/Media"           "$P/Media"
+l "APPLICATIONS/AUDIO/Sounds"          "$P/Sounds"
+l "APPLICATIONS/KLAVIATURE/Keymap"     "$P/Keymap"
+l "APPLICATIONS/KLAVIATURE/KeymapSwitcher" "$P/KeymapSwitcher"
+l "APPLICATIONS/KLAVIATURE/Locale"     "$P/Locale"
+l "APPLICATIONS/KLAVIATURE/Shortcuts"  "$P/Shortcuts"
+l "APPLICATIONS/DEVICES/Devices"       "$A/Devices"
+l "APPLICATIONS/DEVICES/Bluetooth"     "$P/Bluetooth"
+l "APPLICATIONS/DEVICES/Printers"      "$P/Printers"
+[ $miss = 0 ] && echo "OK: $(find "$M" "$T" -type l | wc -l) пунктов"
