@@ -1,9 +1,11 @@
 #!/bin/sh
-# EPI: браузер при загрузке — страница ожидания сети (сама переходит на
-# ui.center, когда сеть есть) и окно над полосой Deskbar.
+# EPI: браузер при загрузке — страница ожидания сети и окно над полосой.
+# Сеть проверяет этот скрипт, а не страница: когда ui.center отвечает, он
+# кладёт сигнал ~/epi/online.js, и страница переходит.
 # профиль EPI задаётся явно: Firefox не выбирает профиль сам, а берёт этот,
 # с настройками EPI (без автономного режима и без запоминания неудачных
 # поисков адресов, иначе запущенный без сети Firefox не откроет ui.center)
+rm -f "$HOME/epi/online.js"
 firefox -profile "$HOME/config/settings/Mozilla/Firefox/epi.default" \
 	file:///boot/home/epi/start.html &
 for i in $(seq 1 60); do
@@ -13,3 +15,13 @@ done
 sleep 3
 # координаты под 1920x1080
 hey Firefox set Frame of Window 0 to "BRect(5,30,1914,1029)" >/dev/null 2>&1
+
+# сигнал странице: сеть есть и ui.center отвечает
+online() {
+	for d in /dev/net/*/0; do
+		ifconfig "$d" 2>/dev/null | grep -q 'Network:' && return 0
+	done
+	return 1
+}
+until online && wget -q --spider --timeout=5 https://ui.center/; do sleep 2; done
+echo 'window.EPI_ONLINE = 1;' > "$HOME/epi/online.js"

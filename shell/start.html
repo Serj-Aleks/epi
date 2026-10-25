@@ -21,20 +21,27 @@
     Выберите сеть: значок сети внизу справа.</div>
 </div>
 <script>
-  // EPI: ждём сеть и переходим на ui.center. Если за 15 с сети нет — подсказка.
+  // EPI: сеть проверяет система (epi-browser). Когда ui.center отвечает, она
+  // кладёт рядом файл online.js (window.EPI_ONLINE = 1). Страница сама в сеть
+  // не ходит: подгружает этот локальный файл каждые 2 с и переходит, как только
+  // он появился. Если 15 с сигнала нет — подсказка выбрать сеть.
   var TARGET = "https://ui.center/";
   var started = Date.now();
   function check() {
-    var ctrl = new AbortController();
-    var t = setTimeout(function () { ctrl.abort(); }, 4000);
-    fetch(TARGET, { mode: "no-cors", cache: "no-store", signal: ctrl.signal })
-      .then(function () { location.replace(TARGET); })
-      .catch(function () {
-        if (Date.now() - started > 15000)
-          document.getElementById("hint").style.visibility = "visible";
-        setTimeout(check, 2000);
-      })
-      .finally(function () { clearTimeout(t); });
+    var s = document.createElement("script");
+    s.src = "online.js?t=" + Date.now();
+    s.onload = function () {
+      if (window.EPI_ONLINE) { location.replace(TARGET); return; }
+      again();
+    };
+    s.onerror = again;
+    document.head.appendChild(s);
+    function again() {
+      s.remove();
+      if (Date.now() - started > 15000)
+        document.getElementById("hint").style.visibility = "visible";
+      setTimeout(check, 2000);
+    }
   }
   check();
 </script>
