@@ -132,8 +132,8 @@ while todo:
 
 by_name, by_file = [], []
 for p in need:
-    if p in build_repo:
-        by_name.append(p); continue
+    # всё недостающее кладём файлами из репозитория HaikuPorts: на сервере
+    # пакетов сборки есть не всё, что указано в её списке (file_data — 404)
     have = [f for f in os.listdir(PK) if name_of(f) == p]
     if have:
         by_file.append(os.path.join(PK, sorted(have)[-1])); continue
