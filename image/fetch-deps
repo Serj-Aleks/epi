@@ -60,7 +60,7 @@ for line in out.splitlines():
     if s.startswith("name:"):
         cur = s.split()[1]; requires[cur] = []
     elif cur and s.startswith("provides:"):
-        provider.setdefault(re.split(r"[\s=<>]", s[9:].strip())[0], cur)
+        provider.setdefault(re.split(r"[\s=<>]", s[9:].strip())[0], []).append(cur)
     elif cur and s.startswith("requires:"):
         requires[cur].append(re.split(r"[\s=<>]", s[9:].strip())[0])
     elif cur and s.startswith("filename:"):
@@ -80,6 +80,16 @@ for line in open(os.path.join(HAIKU, "build/jam/repositories/HaikuPorts/x86_64")
     m = re.match(r"\s+([a-z0-9_]+)-[0-9]", line)
     if m: build_repo.add(m.group(1))
 
+def pick(req):
+    """Из нескольких пакетов, дающих одно и то же, берём уже имеющийся:
+    сначала из образа, потом из наших пакетов (как на эталонной машине)."""
+    cands = provider.get(req, [])
+    for group in (base, ours):
+        for c in cands:
+            if c in group:
+                return c
+    return cands[0] if cands else None
+
 need, todo = [], list(ROOTS)
 while todo:
     p = todo.pop(0)
@@ -89,7 +99,7 @@ while todo:
         print("нет в репозитории:", p); continue
     need.append(p)
     for r in requires[p]:
-        q = provider.get(r)
+        q = pick(r)
         if q and q not in need and q not in base:
             todo.append(q)
 
