@@ -1,8 +1,10 @@
 #!/bin/sh
 # EPI: сторож сети. Заменяет epi-wifi.
-# Следит за Wi-Fi всё время. При обрыве сначала даёт Haiku подключиться
-# самому, потом подключает сам к сохранённым сетям, с нарастающими паузами
-# (15 с ... 5 мин), чтобы не долбить роутер. Не сдаётся.
+# Следит за Wi-Fi всё время. Сначала даёт Haiku подключиться самому
+# (при загрузке 60 с, после обрыва 45 с) и не вмешивается, пока идёт его
+# попытка: чужая команда join посреди подключения срывает его, а неудача
+# открывает окно ввода пароля. Потом подключает сам к сохранённым сетям,
+# с нарастающими паузами (1 ... 5 мин), чтобы не долбить роутер. Не сдаётся.
 # Журнал: ~/config/var/log/epi-net.log (каждое событие со временем).
 conf=/boot/system/settings/network/wireless_networks
 logdir=$HOME/config/var/log
@@ -41,13 +43,13 @@ while [ -z "$devs" ]; do
 done
 say "старт, устройства:$devs"
 
-state=""
-pause=15
+state=boot
+pause=60
 while :; do
 	for d in $devs; do
 		if steady "$d"; then
 			[ "$state" != up ] && say "есть связь: $(where "$d")"
-			state=up; pause=15
+			state=up; pause=60
 			continue
 		fi
 		if [ "$state" = up ]; then
@@ -55,17 +57,22 @@ while :; do
 		fi
 		if [ "$state" != down ]; then
 			# даём Haiku его собственную попытку
+			[ "$state" = boot ] && grace=60 || grace=45
 			state=down
-			wait_link "$d" 20 && continue
+			wait_link "$d" $grace && continue
+		fi
+		# Haiku ещё подключается (получает адрес) — не мешаем
+		if ifconfig "$d" 2>/dev/null | grep -q configuring; then
+			sleep 10; continue
 		fi
 		say "видно: $(seen "$d")"
 		for n in $(nets | tr ' ' '\037'); do
 			n=$(echo "$n" | tr '\037' ' ')
 			say "подключаю: $n"
 			ifconfig "$d" join "$n" >/dev/null 2>&1
-			if wait_link "$d" 20; then
+			if wait_link "$d" 30; then
 				say "есть связь: $(where "$d")"
-				state=up; pause=15
+				state=up; pause=60
 				break
 			fi
 			say "не вышло: $n"
