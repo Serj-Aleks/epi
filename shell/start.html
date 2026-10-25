@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>APOTHEOS</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #000; color: #ddd;
+    font: 20px/1.5 sans-serif; }
+  body { display: flex; align-items: center; justify-content: center; }
+  .box { text-align: center; }
+  .dots::after { content: ""; animation: d 1.5s steps(4) infinite; }
+  @keyframes d { 0% { content: ""; } 25% { content: "."; }
+    50% { content: ".."; } 75% { content: "..."; } }
+  .hint { margin-top: 1em; font-size: 16px; color: #888; visibility: hidden; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div>Подключение к сети<span class="dots"></span></div>
+  <div class="hint" id="hint">Подключение идёт дольше обычного.<br>
+    Состояние сети — значок внизу справа.</div>
+</div>
+<script>
+  // EPI: ждём сеть и переходим на ui.center. Подсказка — только если долго.
+  var TARGET = "https://ui.center/";
+  var started = Date.now();
+  function check() {
+    var ctrl = new AbortController();
+    var t = setTimeout(function () { ctrl.abort(); }, 4000);
+    fetch(TARGET, { mode: "no-cors", cache: "no-store", signal: ctrl.signal })
+      .then(function () { location.replace(TARGET); })
+      .catch(function () {
+        if (Date.now() - started > 60000)
+          document.getElementById("hint").style.visibility = "visible";
+        setTimeout(check, 2000);
+      })
+      .finally(function () { clearTimeout(t); });
+  }
+  check();
+</script>
+</body>
+</html>
