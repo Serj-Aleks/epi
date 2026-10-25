@@ -32,7 +32,7 @@ AddFilesToHaikuImage home config settings : [ FDirName $(epi) settings Switcher 
 
 # Firefox: готовый профиль (без автономного режима и приветствий)
 AddFilesToHaikuImage home config settings Mozilla Firefox
-	: [ FDirName $(epi) firefox profiles.ini ] ;
+	: [ FDirName $(epi) firefox profiles.ini ] [ FDirName $(epi) firefox installs.ini ] ;
 AddFilesToHaikuImage home config settings Mozilla Firefox epi.default
 	: [ FDirName $(epi) firefox epi.default user.js ] ;
 
