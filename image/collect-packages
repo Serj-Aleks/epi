@@ -1,0 +1,42 @@
+#!/bin/sh
+# EPI: собрать пакеты, которых нет в базовом образе Haiku, но которые нужны
+# указанным программам (по умолчанию firefox), со всеми зависимостями.
+# Базовыми считаются пакеты, поставленные вместе с системой (тот же день, что
+# и пакет haiku); всё, что поставлено позже, копируется в $OUT.
+# Использование: collect-packages [каталог-назначения] [пакет ...]
+OUT=${1:-/usb8/epi-packages}; shift 2>/dev/null
+ROOTS=${*:-firefox}
+P=/boot/system/packages
+T=/tmp/epi-collect; rm -rf "$T"; mkdir -p "$T"
+
+# индекс: что предоставляет каждый пакет
+for f in "$P"/*.hpkg; do
+	package list -i "$f" 2>/dev/null \
+		| sed -n 's/^[[:space:]]*provides:[[:space:]]*\([^ =<>]*\).*/\1/p' \
+		| while read -r prov; do printf '%s\t%s\n' "$prov" "$f"; done
+done > "$T/provides"
+
+base=$(ls "$P"/haiku-*.hpkg | head -1)
+basedate=$(date -r "$base" +%Y%m%d)
+
+# обход зависимостей
+for r in $ROOTS; do awk -v n="$r" -F'\t' '$1==n {print $2; exit}' "$T/provides"; done > "$T/todo"
+: > "$T/done"
+while [ -s "$T/todo" ]; do
+	f=$(head -1 "$T/todo"); sed -i 1d "$T/todo"
+	grep -qxF "$f" "$T/done" && continue
+	echo "$f" >> "$T/done"
+	package list -i "$f" 2>/dev/null \
+		| sed -n 's/^[[:space:]]*requires:[[:space:]]*\([^ =<>]*\).*/\1/p' \
+		| while read -r req; do
+			awk -v n="$req" -F'\t' '$1==n {print $2; exit}' "$T/provides"
+		done >> "$T/todo"
+done
+
+mkdir -p "$OUT"
+n=0
+while read -r f; do
+	[ "$(date -r "$f" +%Y%m%d)" = "$basedate" ] && continue
+	cp "$f" "$OUT/" && echo "$(basename "$f")" && n=$((n+1))
+done < "$T/done"
+echo "скопировано пакетов: $n -> $OUT"
