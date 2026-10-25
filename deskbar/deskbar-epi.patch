@@ -156,7 +156,7 @@ index 3d82e432c5..84b0cc4668 100644
  	// clip to menu item frame
  	if (iconRect.Width() > frame.Width()) {
 diff --git a/src/apps/deskbar/DeskbarMenu.cpp b/src/apps/deskbar/DeskbarMenu.cpp
-index ff6160a228..f5cafa6c92 100644
+index ff6160a228..b045d11776 100644
 --- a/src/apps/deskbar/DeskbarMenu.cpp
 +++ b/src/apps/deskbar/DeskbarMenu.cpp
 @@ -43,7 +43,10 @@ All rights reserved.
@@ -311,7 +311,7 @@ index ff6160a228..f5cafa6c92 100644
  			new BMessage(kSuspendSystem));
  		item->SetEnabled(!dragging);
  		shutdownMenu->AddItem(item);
-@@ -328,6 +321,45 @@ B_TRANSLATE_MARK_VOID("About this system")
+@@ -328,6 +321,47 @@ B_TRANSLATE_MARK_VOID("About this system")
  }
  
  
@@ -331,7 +331,9 @@ index ff6160a228..f5cafa6c92 100644
 +	BEntry entry;
 +	while (dir.GetNextEntry(&entry) == B_OK) {
 +		char name[B_FILE_NAME_LENGTH];
-+		if (entry.IsDirectory() && entry.GetName(name) == B_OK)
++		// names starting with '.' are service folders (e.g. .names), not menu
++		if (entry.IsDirectory() && entry.GetName(name) == B_OK
++			&& name[0] != '.')
 +			names.Add(name);
 +	}
 +	names.Sort();
@@ -357,7 +359,7 @@ index ff6160a228..f5cafa6c92 100644
  void
  TDeskbarMenu::ClearMenuBuildingState()
  {
-@@ -621,6 +653,12 @@ TRecentsMenu::DoneBuildingItemList()
+@@ -621,6 +655,12 @@ TRecentsMenu::DoneBuildingItemList()
  
  	if (CountItems() > 0)
  		SetTargetForItems(Target());
