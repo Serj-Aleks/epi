@@ -1,0 +1,16 @@
+#!/bin/sh
+# EPI: проверка механизма «профиль Firefox в памяти» (ramfs) на диске.
+# Если Firefox с профилем в памяти открывает ui.center — механизм годен для
+# флешки: Firefox перестанет писать на неё вообще.
+# Память освобождается при перезагрузке (или: unmount ~/epi-ram).
+R=https://raw.githubusercontent.com/Serj-Aleks/epi/main
+P=$HOME/epi-ram
+hey Firefox quit >/dev/null 2>&1; sleep 3
+mkdir -p "$P" || exit 1
+mount -t ramfs "$P" || { echo "ОШИБКА: ramfs не смонтирован"; exit 1; }
+mkdir -p "$P/epi.default" && cd "$P" || exit 1
+wget -q "$R/firefox/epi.default/user.js" -O epi.default/user.js || exit 1
+wget -q "$R/shell/epi-browser" -O epi-browser || exit 1
+sed -i "s|^PROFILE=.*|PROFILE=$P/epi.default|" epi-browser
+df "$P" | tail -1
+sh epi-browser
