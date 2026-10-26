@@ -1,0 +1,39 @@
+#!/bin/sh
+# EPI: опыт «индекс BFS для концептов ПИ».
+# Копия kater в ~/epi-idx (оригинал ПИ не трогается). Каждому концепту
+# проставляются атрибуты pi:name и pi:theme, по ним строится индекс тома.
+# Затем каждое имя ищется двумя способами: запросом по индексу и обходом
+# файлов (как ListConcepts/FindByName в ПИ). Ответы должны совпасть.
+# Убрать: rm -rf ~/epi-idx; rmindex -d /boot pi:name; rmindex -d /boot pi:theme
+SRC=/boot/home/PI/kater
+DST=/boot/home/epi-idx
+[ -d "$SRC" ] || { echo "НЕТ: $SRC"; exit 1; }
+rm -rf "$DST"; mkdir -p "$DST" && cp -a "$SRC" "$DST/" || exit 1
+K=$DST/kater
+mkindex -d /boot -t string pi:name 2>/dev/null
+mkindex -d /boot -t string pi:theme 2>/dev/null
+find "$K" -name '*.uic' > "$DST/files.txt"
+n=0
+while read -r f; do
+	name=$(sed -n 's/^r-n //p' "$f" | head -1)
+	[ -n "$name" ] || continue
+	theme=${f#$K/}; theme=${theme%%/*}
+	addattr -t string pi:name "$name" "$f" && addattr -t string pi:theme "$theme" "$f" || continue
+	echo "$theme $name" >> "$DST/names.txt"
+	n=$((n+1))
+done < "$DST/files.txt"
+echo "концептов с атрибутами: $n из $(wc -l < "$DST/files.txt")"
+ms() { echo $(( $(date +%s%N) / 1000000 )); }
+same=0; diff=0; tq=0; tw=0
+while read -r theme name; do
+	t0=$(ms)
+	q=$(query -v /boot "((pi:name==\"$name\")&&(pi:theme==\"$theme\"))" | sort)
+	t1=$(ms)
+	w=$(grep -rlx --include='*.uic' "r-n $name" "$K/$theme" | sort)
+	t2=$(ms)
+	tq=$((tq + t1 - t0)); tw=$((tw + t2 - t1))
+	if [ "$q" = "$w" ] && [ -n "$q" ]; then same=$((same+1))
+	else diff=$((diff+1)); echo "РАСХОЖДЕНИЕ: $theme $name | запрос: $q | обход: $w"; fi
+done < "$DST/names.txt"
+echo "совпало: $same, расхождений: $diff"
+echo "время, мс: запросы $tq, обход $tw"
