@@ -61,6 +61,8 @@ l "APPLICATIONS/KLAVIATURE/Shortcuts"  "$P/Shortcuts"
 l "APPLICATIONS/DEVICES/Devices"       "$A/Devices"
 l "APPLICATIONS/DEVICES/Bluetooth"     "$P/Bluetooth"
 l "APPLICATIONS/DEVICES/Printers"      "$P/Printers"
+# Report: отчёт о зависшем Firefox и его закрытие (скрипт EPI, не системный пункт)
+ln -s "$HOME/config/non-packaged/bin/epi-report" "$M/APPLICATIONS/Report"
 # Служебная папка .names (в меню не показывается): имена для программ, которых
 # нет в меню, но которые видны в полосе. Файловый менеджер — Navigator.
 mkdir -p "$T/.names"

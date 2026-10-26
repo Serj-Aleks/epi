@@ -1,0 +1,20 @@
+#!/bin/sh
+# EPI: отчёт о зависшем Firefox (пункт меню APPLICATIONS/Report).
+# С каждого процесса Firefox снимается отчёт Debugger: где стоит каждый поток.
+# Debugger в режиме отчёта после сохранения завершает программу, поэтому
+# Report заодно закрывает зависший Firefox. Сначала дочерние процессы
+# (-contentproc), последним главный — чтобы дочерние не исчезли раньше отчёта.
+# Результат: ~/config/var/log/epi-reports/<время>/
+D=$HOME/config/var/log/epi-reports/$(date +%Y%m%d-%H%M%S)
+mkdir -p "$D"
+ps -o Id Team > "$D/teams.txt"
+ps -a > "$D/threads.txt"
+ps -i > "$D/memory.txt"
+kids=$(awk '$2 ~ /firefox$/ && / -contentproc/ {print $1}' "$D/teams.txt")
+main=$(awk '$2 ~ /firefox$/ && !/ -contentproc/ {print $1}' "$D/teams.txt")
+for t in $kids $main; do
+	timeout 120 /boot/system/apps/Debugger --save-report="$D/$t.report" \
+		--team "$t" > "$D/$t.log" 2>&1
+done
+notify --group APOTHEOS --title Report --timeout 30 "Отчёт сохранён: $D" \
+	>/dev/null 2>&1
