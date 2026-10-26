@@ -22,8 +22,15 @@ until online && wget -q --spider --timeout=5 "$URL"; do
 	sleep 2
 done
 
-# профиль EPI задаётся явно (настройки EPI, без приветственных страниц)
-firefox -profile "$PROFILE" "$URL" &
+# Профиль Firefox — в оперативной памяти (ramfs): с флешки Firefox не
+# справляется (на диске с теми же настройками работает). Настройки EPI
+# (user.js) копируются из $PROFILE; история и входы не переживают перезагрузку.
+RAM=$HOME/config/var/epi-firefox
+mkdir -p "$RAM"
+df "$RAM" 2>/dev/null | grep -q ramfs || mount -t ramfs "$RAM" 2>/dev/null
+mkdir -p "$RAM/profile"
+cp "$PROFILE/user.js" "$RAM/profile/user.js"
+firefox -profile "$RAM/profile" "$URL" &
 for i in $(seq 1 60); do
 	hey Firefox get Frame of Window 0 >/dev/null 2>&1 && break
 	sleep 1
