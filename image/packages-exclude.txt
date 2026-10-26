@@ -17,7 +17,6 @@ nasm
 mkdepend
 texinfo
 pkgconfig
-libtool_libltdl
 qt5
 qt6_*
 qtwebengine_bin
