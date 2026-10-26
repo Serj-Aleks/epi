@@ -1,0 +1,11 @@
+#!/bin/sh
+# EPI: Firefox на Lenovo с настройками флешки (профиль EPI + epi-browser),
+# в отдельной папке ~/epi-test. Обычный профиль Firefox не трогается.
+# Удаление: rm -rf ~/epi-test
+R=https://raw.githubusercontent.com/Serj-Aleks/epi/main
+hey Firefox quit >/dev/null 2>&1; sleep 3
+mkdir -p "$HOME/epi-test/epi.default" && cd "$HOME/epi-test" || exit 1
+wget -q "$R/firefox/epi.default/user.js" -O epi.default/user.js || exit 1
+wget -q "$R/shell/epi-browser" -O epi-browser || exit 1
+sed -i "s|^PROFILE=.*|PROFILE=$HOME/epi-test/epi.default|" epi-browser
+sh epi-browser
