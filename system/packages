@@ -15,6 +15,7 @@ Package haiku {
         apps/DiskUsage
         apps/DeskCalc
         apps/CharacterMap
+        apps/HaikuDepot
         data/deskbar/menu/Applications/SoundRecorder
         data/deskbar/menu/Applications/SerialConnect
         data/deskbar/menu/Applications/PoorMan
@@ -26,6 +27,7 @@ Package haiku {
         data/deskbar/menu/Applications/DiskUsage
         data/deskbar/menu/Applications/DeskCalc
         data/deskbar/menu/Applications/CharacterMap
+        data/deskbar/menu/Applications/HaikuDepot
     }
 }
 Package qthaikuplugins {

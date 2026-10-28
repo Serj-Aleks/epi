@@ -1,0 +1,24 @@
+#!/bin/sh
+# EPI: обновить части EPI на Haiku, установленной на диск (стенд Lenovo),
+# из репозитория: список скрытых программ и меню Θ.
+# Запуск: wget -qO- https://raw.githubusercontent.com/Serj-Aleks/epi/main/tools/epi-update-disk | sh
+R=https://raw.githubusercontent.com/Serj-Aleks/epi/main
+T=/tmp/epi-update; rm -rf "$T"; mkdir -p "$T"
+wget -q "$R/system/packages" -O "$T/packages" && wget -q "$R/menu/epi-menu" -O "$T/epi-menu" \
+	|| { echo "ИТОГ: не скачалось (сеть?)"; exit 1; }
+
+echo "== скрытые программы: изменения"
+if cmp -s "$T/packages" /boot/system/settings/packages; then echo "без изменений"; else
+	diff /boot/system/settings/packages "$T/packages"
+	cp /boot/system/settings/packages "$T/packages.old" 2>/dev/null
+	cp "$T/packages" /boot/system/settings/packages || { echo "ИТОГ: не записался список"; exit 1; }
+fi
+
+echo "== меню: изменения"
+B=$HOME/config/non-packaged/bin/epi-menu
+if cmp -s "$T/epi-menu" "$B"; then echo "без изменений"; else
+	diff "$B" "$T/epi-menu"
+	cp "$T/epi-menu" "$B" && chmod +x "$B"
+fi
+"$B" && (hey Deskbar quit >/dev/null 2>&1; sleep 2; /boot/system/Deskbar >/dev/null 2>&1 &)
+echo "ИТОГ: готово; скрытые программы скроются после перезагрузки"
