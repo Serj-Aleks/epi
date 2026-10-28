@@ -20,5 +20,5 @@ if cmp -s "$T/epi-menu" "$B"; then echo "без изменений"; else
 	diff "$B" "$T/epi-menu"
 	cp "$T/epi-menu" "$B" && chmod +x "$B"
 fi
-"$B" && (hey Deskbar quit >/dev/null 2>&1; sleep 2; /boot/system/Deskbar >/dev/null 2>&1 &)
-echo "ИТОГ: готово; скрытые программы скроются после перезагрузки"
+"$B" || { echo "ИТОГ: меню не собралось"; exit 1; }
+echo "ИТОГ: готово; перезагрузи компьютер — изменения вступят в силу после неё"
