@@ -1,0 +1,17 @@
+#!/bin/sh
+# EPI: есть ли в собранном пакете haiku.hpkg файлы, чьи пути содержат образец.
+# Запуск на машине сборки после сборки образа: sh check-package <образец>
+# Вывод: найденные пути и итог «<образец>: есть (N)» или «<образец>: нет».
+P=${1:?образец}
+G=$HOME/haiku-dev/haiku/generated.x86_64
+pkg=$(find "$G/objects/haiku" -name haiku.hpkg -type f -path '*packaging/packages*' | head -1)
+tool=$(find "$G/objects/linux" -name package -type f -perm -u+x | head -1)
+[ -n "$pkg" ] || { echo "не найден haiku.hpkg"; exit 1; }
+[ -n "$tool" ] || { echo "не найден инструмент package"; exit 1; }
+# инструменты сборки для Linux используют свои библиотеки (libbe_build.so и др.)
+libs=$(find "$G/objects/linux" -name '*_build.so' -exec dirname {} \; | sort -u | tr '\n' ':')
+LD_LIBRARY_PATH=$libs$LD_LIBRARY_PATH "$tool" list "$pkg" > /tmp/epi-check-package.txt || { echo "package list не сработал"; exit 1; }
+n=$(grep -c -- "$P" /tmp/epi-check-package.txt)
+grep -- "$P" /tmp/epi-check-package.txt | head -5
+if [ "$n" -gt 0 ]; then echo "$P: есть ($n)"; else echo "$P: нет"; fi
+echo "пакет: $pkg, от $(date -r "$pkg" '+%d.%m %H:%M')"
