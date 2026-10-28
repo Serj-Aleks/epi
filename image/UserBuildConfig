@@ -15,7 +15,7 @@ local epi = [ FDirName $(HAIKU_TOP) .. epi ] ;
 local epiLocal = [ FDirName $(HAIKU_TOP) .. epi-local ] ;
 
 # Firefox и все его зависимости, которых нет в базовом образе.
-# Файл создаёт image/fetch-deps (сверка с собранным образом).
+# Файл создаёт image/fetchdeps (сверка с собранным образом).
 local epiPackagesJam = [ FDirName $(epiLocal) epi-packages.jam ] ;
 if [ Glob $(epiLocal) : epi-packages.jam ] {
 	include $(epiPackagesJam) ;

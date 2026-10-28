@@ -353,7 +353,7 @@ func main() {
 	sort.Strings(sortedNeed)
 	sort.Strings(byFile)
 	var w bytes.Buffer
-	w.WriteString("# создано image/fetch-deps\n")
+	w.WriteString("# создано image/fetchdeps\n")
 	for i := 0; i < len(sortedNeed); i += 10 {
 		j := i + 10
 		if j > len(sortedNeed) {
