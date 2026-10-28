@@ -179,7 +179,6 @@ perl-5.42.2-1-x86_64.hpkg
 pixman-0.46.4-1-x86_64.hpkg
 pkgconfig-0.29.2-4-x86_64.hpkg
 portaudio-19.07.00-3-x86_64.hpkg
-python3.14-3.14.7-1-x86_64.hpkg
 qsystray-5.15.2.14-1-x86_64.hpkg
 qt5-5.15.19-2-x86_64.hpkg
 qt6_base-6.10.3-3-x86_64.hpkg

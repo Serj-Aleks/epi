@@ -30,7 +30,6 @@ libsrtp2
 tcpdump
 libpcap
 netcat
-python3.14
 karchive
 haiku_userguide_*
 be_book
