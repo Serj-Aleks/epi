@@ -167,3 +167,24 @@ func TestErrors(t *testing.T) {
 		}
 	}
 }
+
+// Термы любого алфавита (решение 29.10.2026).
+func TestUnicodeTerms(t *testing.T) {
+	cases := map[string]Kind{
+		`нумерация`: Term, `концепт-1`: Term, `имя:`: SetTerm, `:имя`: GetTerm,
+		`'тема`: LitTerm, `тема.концепт`: Field, `λόγος`: Term, `<абв>`: Tag,
+		`@истина`: Literal, `/уточнение`: Refinement,
+	}
+	for src, want := range cases {
+		v, err := Parse(src)
+		if err != nil || len(v) != 1 || v[0].Kind != want {
+			t.Errorf("%q: %v %v, ожидалось %v", src, v, err, want)
+		}
+	}
+	if _, err := Parse(`1имя`); err == nil {
+		t.Error("терм не может начинаться с цифры")
+	}
+	if !SameTerm("Нумерация", "нумерация") {
+		t.Error("регистронезависимость для кириллицы")
+	}
+}

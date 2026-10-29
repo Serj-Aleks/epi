@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // Kind — вид значения.
@@ -79,7 +80,9 @@ func (e *Error) Error() string {
 var Operators = map[string]bool{"+": true, "-": true, "*": true, "/": true, "//": true,
 	"%": true, "<": true, ">": true, "<=": true, ">=": true, "=": true, "<>": true, "->": true}
 
-const termRe = `[A-Za-z][A-Za-z0-9_?!*+~&|-]*`
+// Терм начинается с буквы любого алфавита (решение 29.10.2026); системный
+// лексикон — общеупотребительные символы и термы латино-эллинской этимологии.
+const termRe = `\pL[\pL\pN_?!*+~&|-]*`
 
 var atoms = []struct {
 	kind Kind
@@ -245,7 +248,7 @@ func (p *parser) value() (Value, error) {
 			return Value{}, p.errAt(line, col, "недопустимые символы в двоичном значении %q", s)
 		}
 		return Value{Kind: k, Text: s, Line: line, Col: col}, nil
-	case len(rest) > 1 && rest[0] == '<' && (isLetter(rune(rest[1])) || rest[1] == '/'):
+	case r == '<' && p.pos+1 < len(p.src) && (unicode.IsLetter(p.src[p.pos+1]) || p.src[p.pos+1] == '/'):
 		start := p.pos
 		for p.pos < len(p.src) && p.peek() != '>' {
 			if p.peek() == '\n' {
@@ -316,8 +319,6 @@ func (p *parser) quoted(line, col int) (string, error) {
 		}
 	}
 }
-
-func isLetter(r rune) bool { return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' }
 
 func min(a, b int) int {
 	if a < b {

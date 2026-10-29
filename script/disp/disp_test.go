@@ -138,3 +138,14 @@ func TestLimit(t *testing.T) {
 		t.Fatalf("продолжение после лимита: %q %v %d", got, err, len(asked))
 	}
 }
+
+func TestUnicodeNames(t *testing.T) {
+	got, _, _, err := run(t, `число: 5  удвоить: [ x * 2 ]  удвоить { x: число }`, 100)
+	if err != nil || got != "10" {
+		t.Fatalf("кириллические имена: %q %v", got, err)
+	}
+	got, _, _, _ = run(t, `Число: 5  число + 1`, 100)
+	if got != "6" {
+		t.Fatalf("регистронезависимость имён: %q", got)
+	}
+}
