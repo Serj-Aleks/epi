@@ -7,6 +7,7 @@
 package disp
 
 import (
+	_ "embed"
 	"fmt"
 	"math"
 	"strconv"
@@ -87,6 +88,7 @@ type slot struct {
 	a      []ason.Value // операнд: значение или «терм { аргументы }»
 	op     *ason.Value
 	b      []ason.Value
+	alias  bool // «имя: препозиция» — алиас препозиции (9.8)
 	ok     bool
 }
 
@@ -96,11 +98,43 @@ type pred struct {
 	ok          bool
 }
 
-func isPrep(v ason.Value) bool  { return v.Kind == ason.Op && v.Text != "->" }
+// prepName: имя препозиции, если токен — препозиция: символ препозиции или
+// терм-алиас, связанный с препозицией (`plus: +`, решение 9.8).
+func prepName(v ason.Value, env *Env) (string, bool) {
+	for depth := 0; depth < 16; depth++ {
+		if v.Kind == ason.Op {
+			return v.Text, v.Text != "->"
+		}
+		if v.Kind != ason.Term || env == nil {
+			return "", false
+		}
+		b, _ := env.find(v.Text)
+		if b == nil || len(b.pred) != 1 {
+			return "", false
+		}
+		v = b.pred[0]
+	}
+	return "", false
+}
+
 func isModel(v ason.Value) bool { return v.Kind == ason.Op && v.Text == "->" }
 
-func operand(vs []ason.Value, i int) ([]ason.Value, int, bool) {
-	if i >= len(vs) || vs[i].Kind == ason.Op || vs[i].Kind == ason.SetTerm {
+type reader struct {
+	vs  []ason.Value
+	env *Env
+}
+
+func (r reader) isPrep(i int) bool {
+	if i >= len(r.vs) {
+		return false
+	}
+	_, ok := prepName(r.vs[i], r.env)
+	return ok
+}
+
+func (r reader) operand(i int) ([]ason.Value, int, bool) {
+	vs := r.vs
+	if i >= len(vs) || vs[i].Kind == ason.Op || vs[i].Kind == ason.SetTerm || r.isPrep(i) {
 		return nil, i, false
 	}
 	if vs[i].Kind == ason.Term && i+1 < len(vs) && vs[i+1].Kind == ason.Object {
@@ -109,36 +143,41 @@ func operand(vs []ason.Value, i int) ([]ason.Value, int, bool) {
 	return vs[i : i+1], i + 1, true
 }
 
-func readSlot(vs []ason.Value, i int) (*slot, int) {
+func (r reader) slot(i int) (*slot, int) {
+	vs := r.vs
 	s := &slot{}
 	if i < len(vs) && vs[i].Kind == ason.SetTerm {
 		d := vs[i]
-		inner, j := readSlot(vs, i+1)
+		// значение, начинающееся с препозиции, — алиас препозиции (9.8)
+		if r.isPrep(i + 1) {
+			return &slot{def: &d, a: vs[i+1 : i+2], alias: true, ok: true}, i + 2
+		}
+		inner, j := r.slot(i + 1)
 		inner.def = &d
 		return inner, j
 	}
-	if i < len(vs) && isPrep(vs[i]) {
+	if r.isPrep(i) {
 		p := vs[i]
 		s.prefix = &p
 		i++
 	}
-	a, j, ok := operand(vs, i)
+	a, j, ok := r.operand(i)
 	if !ok {
 		return s, j
 	}
 	s.a, i = a, j
-	if i < len(vs) && isPrep(vs[i]) {
+	if r.isPrep(i) {
 		if s.prefix != nil {
 			return s, i + 1 // вторая препозиция
 		}
 		o := vs[i]
 		s.op = &o
-		b, j, ok := operand(vs, i+1)
+		b, j, ok := r.operand(i + 1)
 		if !ok {
 			return s, j // препозиция в конце
 		}
 		s.b, i = b, j
-		if i < len(vs) && isPrep(vs[i]) {
+		if r.isPrep(i) {
 			return s, i + 1 // вторая препозиция: в одной предикации одна
 		}
 	}
@@ -146,31 +185,29 @@ func readSlot(vs []ason.Value, i int) (*slot, int) {
 	return s, i
 }
 
-// split делит последовательность на предикации. Нераспознанная часть
+// pred читает одну предикацию с позиции i в текущем контексте (алиасы,
+// определённые предыдущими предикациями, уже действуют). Нераспознанная часть
 // забирает токены до следующей границы.
-func split(vs []ason.Value) []pred {
-	var ps []pred
-	for i := 0; i < len(vs); {
-		start := i
-		p := pred{}
-		p.left, i = readSlot(vs, i)
-		p.ok = p.left.ok
-		if p.ok && i < len(vs) && isModel(vs[i]) {
-			p.right, i = readSlot(vs, i+1)
-			p.ok = p.right.ok
-		}
-		if !p.ok {
-			for i < len(vs) && (vs[i].Kind == ason.Op || (i > start && isPrep(vs[i-1]))) {
-				i++
-			}
-			if i == start {
-				i++
-			}
-		}
-		p.toks = vs[start:i]
-		ps = append(ps, p)
+func (r reader) pred(i int) (pred, int) {
+	vs := r.vs
+	start := i
+	p := pred{}
+	p.left, i = r.slot(i)
+	p.ok = p.left.ok
+	if p.ok && i < len(vs) && isModel(vs[i]) {
+		p.right, i = r.slot(i + 1)
+		p.ok = p.right.ok
 	}
-	return ps
+	if !p.ok {
+		for i < len(vs) && (vs[i].Kind == ason.Op || r.isPrep(i) || (i > start && r.isPrep(i-1))) {
+			i++
+		}
+		if i == start {
+			i++
+		}
+	}
+	p.toks = vs[start:i]
+	return p, i
 }
 
 // ---- интерпретация ----
@@ -189,7 +226,10 @@ func (in *Interp) Run(text string, env *Env) (ason.Value, error) {
 // интерпретацией правого (9.1); с ложным — дальше. Иначе результат — последняя.
 func (in *Interp) block(vs []ason.Value, env *Env) (ason.Value, bool, error) {
 	res := none
-	for _, p := range split(vs) {
+	r := reader{vs: vs, env: env}
+	for i := 0; i < len(vs); {
+		var p pred
+		p, i = r.pred(i)
 		if err := in.step(); err != nil {
 			return none, false, err
 		}
@@ -267,13 +307,15 @@ func (in *Interp) slot(s *slot, env *Env, right bool) (ason.Value, error) {
 	}
 	name, pa, pb := "", &a, (*ason.Value)(nil)
 	if s.prefix != nil {
-		name, pa, pb = s.prefix.Text, nil, &a
+		name, _ = prepName(*s.prefix, env)
+		pa, pb = nil, &a
 	} else {
 		b, err := in.operand(s.b, env, false)
 		if err != nil {
 			return none, err
 		}
-		name, pb = s.op.Text, &b
+		name, _ = prepName(*s.op, env)
+		pb = &b
 	}
 	f := in.Preps[name]
 	if f == nil {
@@ -460,4 +502,16 @@ func basePreps() map[string]Prep {
 		"=":  eq(false),
 		"<>": eq(true),
 	}
+}
+
+//go:embed lexicon.ason
+var lexicon string
+
+// Global — контекст верхнего уровня с системным лексиконом (lexicon.ason).
+func (in *Interp) Global() (*Env, error) {
+	env := NewEnv(nil)
+	if _, err := in.Run(lexicon, env); err != nil {
+		return nil, fmt.Errorf("лексикон: %w", err)
+	}
+	return env, nil
 }

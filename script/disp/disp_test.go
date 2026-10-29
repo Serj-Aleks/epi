@@ -149,3 +149,41 @@ func TestUnicodeNames(t *testing.T) {
 		t.Fatalf("регистронезависимость имён: %q", got)
 	}
 }
+
+// Алиасы препозиций (9.8): «имя: препозиция».
+func TestAliases(t *testing.T) {
+	cases := map[string]string{
+		`plus: +  2 plus 3`:               "5",
+		`minus: -  minus 4`:               "-4",
+		`plus: +  summa: plus  2 summa 3`: "5",
+		`major: >  10 major 3 -> 'ok`:     "ok",
+		`x: (- 5)  x`:                     "-5",
+		`plus: +  plus: -  7 plus 2`:      "5",
+	}
+	for src, want := range cases {
+		got, _, _, err := run(t, src, 100)
+		if err != nil || got != want {
+			t.Errorf("%q: %q %v, ожидалось %q", src, got, err, want)
+		}
+	}
+	_, in, _, err := run(t, `pow: //  2 pow 3`, 100, true)
+	if err != nil || len(in.Unknown) != 1 || in.Unknown[0] != "2 pow 3" {
+		t.Errorf("алиас без интерпретатора: %v %v", in.Unknown, err)
+	}
+}
+
+func TestLexicon(t *testing.T) {
+	in := New(100, nil)
+	env, err := in.Global()
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err := in.Run(`2 plus 3 minus 1`, env)
+	if err != nil || v.String() != "@none" {
+		t.Fatalf("две препозиции в слоте — нераспознано: %v %v", v, err)
+	}
+	v, err = in.Run(`( 2 plus 3 ) minus 1`, env)
+	if err != nil || v.String() != "4" {
+		t.Fatalf("лексикон: %v %v", v, err)
+	}
+}
