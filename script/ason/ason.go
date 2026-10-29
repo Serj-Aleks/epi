@@ -77,7 +77,7 @@ func (e *Error) Error() string {
 
 // Operators — операторы: всегда отдельный токен.
 var Operators = map[string]bool{"+": true, "-": true, "*": true, "/": true, "//": true,
-	"%": true, ":": true, "<": true, ">": true, "<=": true, ">=": true, "=": true, "<>": true, "->": true}
+	"%": true, ":": true, ".": true, "<": true, ">": true, "<=": true, ">=": true, "=": true, "<>": true, "->": true}
 
 // Терм начинается с буквы любого алфавита (решение 29.10.2026); системный
 // лексикон — общеупотребительные символы и термы латино-эллинской этимологии.
@@ -371,13 +371,21 @@ func (v Value) Entries() []Entry {
 	return es
 }
 
-// Format пишет значения в канонический текст (решение 2.4.8).
+// Format пишет значения в канонический текст (решения 2.4.8, 9.10).
 func Format(vs []Value) string {
-	parts := make([]string, len(vs))
+	var b strings.Builder
 	for i, v := range vs {
-		parts[i] = v.String()
+		if i > 0 {
+			// перевод строки между значениями сохраняется: он отделяет предикации (9.10)
+			if v.Line > vs[i-1].End && vs[i-1].End > 0 {
+				b.WriteString("\n")
+			} else {
+				b.WriteString(" ")
+			}
+		}
+		b.WriteString(v.String())
 	}
-	return strings.Join(parts, " ")
+	return b.String()
 }
 
 func (v Value) String() string {

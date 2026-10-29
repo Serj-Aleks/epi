@@ -104,7 +104,7 @@ type pred struct {
 func isPrepTok(v ason.Value) bool {
 	switch v.Kind {
 	case ason.Op:
-		return v.Text != "->" && v.Text != ":"
+		return v.Text != "->" && v.Text != ":" && v.Text != "."
 	case ason.Term:
 		return ason.IsPrepTerm(v.Text)
 	}
@@ -116,11 +116,6 @@ func isModel(v ason.Value) bool { return v.Kind == ason.Op && v.Text == "->" }
 type reader struct{ vs []ason.Value }
 
 func (r reader) isPrep(i int) bool { return i < len(r.vs) && isPrepTok(r.vs[i]) }
-
-// infix: препозиция на позиции i продолжает текущую предикацию, только если
-// стоит на той же строке, где кончается предыдущий токен; препозиция в начале
-// строки начинает новую предикацию (9.9).
-func (r reader) infix(i int) bool { return r.isPrep(i) && i > 0 && r.vs[i].Line == r.vs[i-1].End }
 
 func (r reader) operand(i int) ([]ason.Value, int, bool) {
 	vs := r.vs
@@ -156,7 +151,7 @@ func (r reader) slot(i int) (*slot, int) {
 		return s, j
 	}
 	s.a, i = a, j
-	if r.infix(i) {
+	if r.isPrep(i) {
 		if s.prefix != nil {
 			return s, i + 1 // вторая препозиция
 		}
@@ -167,7 +162,7 @@ func (r reader) slot(i int) (*slot, int) {
 			return s, j // препозиция в конце
 		}
 		s.b, i = b, j
-		if r.infix(i) {
+		if r.isPrep(i) {
 			return s, i + 1 // вторая препозиция: в одном слоте одна
 		}
 	}
@@ -175,29 +170,47 @@ func (r reader) slot(i int) (*slot, int) {
 	return s, i
 }
 
-// pred читает одну предикацию с позиции i. Нераспознанная часть забирает
-// токены до следующей границы.
-func (r reader) pred(i int) (pred, int) {
-	vs := r.vs
-	start := i
-	p := pred{}
-	p.left, i = r.slot(i)
+// segments делит последовательность на предикации (9.10): граница — точка
+// ` . ` (отдельный токен) или перевод строки (значение начинается на строке
+// позже, чем кончилось предыдущее). Пустые части пропускаются.
+func segments(vs []ason.Value) [][]ason.Value {
+	var segs [][]ason.Value
+	start := 0
+	cut := func(end int) {
+		if end > start {
+			segs = append(segs, vs[start:end])
+		}
+	}
+	for i, v := range vs {
+		switch {
+		case v.Kind == ason.Op && v.Text == ".":
+			cut(i)
+			start = i + 1
+		case i > start && v.Line > vs[i-1].End && vs[i-1].End > 0:
+			cut(i)
+			start = i
+		}
+	}
+	cut(len(vs))
+	return segs
+}
+
+// readPred читает предикацию из части seg; часть должна быть ровно одной
+// предикацией, иначе она не распознана целиком.
+func readPred(seg []ason.Value) pred {
+	r := reader{vs: seg}
+	p := pred{toks: seg}
+	var i int
+	p.left, i = r.slot(0)
 	p.ok = p.left.ok
-	if p.ok && i < len(vs) && isModel(vs[i]) {
+	if p.ok && i < len(seg) && isModel(seg[i]) {
 		p.right, i = r.slot(i + 1)
 		p.ok = p.right.ok
 	}
-	if !p.ok {
-		for i < len(vs) && i > start && !ason.IsDef(vs, i) && vs[i].Line == vs[i-1].End &&
-			(vs[i].Kind == ason.Op || r.isPrep(i) || r.isPrep(i-1)) {
-			i++
-		}
-		if i == start {
-			i++
-		}
+	if i != len(seg) {
+		p.ok = false
 	}
-	p.toks = vs[start:i]
-	return p, i
+	return p
 }
 
 // ---- интерпретация ----
@@ -216,10 +229,9 @@ func (in *Interp) Run(text string, env *Env) (ason.Value, error) {
 // интерпретацией правого (9.1); с ложным — дальше. Иначе результат — последняя.
 func (in *Interp) block(vs []ason.Value, env *Env) (ason.Value, bool, error) {
 	res := none
-	r := reader{vs: vs}
-	for i := 0; i < len(vs); {
-		var p pred
-		p, i = r.pred(i)
+
+	for _, seg := range segments(vs) {
+		p := readPred(seg)
 		if err := in.step(); err != nil {
 			return none, false, err
 		}

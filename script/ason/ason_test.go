@@ -36,7 +36,7 @@ var authorExamples = []string{
 // Предикации из раздела 9 спецификации.
 var epiExamples = []string{
 	`A > B -> C`,
-	"Count : [\n    I < 10 -> [ print { X : I }  I : (I + 1)  Count ]\n]",
+	"Count : [\n    I < 10 -> [ print { X : I } . I : (I + 1) . Count ]\n]",
 	`each { In : Items  As : X  Do : [ print { X : X } ] }`,
 	`x + 0 -> x`,
 }
@@ -87,7 +87,7 @@ func TestKinds(t *testing.T) {
 		`abc`: Term, `:`: Op, `:abc`: GetTerm, `'abc`: LitTerm,
 		`.abc`: Selector, `/abc`: Refinement, `@true`: Literal,
 		`abc.def`: Field, `:abc.def`: GetField, `abc/def`: Path,
-		`+`: Op, `/`: Op, `<`: Op, `>=`: Op, `<>`: Op, `->`: Op, `-`: Op,
+		`+`: Op, `.`: Op, `/`: Op, `<`: Op, `>=`: Op, `<>`: Op, `->`: Op, `-`: Op,
 		`l-n`: Term, `length?`: Term,
 	}
 	for src, want := range cases {
@@ -194,5 +194,23 @@ func TestUnicodeTerms(t *testing.T) {
 	}
 	if _, err := Parse(`1имя`); err == nil {
 		t.Error("терм не может начинаться с цифры")
+	}
+}
+
+// Перевод строки отделяет предикации и сохраняется в каноническом тексте (9.10).
+func TestLinesKept(t *testing.T) {
+	src := "A : 1\nB : [ X : 2\n  Y : 3 ] C\nD"
+	v, err := Parse(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := Format(v)
+	want := "A : 1\nB : [ X : 2\nY : 3 ] C\nD"
+	if got != want {
+		t.Fatalf("канонический текст:\n%q\nожидалось\n%q", got, want)
+	}
+	v2, _ := Parse(got)
+	if Format(v2) != got {
+		t.Fatal("повторный обход меняет текст")
 	}
 }
