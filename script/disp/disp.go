@@ -1,9 +1,10 @@
-// Package disp — диспетчер предикаций (claude/ason-spec.md, раздел 9.7).
+// Package disp — диспетчер предикаций (claude/ason-spec.md, разделы 9.7–9.9).
 //
 // Предикация читается из дерева ASON (пакет ason). Форму предикации задаёт её
-// препозиция; препозиция — имя интерпретатора. Предикация без препозиции —
-// аппликация фрейма по имени; «имя:» — описание фрейма (определение).
-// Нераспознанная предикация — не ошибка: она предлагается к записи в базу.
+// препозиция; препозиция — имя интерпретатора. Препозиции — символы
+// (`+`, `>`) и термы со строчной буквы; объекты — термы с прописной.
+// «Ключ : значение» — определение. Нераспознанная предикация — не ошибка:
+// она предлагается к записи в базу.
 package disp
 
 import (
@@ -22,7 +23,7 @@ type Prep func(a, b *ason.Value) (ason.Value, bool)
 
 // Interp — среда интерпретации.
 type Interp struct {
-	Preps   map[string]Prep // препозиция → интерпретатор
+	Preps   map[string]Prep // символ препозиции → интерпретатор
 	Limit   int             // лимит шагов (0.16)
 	Ask     func(q string) bool
 	Unknown []string // база нераспознанных предикаций (канонический текст)
@@ -42,7 +43,7 @@ func New(limit int, ask func(string) bool) *Interp {
 	return &Interp{Preps: basePreps(), Limit: limit, Ask: ask, allowed: limit}
 }
 
-// Env — контекст: модели «имя → предикация». Имена регистронезависимы.
+// Env — контекст: модели «имя -> предикация». Имена сравниваются по ason.Key.
 type Env struct {
 	vars   map[string]*binding
 	parent *Env
@@ -57,7 +58,7 @@ func NewEnv(parent *Env) *Env { return &Env{vars: map[string]*binding{}, parent:
 
 func (e *Env) find(name string) (*binding, *Env) {
 	for c := e; c != nil; c = c.parent {
-		if b, ok := c.vars[strings.ToLower(name)]; ok {
+		if b, ok := c.vars[ason.Key(name)]; ok {
 			return b, c
 		}
 	}
@@ -68,10 +69,10 @@ func (e *Env) find(name string) (*binding, *Env) {
 // связывается в текущем контексте.
 func (e *Env) set(name string, b *binding) {
 	if _, c := e.find(name); c != nil {
-		c.vars[strings.ToLower(name)] = b
+		c.vars[ason.Key(name)] = b
 		return
 	}
-	e.vars[strings.ToLower(name)] = b
+	e.vars[ason.Key(name)] = b
 }
 
 var (
@@ -80,15 +81,15 @@ var (
 	vfals = ason.Value{Kind: ason.Literal, Text: "@false"}
 )
 
-// ---- разбор последовательности на предикации (жёсткий синтаксис 9.7) ----
+// ---- разбор последовательности на предикации ----
 
 type slot struct {
-	def    *ason.Value  // «имя:» — описание (определение)
+	def    *ason.Value  // ключ определения «Ключ : …»
+	alias  bool         // «имя : препозиция» — алиас препозиции (9.8)
 	prefix *ason.Value  // препозиция в начале
-	a      []ason.Value // операнд: значение или «терм { аргументы }»
+	a      []ason.Value // операнд: значение или «Терм { аргументы }»
 	op     *ason.Value
 	b      []ason.Value
-	alias  bool // «имя: препозиция» — алиас препозиции (9.8)
 	ok     bool
 }
 
@@ -98,43 +99,32 @@ type pred struct {
 	ok          bool
 }
 
-// prepName: имя препозиции, если токен — препозиция: символ препозиции или
-// терм-алиас, связанный с препозицией (`plus: +`, решение 9.8).
-func prepName(v ason.Value, env *Env) (string, bool) {
-	for depth := 0; depth < 16; depth++ {
-		if v.Kind == ason.Op {
-			return v.Text, v.Text != "->"
-		}
-		if v.Kind != ason.Term || env == nil {
-			return "", false
-		}
-		b, _ := env.find(v.Text)
-		if b == nil || len(b.pred) != 1 {
-			return "", false
-		}
-		v = b.pred[0]
+// isPrepTok: токен — препозиция: символ (кроме `->` и `:`) или терм со
+// строчной буквы (9.9).
+func isPrepTok(v ason.Value) bool {
+	switch v.Kind {
+	case ason.Op:
+		return v.Text != "->" && v.Text != ":"
+	case ason.Term:
+		return ason.IsPrepTerm(v.Text)
 	}
-	return "", false
+	return false
 }
 
 func isModel(v ason.Value) bool { return v.Kind == ason.Op && v.Text == "->" }
 
-type reader struct {
-	vs  []ason.Value
-	env *Env
-}
+type reader struct{ vs []ason.Value }
 
-func (r reader) isPrep(i int) bool {
-	if i >= len(r.vs) {
-		return false
-	}
-	_, ok := prepName(r.vs[i], r.env)
-	return ok
-}
+func (r reader) isPrep(i int) bool { return i < len(r.vs) && isPrepTok(r.vs[i]) }
+
+// infix: препозиция на позиции i продолжает текущую предикацию, только если
+// стоит на той же строке, где кончается предыдущий токен; препозиция в начале
+// строки начинает новую предикацию (9.9).
+func (r reader) infix(i int) bool { return r.isPrep(i) && i > 0 && r.vs[i].Line == r.vs[i-1].End }
 
 func (r reader) operand(i int) ([]ason.Value, int, bool) {
 	vs := r.vs
-	if i >= len(vs) || vs[i].Kind == ason.Op || vs[i].Kind == ason.SetTerm || r.isPrep(i) {
+	if i >= len(vs) || vs[i].Kind == ason.Op || r.isPrep(i) || ason.IsDef(vs, i) {
 		return nil, i, false
 	}
 	if vs[i].Kind == ason.Term && i+1 < len(vs) && vs[i+1].Kind == ason.Object {
@@ -145,17 +135,17 @@ func (r reader) operand(i int) ([]ason.Value, int, bool) {
 
 func (r reader) slot(i int) (*slot, int) {
 	vs := r.vs
-	s := &slot{}
-	if i < len(vs) && vs[i].Kind == ason.SetTerm {
-		d := vs[i]
+	if ason.IsDef(vs, i) {
+		key := vs[i]
 		// значение, начинающееся с препозиции, — алиас препозиции (9.8)
-		if r.isPrep(i + 1) {
-			return &slot{def: &d, a: vs[i+1 : i+2], alias: true, ok: true}, i + 2
+		if r.isPrep(i + 2) {
+			return &slot{def: &key, a: vs[i+2 : i+3], alias: true, ok: true}, i + 3
 		}
-		inner, j := r.slot(i + 1)
-		inner.def = &d
+		inner, j := r.slot(i + 2)
+		inner.def = &key
 		return inner, j
 	}
+	s := &slot{}
 	if r.isPrep(i) {
 		p := vs[i]
 		s.prefix = &p
@@ -166,7 +156,7 @@ func (r reader) slot(i int) (*slot, int) {
 		return s, j
 	}
 	s.a, i = a, j
-	if r.isPrep(i) {
+	if r.infix(i) {
 		if s.prefix != nil {
 			return s, i + 1 // вторая препозиция
 		}
@@ -177,17 +167,16 @@ func (r reader) slot(i int) (*slot, int) {
 			return s, j // препозиция в конце
 		}
 		s.b, i = b, j
-		if r.isPrep(i) {
-			return s, i + 1 // вторая препозиция: в одной предикации одна
+		if r.infix(i) {
+			return s, i + 1 // вторая препозиция: в одном слоте одна
 		}
 	}
 	s.ok = true
 	return s, i
 }
 
-// pred читает одну предикацию с позиции i в текущем контексте (алиасы,
-// определённые предыдущими предикациями, уже действуют). Нераспознанная часть
-// забирает токены до следующей границы.
+// pred читает одну предикацию с позиции i. Нераспознанная часть забирает
+// токены до следующей границы.
 func (r reader) pred(i int) (pred, int) {
 	vs := r.vs
 	start := i
@@ -199,7 +188,8 @@ func (r reader) pred(i int) (pred, int) {
 		p.ok = p.right.ok
 	}
 	if !p.ok {
-		for i < len(vs) && (vs[i].Kind == ason.Op || r.isPrep(i) || (i > start && r.isPrep(i-1))) {
+		for i < len(vs) && i > start && !ason.IsDef(vs, i) && vs[i].Line == vs[i-1].End &&
+			(vs[i].Kind == ason.Op || r.isPrep(i) || r.isPrep(i-1)) {
 			i++
 		}
 		if i == start {
@@ -226,7 +216,7 @@ func (in *Interp) Run(text string, env *Env) (ason.Value, error) {
 // интерпретацией правого (9.1); с ложным — дальше. Иначе результат — последняя.
 func (in *Interp) block(vs []ason.Value, env *Env) (ason.Value, bool, error) {
 	res := none
-	r := reader{vs: vs, env: env}
+	r := reader{vs: vs}
 	for i := 0; i < len(vs); {
 		var p pred
 		p, i = r.pred(i)
@@ -282,12 +272,39 @@ func (in *Interp) unknown(toks []ason.Value, why string) {
 	}
 }
 
+// resolve: чем интерпретируется препозиция-токен: символом (сим != "")
+// или фреймом-интерпретатором (frame != nil). Алиасы раскрываются.
+func resolve(v ason.Value, env *Env) (sym string, frame *binding) {
+	for depth := 0; depth < 16; depth++ {
+		if v.Kind == ason.Op {
+			return v.Text, nil
+		}
+		b, _ := env.find(v.Text)
+		if b == nil || len(b.pred) != 1 {
+			return "", nil
+		}
+		switch w := b.pred[0]; {
+		case w.Kind == ason.Array:
+			return "", b
+		case isPrepTok(w):
+			v = w
+		default:
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
 // slot: right=true — правый слот модели: блок в нём интерпретируется.
 func (in *Interp) slot(s *slot, env *Env, right bool) (ason.Value, error) {
 	if s.def != nil {
 		d := *s
 		d.def = nil
 		toks := d.toks()
+		if ason.IsPrepTerm(s.def.Text) && !s.alias && !(len(toks) == 1 && toks[0].Kind == ason.Array) {
+			in.unknown(s.toks(), "— препозиция определяется алиасом или фреймом")
+			return none, nil
+		}
 		if len(toks) == 1 && toks[0].Kind == ason.Expr { // ( ) — вычислить сейчас (9.3)
 			v, err := in.operand(toks, env, false)
 			if err != nil {
@@ -295,36 +312,46 @@ func (in *Interp) slot(s *slot, env *Env, right bool) (ason.Value, error) {
 			}
 			toks = []ason.Value{v}
 		}
-		env.set(strings.TrimSuffix(s.def.Text, ":"), &binding{pred: toks, env: env})
+		env.set(s.def.Text, &binding{pred: toks, env: env})
 		return none, nil
 	}
 	if s.op == nil && s.prefix == nil {
 		return in.operand(s.a, env, right)
 	}
+	ptok := s.op
+	if s.prefix != nil {
+		ptok = s.prefix
+	}
+	sym, frame := resolve(*ptok, env)
+	if frame != nil { // препозиция-фрейм: только в начале, аргументы — объектный блок
+		if s.prefix == nil || s.a[0].Kind != ason.Object {
+			in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text))
+			return none, nil
+		}
+		return in.call(frame, s.a[0], env)
+	}
 	a, err := in.operand(s.a, env, false)
 	if err != nil {
 		return none, err
 	}
-	name, pa, pb := "", &a, (*ason.Value)(nil)
+	pa, pb := &a, (*ason.Value)(nil)
 	if s.prefix != nil {
-		name, _ = prepName(*s.prefix, env)
 		pa, pb = nil, &a
 	} else {
 		b, err := in.operand(s.b, env, false)
 		if err != nil {
 			return none, err
 		}
-		name, _ = prepName(*s.op, env)
 		pb = &b
 	}
-	f := in.Preps[name]
+	f := in.Preps[sym]
 	if f == nil {
-		in.unknown(s.toks(), fmt.Sprintf("— нет интерпретатора препозиции «%s»", name))
+		in.unknown(s.toks(), fmt.Sprintf("— нет интерпретатора препозиции «%s»", ptok.Text))
 		return none, nil
 	}
 	v, ok := f(pa, pb)
 	if !ok {
-		in.unknown(s.toks(), fmt.Sprintf("— «%s» не интерпретирует такие аргументы", name))
+		in.unknown(s.toks(), fmt.Sprintf("— «%s» не интерпретирует такие аргументы", ptok.Text))
 		return none, nil
 	}
 	return v, nil
@@ -333,7 +360,7 @@ func (in *Interp) slot(s *slot, env *Env, right bool) (ason.Value, error) {
 func (s *slot) toks() []ason.Value {
 	var t []ason.Value
 	if s.def != nil {
-		t = append(t, *s.def)
+		t = append(t, *s.def, ason.Value{Kind: ason.Op, Text: ":"})
 	}
 	if s.prefix != nil {
 		t = append(t, *s.prefix)
@@ -372,7 +399,7 @@ func (in *Interp) operand(a []ason.Value, env *Env, right bool) (ason.Value, err
 	return v, nil
 }
 
-// apply: аппликация фрейма по имени, с аргументами-моделями или без.
+// apply: аппликация объекта по имени, с аргументами или без.
 func (in *Interp) apply(a []ason.Value, env *Env) (ason.Value, error) {
 	b, _ := env.find(a[0].Text)
 	if b == nil {
@@ -380,17 +407,10 @@ func (in *Interp) apply(a []ason.Value, env *Env) (ason.Value, error) {
 		return none, nil
 	}
 	if len(b.pred) == 1 && b.pred[0].Kind == ason.Array { // фрейм
-		inst := NewEnv(b.env)
 		if len(a) == 2 {
-			for _, e := range a[1].Entries() {
-				inst.vars[strings.ToLower(strings.TrimSuffix(e.Key.Text, ":"))] = &binding{pred: e.Value, env: env}
-			}
+			return in.call(b, a[1], env)
 		}
-		if err := in.step(); err != nil {
-			return none, err
-		}
-		r, _, err := in.block(b.pred[0].Items, inst)
-		return r, err
+		return in.call(b, ason.Value{Kind: ason.Object}, env)
 	}
 	if len(a) == 2 {
 		in.unknown(a, "— «"+a[0].Text+"» не фрейм")
@@ -398,6 +418,21 @@ func (in *Interp) apply(a []ason.Value, env *Env) (ason.Value, error) {
 	}
 	// модель «имя -> предикация»: живая формула, интерпретируется при обращении
 	r, _, err := in.block(b.pred, b.env)
+	return r, err
+}
+
+// call: экземпляр фрейма — контекст, дочерний к контексту описания фрейма;
+// аргументы «Ключ : предикация» — модели экземпляра, интерпретируются в
+// контексте вызова при обращении.
+func (in *Interp) call(frame *binding, args ason.Value, env *Env) (ason.Value, error) {
+	inst := NewEnv(frame.env)
+	for _, e := range args.Entries() {
+		inst.vars[ason.Key(e.Key.Text)] = &binding{pred: e.Value, env: env}
+	}
+	if err := in.step(); err != nil {
+		return none, err
+	}
+	r, _, err := in.block(frame.pred[0].Items, inst)
 	return r, err
 }
 

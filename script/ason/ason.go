@@ -34,14 +34,12 @@ const (
 	Binary16               // #"a1b2"
 	Binary64               // ##"atbf"
 	Term                   // abc
-	SetTerm                // abc:
 	GetTerm                // :abc
 	LitTerm                // 'abc
 	Selector               // .abc
 	Refinement             // /abc
 	Literal                // @abc
 	Field                  // abc.def
-	SetField               // abc.def:
 	GetField               // :abc.def
 	Path                   // abc/def
 	Op                     // + - * / < > ... ->
@@ -50,8 +48,8 @@ const (
 var kindNames = [...]string{"массив", "объект", "выражение", "целое", "десятичное",
 	"деньги", "кортеж", "диапазон", "координаты", "шестнадцатеричное", "дата", "время",
 	"строка", "длинная строка", "тег", "файл", "URL", "email", "двоичное-16",
-	"двоичное-64", "терм", "терм-определение", "терм-получение", "ссылка на терм",
-	"селектор", "уточнение", "литерал", "поле", "установка поля", "получение поля",
+	"двоичное-64", "терм", "терм-получение", "ссылка на терм",
+	"селектор", "уточнение", "литерал", "поле", "получение поля",
 	"путь", "оператор"}
 
 func (k Kind) String() string { return kindNames[k] }
@@ -64,6 +62,7 @@ type Value struct {
 	Items []Value
 	Line  int
 	Col   int
+	End   int // строка, на которой значение кончается
 }
 
 // Error — ошибка разбора с местом в тексте.
@@ -78,7 +77,7 @@ func (e *Error) Error() string {
 
 // Operators — операторы: всегда отдельный токен.
 var Operators = map[string]bool{"+": true, "-": true, "*": true, "/": true, "//": true,
-	"%": true, "<": true, ">": true, "<=": true, ">=": true, "=": true, "<>": true, "->": true}
+	"%": true, ":": true, "<": true, ">": true, "<=": true, ">=": true, "=": true, "<>": true, "->": true}
 
 // Терм начинается с буквы любого алфавита (решение 29.10.2026); системный
 // лексикон — общеупотребительные символы и термы латино-эллинской этимологии.
@@ -104,11 +103,9 @@ var atoms = []struct {
 	{LitTerm, regexp.MustCompile(`^'` + termRe + `$`)},
 	{Selector, regexp.MustCompile(`^\.` + termRe + `$`)},
 	{Refinement, regexp.MustCompile(`^/` + termRe + `$`)},
-	{SetField, regexp.MustCompile(`^` + termRe + `(\.` + termRe + `)+:$`)},
 	{GetField, regexp.MustCompile(`^:` + termRe + `(\.` + termRe + `)+$`)},
 	{Field, regexp.MustCompile(`^` + termRe + `(\.` + termRe + `)+$`)},
 	{Path, regexp.MustCompile(`^` + termRe + `(/` + termRe + `)+$`)},
-	{SetTerm, regexp.MustCompile(`^` + termRe + `:$`)},
 	{GetTerm, regexp.MustCompile(`^:` + termRe + `$`)},
 	{Term, regexp.MustCompile(`^` + termRe + `$`)},
 }
@@ -181,6 +178,7 @@ func (p *parser) seq(end rune, line, col int) ([]Value, error) {
 		if err != nil {
 			return nil, err
 		}
+		v.End = p.line
 		items = append(items, v)
 	}
 }
@@ -273,6 +271,9 @@ func (p *parser) value() (Value, error) {
 	if Operators[tok] {
 		return Value{Kind: Op, Text: tok, Line: line, Col: col}, nil
 	}
+	if len(tok) > 1 && strings.HasSuffix(tok, ":") { // решение 9.9
+		return Value{}, p.errAt(line, col, "определение пишется через пробел: «%s :»", strings.TrimSuffix(tok, ":"))
+	}
 	for _, a := range atoms {
 		if a.re.MatchString(tok) {
 			return Value{Kind: a.kind, Text: tok, Line: line, Col: col}, nil
@@ -327,22 +328,30 @@ func min(a, b int) int {
 	return b
 }
 
-// checkObject: объектный блок начинается с терма-определения, у каждого
-// терма-определения есть значение (решение 2.4.6).
+// IsDef: на позиции i начинается определение «Ключ : …» (решение 9.9).
+func IsDef(items []Value, i int) bool {
+	return i+1 < len(items) && (items[i].Kind == Term || items[i].Kind == Field) &&
+		items[i+1].Kind == Op && items[i+1].Text == ":"
+}
+
+// checkObject: объектный блок — определения «Ключ : значение»; значение —
+// всё до следующего определения (решения 2.4.6, 9.9).
 func checkObject(items []Value, line, col int) error {
-	for i, v := range items {
-		isKey := v.Kind == SetTerm || v.Kind == SetField
-		if i == 0 && !isKey {
-			return &Error{v.Line, v.Col, "объектный блок должен начинаться с терма-определения"}
-		}
-		if isKey && (i+1 == len(items) || items[i+1].Kind == SetTerm || items[i+1].Kind == SetField) {
-			return &Error{v.Line, v.Col, fmt.Sprintf("у «%s» нет значения", v.Text)}
+	if len(items) > 0 && !IsDef(items, 0) {
+		return &Error{items[0].Line, items[0].Col, "объектный блок должен начинаться с определения «Ключ : значение»"}
+	}
+	for i := 0; i < len(items); i++ {
+		if IsDef(items, i) {
+			if i+2 == len(items) || IsDef(items, i+2) {
+				return &Error{items[i].Line, items[i].Col, fmt.Sprintf("у «%s» нет значения", items[i].Text)}
+			}
+			i++
 		}
 	}
 	return nil
 }
 
-// Entry — терм-определение объектного блока и его значение (одно или несколько).
+// Entry — определение объектного блока: ключ и значение (одно или несколько).
 type Entry struct {
 	Key   Value
 	Value []Value
@@ -351,11 +360,12 @@ type Entry struct {
 // Entries раскладывает объектный блок на пары «ключ — значение».
 func (v Value) Entries() []Entry {
 	var es []Entry
-	for _, it := range v.Items {
-		if it.Kind == SetTerm || it.Kind == SetField {
-			es = append(es, Entry{Key: it})
+	for i := 0; i < len(v.Items); i++ {
+		if IsDef(v.Items, i) {
+			es = append(es, Entry{Key: v.Items[i]})
+			i++
 		} else if len(es) > 0 {
-			es[len(es)-1].Value = append(es[len(es)-1].Value, it)
+			es[len(es)-1].Value = append(es[len(es)-1].Value, v.Items[i])
 		}
 	}
 	return es
@@ -393,6 +403,23 @@ func (v Value) String() string {
 	return v.Text
 }
 
-// SameTerm сравнивает написания термов без учёта регистра (термы
-// регистронезависимы, раздел 2.3).
-func SameTerm(a, b string) bool { return strings.EqualFold(a, b) }
+// Key — ключ терма для сравнения: первая буква — как написана (строчная —
+// препозиция, прописная — объект, решение 9.9), остальные — без учёта регистра.
+func Key(s string) string {
+	r := []rune(s)
+	if len(r) == 0 {
+		return s
+	}
+	return string(r[0]) + strings.ToLower(string(r[1:]))
+}
+
+// SameTerm сравнивает написания термов по Key.
+func SameTerm(a, b string) bool { return Key(a) == Key(b) }
+
+// IsPrepTerm: терм — препозиция (начинается со строчной буквы, решение 9.9).
+func IsPrepTerm(s string) bool {
+	for _, r := range s {
+		return unicode.IsLower(r)
+	}
+	return false
+}

@@ -5,8 +5,9 @@ import (
 	"testing"
 )
 
-// Примеры со страницы спецификации ASON (с поправками раздела 2.4:
-// дата и время через «/»).
+// Примеры со страницы спецификации ASON (с поправками раздела 2.4 — дата и
+// время через «/» — и 9.9 — определение « : » через пробел).
+
 var authorExamples = []string{
 	`[ 1 2 3 4 5 ]`,
 	`[ "A" "B" "C" ]`,
@@ -17,11 +18,11 @@ var authorExamples = []string{
 	`[ if time > 10:30 [ turn-off back-light ]]`,
 	`[ at [ 10:22 15:30 ] activate [ front side back ]]`,
 	`[ TCP address 138.197.200.83 for http://altscript.com ]`,
-	`{ name: "John Smith" age: 27 }`,
-	`{ site: "Altscript" url: http://altscript.com }`,
-	`{ directions: [ up down left right ] }`,
-	"{\n    first-name:  \"John\"\n    last-name:   \"Smith\"\n    birth-date:  1990-7-4\n    clock-color: 255.80.30\n    wake-time:   [ 7:44 weekdays 9:00 weekends ]\n    services:    [ http://spotify.com http://pandora.com ]\n    song-id:     #\"C23A9F87D457\"\n}",
-	"{\n    start-time: 10:30\n    stop-time: start-time + 3:00\n}",
+	`{ name : "John Smith" age : 27 }`,
+	`{ site : "Altscript" url : http://altscript.com }`,
+	`{ directions : [ up down left right ] }`,
+	"{\n    first-name :  \"John\"\n    last-name :   \"Smith\"\n    birth-date :  1990-7-4\n    clock-color : 255.80.30\n    wake-time :   [ 7:44 weekdays 9:00 weekends ]\n    services :    [ http://spotify.com http://pandora.com ]\n    song-id :     #\"C23A9F87D457\"\n}",
+	"{\n    start-time : 10:30\n    stop-time : start-time + 3:00\n}",
 	`( 123 + 456 )`,
 	`( 10:30 - 3:00 )`,
 	`( 2021-2-1 - 365 )`,
@@ -35,8 +36,8 @@ var authorExamples = []string{
 // Предикации из раздела 9 спецификации.
 var epiExamples = []string{
 	`A > B -> C`,
-	"count: [\n    i < 10 -> [ print i  i: (i + 1)  count ]\n]",
-	`each { in: items  as: x  do: [ print x ] }`,
+	"Count : [\n    I < 10 -> [ print { X : I }  I : (I + 1)  Count ]\n]",
+	`each { In : Items  As : X  Do : [ print { X : X } ] }`,
 	`x + 0 -> x`,
 }
 
@@ -83,9 +84,9 @@ func TestKinds(t *testing.T) {
 		`2021-4-5/10:23:45-8:00`: Date, `2021-4-5/10:23:45+2:00`: Date,
 		`"abc"`: String, `''abc''`: LongString, `<abc>`: Tag, `%abc`: File,
 		`abc://`: URL, `ab@cde`: Email, `#"a1b2c"`: Binary16, `##"atbfc"`: Binary64,
-		`abc`: Term, `abc:`: SetTerm, `:abc`: GetTerm, `'abc`: LitTerm,
+		`abc`: Term, `:`: Op, `:abc`: GetTerm, `'abc`: LitTerm,
 		`.abc`: Selector, `/abc`: Refinement, `@true`: Literal,
-		`abc.def`: Field, `abc.def:`: SetField, `:abc.def`: GetField, `abc/def`: Path,
+		`abc.def`: Field, `:abc.def`: GetField, `abc/def`: Path,
 		`+`: Op, `/`: Op, `<`: Op, `>=`: Op, `<>`: Op, `->`: Op, `-`: Op,
 		`l-n`: Term, `length?`: Term,
 	}
@@ -117,19 +118,27 @@ func TestStrings(t *testing.T) {
 }
 
 func TestObjectEntries(t *testing.T) {
-	v, err := Parse(`{ start-time: 10:30 stop-time: start-time + 3:00 }`)
+	v, err := Parse(`{ start-time : 10:30 stop-time : start-time + 3:00 }`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	es := v[0].Entries()
-	if len(es) != 2 || es[1].Key.Text != "stop-time:" || Format(es[1].Value) != "start-time + 3:00" {
+	if len(es) != 2 || es[1].Key.Text != "stop-time" || Format(es[1].Value) != "start-time + 3:00" {
 		t.Fatalf("значение до следующего терма-определения: %+v", es)
 	}
 }
 
-func TestTermsCaseInsensitive(t *testing.T) {
-	if !SameTerm("First-Name", "first-name") || SameTerm("a", "b") {
-		t.Fatal("термы регистронезависимы")
+// Регистр значим по первой букве (решение 9.9): строчная — препозиция,
+// прописная — объект; остальные буквы — без учёта регистра.
+func TestTermCase(t *testing.T) {
+	if !SameTerm("First-Name", "First-NAME") || SameTerm("First", "first") || SameTerm("a", "b") {
+		t.Fatal("сравнение термов")
+	}
+	if !SameTerm("Нумерация", "НУМЕРАЦИЯ") || SameTerm("Нумерация", "нумерация") {
+		t.Fatal("сравнение термов кириллицей")
+	}
+	if !IsPrepTerm("plus") || IsPrepTerm("Plus") || !IsPrepTerm("в") || IsPrepTerm("Тема") {
+		t.Fatal("препозиция — со строчной буквы")
 	}
 }
 
@@ -141,9 +150,11 @@ func TestErrors(t *testing.T) {
 		"[ 1\n  12abc ]":    "строка 2, позиция 3: непонятный токен",
 		`1,23`:              "непонятный токен",
 		`2021-4-5-10:23:45`: "непонятный токен",
-		`{ 1 a: 2 }`:        "объектный блок должен начинаться",
-		`{ a: b: 2 }`:       "у «a:» нет значения",
-		`{ a: }`:            "у «a:» нет значения",
+		`{ 1 a : 2 }`:       "объектный блок должен начинаться",
+		`{ a : b : 2 }`:     "у «a» нет значения",
+		`{ a : }`:           "у «a» нет значения",
+		`a: 1`:              "определение пишется через пробел: «a :»",
+		`{ a: 1 }`:          "определение пишется через пробел",
 		`"abc`:              "строка не закрыта",
 		"\"a\nb\"":          "перевод строки внутри",
 		`"a\q"`:             "неизвестное экранирование",
@@ -171,7 +182,7 @@ func TestErrors(t *testing.T) {
 // Термы любого алфавита (решение 29.10.2026).
 func TestUnicodeTerms(t *testing.T) {
 	cases := map[string]Kind{
-		`нумерация`: Term, `концепт-1`: Term, `имя:`: SetTerm, `:имя`: GetTerm,
+		`нумерация`: Term, `концепт-1`: Term, `:имя`: GetTerm,
 		`'тема`: LitTerm, `тема.концепт`: Field, `λόγος`: Term, `<абв>`: Tag,
 		`@истина`: Literal, `/уточнение`: Refinement,
 	}
@@ -183,8 +194,5 @@ func TestUnicodeTerms(t *testing.T) {
 	}
 	if _, err := Parse(`1имя`); err == nil {
 		t.Error("терм не может начинаться с цифры")
-	}
-	if !SameTerm("Нумерация", "нумерация") {
-		t.Error("регистронезависимость для кириллицы")
 	}
 }
