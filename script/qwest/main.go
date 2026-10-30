@@ -88,10 +88,10 @@ func openSession(dir string) (*Session, error) {
 			f.Add(disp.Model{Pred: ason.Format(vs[i].Items), Value: vs[i+2]})
 		}
 	}
-	if b, err := os.ReadFile(s.file("ignota.ason")); err == nil {
+	if b, err := os.ReadFile(s.file("ignor.uic")); err == nil {
 		vs, err := ason.Parse(string(b))
 		if err != nil {
-			return nil, fmt.Errorf("ignota.ason: %w", err)
+			return nil, fmt.Errorf("ignor.uic: %w", err)
 		}
 		for _, v := range vs {
 			if v.Kind == ason.Array {
@@ -172,7 +172,7 @@ func (s *Session) start(text string) *run {
 			t.Answer, t.Error = err.Error(), true
 		}
 		for _, u := range s.in.Unknown[known:] {
-			if e := appendFile(s.file("ignota.ason"), "[ "+u+" ]\n"); e != nil {
+			if e := appendFile(s.file("ignor.uic"), "[ "+u+" ]\n"); e != nil {
 				log.Print(e)
 			}
 		}
