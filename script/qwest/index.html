@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Qwest</title>
 <style>
-  :root { --bg: #0a0d16; --fg: #dfe3ec; --dim: #7c8599; --acc: #e8c35a; --err: #e8806f; --line: rgba(232,195,90,.18); }
+  :root { --bg: #0a0d16; --g1: #1a2238; --g2: #0e1322; --bar: rgba(10,13,22,.6); --fg: #dfe3ec; --dim: #7c8599; --acc: #e8c35a; --err: #e8806f; --line: rgba(232,195,90,.18); }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; color: var(--fg);
     /* тёмно-чернильный фон со свечением в центре и знаком Θ APOTHEOS */
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23e8c35a' stroke-opacity='.06' stroke-width='3'%3E%3Cellipse cx='32' cy='32' rx='22' ry='26'/%3E%3Cpath d='M21 32H43'/%3E%3C/g%3E%3C/svg%3E") center 55% / min(70vh, 70vw) no-repeat fixed,
-      radial-gradient(ellipse at 50% 40%, #1a2238 0%, #0e1322 45%, var(--bg) 100%) fixed;
+      radial-gradient(ellipse at 50% 40%, var(--g1) 0%, var(--g2) 45%, var(--bg) 100%) fixed;
     font: 16px/1.5 "DejaVu Sans Mono", "Noto Sans Mono", monospace; }
   body { display: flex; flex-direction: column; }
-  header { display: flex; gap: 8px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); background: rgba(10,13,22,.6); }
-  header select { background: #0e1322; color: var(--fg); border: 1px solid var(--line); font: inherit;
+  header { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--bar); }
+  header select { background: var(--g2); color: var(--fg); border: 1px solid var(--line); font: inherit;
     padding: 2px 6px; border-radius: 4px; max-width: 60vw; }
   button { background: none; border: 1px solid var(--line); color: var(--fg); min-width: 32px; height: 28px;
     border-radius: 4px; cursor: pointer; font: inherit; }
@@ -30,7 +30,7 @@
   .ans.err .v { color: var(--err); }
   .ans .f, .q .f { margin-left: auto; color: var(--dim); font-size: 13px; }
   .q { padding-left: 2ch; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  form { display: flex; border-top: 1px solid var(--line); background: rgba(10,13,22,.6); }
+  form { display: flex; border-top: 1px solid var(--line); background: var(--bar); }
   form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
   input { flex: 1; background: none; border: 0; color: var(--fg); font: inherit; padding: 12px 16px 12px 1ch; outline: none; }
   input:disabled { opacity: .4; }
@@ -38,10 +38,10 @@
 </head>
 <body>
 <header>
+  <span id="note"></span>
+  <select id="seans" title="seans"></select>
   <button id="new" title="new seans">＋</button>
   <button id="close" title="close seans">■</button>
-  <select id="seans" title="seans"></select>
-  <span id="note"></span>
 </header>
 <div id="log" aria-live="polite"></div>
 <form id="f" autocomplete="off"><input id="i" title="predicatio" spellcheck="false"></form>
