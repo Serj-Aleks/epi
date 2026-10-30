@@ -1,7 +1,7 @@
 // Qwest — строка взаимодействия с диспетчером предикаций в браузере
 // (claude/ason-spec.md, раздел 9.11). Предикация вводится в строке, ответ
-// диспетчера — следующей строкой диалога. Сессия сохраняется: каждая
-// предикация порождает модель «Predicatio — Interpretatio» в файле сессии.
+// диспетчера — следующей строкой диалога. Сессия (предикации автора)
+// сохраняется; модели интерпретаций — в файлах фреймов-интерпретаторов.
 //
 // Запуск: go run ./qwest [-addr 127.0.0.1:8790] [-data папка]
 package main
@@ -71,22 +71,21 @@ func openSession(dir string) (*Session, error) {
 		return nil, err
 	}
 	s.env = env
-	// восстановление: модели сессии читаются, предикации интерпретируются
-	// заново без вопросов — так восстанавливается контекст (определения)
-	if b, err := os.ReadFile(s.file("sessio.ason")); err == nil {
+	// модели фреймов-интерпретаторов: «[ предикация ] -> интерпретация» (9.11)
+	for _, f := range s.in.Frames {
+		b, err := os.ReadFile(s.file(f.Name + ".ason"))
+		if err != nil {
+			continue
+		}
 		vs, err := ason.Parse(string(b))
 		if err != nil {
-			return nil, fmt.Errorf("sessio.ason: %w", err)
+			return nil, fmt.Errorf("%s.ason: %w", f.Name, err)
 		}
-		for _, v := range vs {
-			t := turnOf(v)
-			if t.Pred == "" {
-				continue
+		for i := 0; i+2 < len(vs); i += 3 {
+			if vs[i].Kind != ason.Array || vs[i+1].Kind != ason.Op || vs[i+1].Text != "->" {
+				return nil, fmt.Errorf("%s.ason: строка %d: ожидалась модель «[ … ] -> …»", f.Name, vs[i].Line)
 			}
-			if !t.Error {
-				s.in.Run(t.Pred, s.env)
-			}
-			s.turns = append(s.turns, t)
+			f.Add(disp.Model{Pred: ason.Format(vs[i].Items), Value: vs[i+2]})
 		}
 	}
 	if b, err := os.ReadFile(s.file("ignota.ason")); err == nil {
@@ -100,58 +99,48 @@ func openSession(dir string) (*Session, error) {
 			}
 		}
 	}
+	// сессия — предикации автора по порядку; при запуске они интерпретируются
+	// заново без вопросов: восстанавливаются контекст и ответы диалога
+	if b, err := os.ReadFile(s.file("sessio.ason")); err == nil {
+		vs, err := ason.Parse(string(b))
+		if err != nil {
+			return nil, fmt.Errorf("sessio.ason: %w", err)
+		}
+		for _, v := range vs {
+			text := v.Text
+			if v.Kind == ason.Array {
+				text = ason.Format(v.Items)
+			}
+			s.turns = append(s.turns, s.replay(text))
+		}
+	}
+	s.in.OnModel = func(f *disp.Frame, m disp.Model) {
+		if err := appendFile(s.file(f.Name+".ason"), "[ "+m.Pred+" ] -> "+m.Value.String()+"\n"); err != nil {
+			log.Print(err)
+		}
+	}
 	return s, nil
 }
 
-func (s *Session) file(name string) string { return filepath.Join(s.dir, name) }
-
-// model: запись шага как модели с ключами слотов (одна строка файла сессии).
-func model(t Turn) string {
-	interp := "@none"
-	if len(t.Frames) > 0 {
-		interp = "[ " + strings.Join(t.Frames, " ") + " ]"
-	}
-	ans := ason.Value{Kind: ason.String, Text: t.Answer}.String()
-	if t.Error {
-		interp = "'erratum"
-	}
-	pred := "[ " + t.Pred + " ]"
-	if _, err := ason.Parse(t.Pred); err != nil { // нечитаемый ввод — строкой
-		pred = ason.Value{Kind: ason.String, Text: t.Pred}.String()
-	}
-	return fmt.Sprintf("{ Predicatio : %s  Interpretatio : %s  Interpres : %s }\n", pred, ans, interp)
-}
-
-func turnOf(v ason.Value) Turn {
-	var t Turn
-	if v.Kind != ason.Object {
-		return t
-	}
-	for _, e := range v.Entries() {
-		if len(e.Value) != 1 {
-			continue
-		}
-		x := e.Value[0]
-		switch e.Key.Text {
-		case "Predicatio":
-			t.Pred = ason.Format(x.Items)
-			if x.Kind == ason.String {
-				t.Pred = x.Text
-			}
-		case "Interpretatio":
-			t.Answer = x.Text
-		case "Interpres":
-			if x.Kind == ason.LitTerm && x.Text == "'erratum" {
-				t.Error = true
-			}
-			for _, f := range x.Items {
-				t.Frames = append(t.Frames, f.Text)
-			}
-		}
+func (s *Session) replay(text string) Turn {
+	v, err := s.in.Run(text, s.env)
+	t := Turn{Pred: text, Answer: v.String(), Frames: append([]string(nil), s.in.Used...)}
+	if err != nil {
+		t.Answer, t.Error = err.Error(), true
 	}
 	return t
 }
 
+func (s *Session) file(name string) string { return filepath.Join(s.dir, name) }
+
+// input: предикация автора как строка сессии — блок данных `[ … ]` (9.3);
+// нечитаемый ввод — строкой.
+func input(text string) string {
+	if _, err := ason.Parse(text); err != nil {
+		return ason.Value{Kind: ason.String, Text: text}.String() + "\n"
+	}
+	return "[ " + text + " ]\n"
+}
 func appendFile(path, text string) error {
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -201,7 +190,7 @@ func (s *Session) wait(r *run) Reply {
 	case t := <-r.done:
 		s.pending, s.pPred, s.pQuest = nil, "", ""
 		s.turns = append(s.turns, t)
-		if err := appendFile(s.file("sessio.ason"), model(t)); err != nil {
+		if err := appendFile(s.file("sessio.ason"), input(t.Pred)); err != nil {
 			log.Print(err)
 		}
 		return Reply{Turn: &t}

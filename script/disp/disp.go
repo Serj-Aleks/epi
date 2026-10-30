@@ -23,9 +23,10 @@ type Prep func(a, b *ason.Value) (ason.Value, bool)
 
 // Interp — среда интерпретации.
 type Interp struct {
-	Frames  []*Frame // фреймы-интерпретаторы препозиций (9.11)
-	Used    []string // фреймы, интерпретировавшие последнюю Run
-	Limit   int      // лимит шагов (0.16)
+	Frames  []*Frame                // фреймы-интерпретаторы препозиций (9.11)
+	Used    []string                // фреймы, интерпретировавшие последнюю Run
+	OnModel func(f *Frame, m Model) // новая модель во фрейме-интерпретаторе
+	Limit   int                     // лимит шагов (0.16)
 	Ask     func(q string) bool
 	Unknown []string // база нераспознанных предикаций (канонический текст)
 	steps   int
@@ -45,6 +46,53 @@ func (s Stopped) Error() string {
 type Frame struct {
 	Name   string
 	Kernel map[string]Prep
+	Models []Model // динамическая часть: модели интерпретаций (9.11)
+}
+
+// Model — модель интерпретации «[ предикация ] -> интерпретация» в контексте
+// фрейма-интерпретатора.
+type Model struct {
+	Pred  string
+	Value ason.Value
+}
+
+// Add добавляет модель, если такой предикации во фрейме ещё нет; true — добавлена.
+func (f *Frame) Add(m Model) bool {
+	for _, x := range f.Models {
+		if x.Pred == m.Pred {
+			return false
+		}
+	}
+	f.Models = append(f.Models, m)
+	return true
+}
+
+// Frame находит фрейм-интерпретатор по имени.
+func (in *Interp) Frame(name string) *Frame {
+	for _, f := range in.Frames {
+		if f.Name == name {
+			return f
+		}
+	}
+	return nil
+}
+
+// pure: в предикации только значения, без имён — модель порождается только
+// для таких предикаций (явные числа, 9.11); параметризованные — следующий шаг.
+func pure(toks []ason.Value) bool {
+	for _, t := range toks {
+		switch t.Kind {
+		case ason.Term, ason.GetTerm, ason.Field, ason.GetField, ason.Path:
+			if !isPrepTok(t) {
+				return false
+			}
+		case ason.Array, ason.Expr, ason.Object:
+			if !pure(t.Items) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // prep находит интерпретатор символа препозиции и его фрейм.
@@ -246,6 +294,7 @@ func readPred(seg []ason.Value) pred {
 // Run читает текст и интерпретирует его в контексте env.
 func (in *Interp) Run(text string, env *Env) (ason.Value, error) {
 	in.Used = nil
+	in.steps, in.allowed = 0, in.Limit // лимит — на одну интерпретацию
 	vs, err := ason.Parse(text)
 	if err != nil {
 		return none, err
@@ -396,6 +445,12 @@ func (in *Interp) slot(s *slot, env *Env, right bool) (ason.Value, error) {
 		return none, nil
 	}
 	in.use(fr)
+	if toks := s.toks(); pure(toks) {
+		m := Model{Pred: ason.Format(toks), Value: v}
+		if fr.Add(m) && in.OnModel != nil {
+			in.OnModel(fr, m)
+		}
+	}
 	return v, nil
 }
 
