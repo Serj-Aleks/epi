@@ -14,6 +14,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"epi/script/ason"
 )
@@ -315,7 +316,7 @@ func (in *Interp) block(vs []ason.Value, env *Env) (ason.Value, bool, error) {
 			return none, false, err
 		}
 		if !p.ok {
-			in.unknown(p.toks, "не распознана")
+			in.unknown(p.toks, "не распознана"+caseHint(p.toks, env))
 			res = none
 			continue
 		}
@@ -393,7 +394,7 @@ func (in *Interp) slot(s *slot, env *Env, right bool) (ason.Value, error) {
 		d.def = nil
 		toks := d.toks()
 		if ason.IsPrepTerm(s.def.Text) && !s.alias && !(len(toks) == 1 && toks[0].Kind == ason.Array) {
-			in.unknown(s.toks(), "— препозиция определяется алиасом или фреймом")
+			in.unknown(s.toks(), fmt.Sprintf("— «%s» со строчной буквы — препозиция, она определяется алиасом или фреймом; объект пишется с прописной: «%s : …»", s.def.Text, upperFirst(s.def.Text)))
 			return none, nil
 		}
 		if len(toks) == 1 && toks[0].Kind == ason.Expr { // ( ) — вычислить сейчас (9.3)
@@ -666,4 +667,25 @@ func (in *Interp) Global() (*Env, error) {
 		return nil, fmt.Errorf("лексикон: %w", err)
 	}
 	return env, nil
+}
+
+func upperFirst(s string) string {
+	r := []rune(s)
+	if len(r) > 0 {
+		r[0] = unicode.ToUpper(r[0])
+	}
+	return string(r)
+}
+
+// caseHint: подсказка, если в предикации неопределённый терм со строчной
+// буквы — он читается как препозиция (9.9), а имелся в виду, вероятно, объект.
+func caseHint(toks []ason.Value, env *Env) string {
+	for _, t := range toks {
+		if t.Kind == ason.Term && ason.IsPrepTerm(t.Text) {
+			if b, _ := env.find(t.Text); b == nil {
+				return fmt.Sprintf(" («%s» со строчной буквы — препозиция; объект пишется с прописной: «%s»)", t.Text, upperFirst(t.Text))
+			}
+		}
+	}
+	return ""
 }
