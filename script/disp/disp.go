@@ -114,7 +114,7 @@ func (in *Interp) use(f *Frame) {
 	in.Used = append(in.Used, f.Name)
 }
 
-// New — среда с фреймами-интерпретаторами arithmetica и logica.
+// New — среда с фреймами-интерпретаторами arifm и logic (имена — пять литер, 0.18).
 func New(limit int, ask func(string) bool) *Interp {
 	return &Interp{Frames: baseFrames(), Limit: limit, Ask: ask, allowed: limit}
 }
@@ -615,7 +615,7 @@ func baseFrames() []*Frame {
 			return p(a, b)
 		}
 	}
-	arithmetica := map[string]Prep{
+	arifm := map[string]Prep{
 		"+": plusOnlyInfix(arith(func(x, y float64) (float64, bool) { return x + y, true })),
 		"-": arith(func(x, y float64) (float64, bool) { return x - y, true }),
 		"*": plusOnlyInfix(arith(func(x, y float64) (float64, bool) { return x * y, true })),
@@ -628,7 +628,7 @@ func baseFrames() []*Frame {
 			return number(x/y, false), true
 		}),
 	}
-	logica := map[string]Prep{
+	logic := map[string]Prep{
 		"<":  plusOnlyInfix(cmp(func(x, y float64) bool { return x < y })),
 		">":  plusOnlyInfix(cmp(func(x, y float64) bool { return x > y })),
 		"<=": plusOnlyInfix(cmp(func(x, y float64) bool { return x <= y })),
@@ -636,7 +636,7 @@ func baseFrames() []*Frame {
 		"=":  eq(false),
 		"<>": eq(true),
 	}
-	return []*Frame{{Name: "arithmetica", Kernel: arithmetica}, {Name: "logica", Kernel: logica}}
+	return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic}}
 }
 
 //go:embed lexicon.ason

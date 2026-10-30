@@ -87,24 +87,24 @@ func TestBinding(t *testing.T) {
 // фрейм-объект с прописной — аппликация по имени.
 func TestFrames(t *testing.T) {
 	expect(t, map[string]string{
-		"double : [ X * 2 ]\nN : 4\ndouble { X : N + 1 }": "10",
-		`Twice : [ X * 2 ] . Twice { X : 21 }`:            "42",
+		"dupla : [ X * 2 ]\nN : 4\ndupla { X : N + 1 }": "10",
+		`Twice : [ X * 2 ] . Twice { X : 21 }`:          "42",
 	})
 }
 
 // Нераспознанная предикация — не ошибка: вопрос и запись в базу (0.7).
 func TestUnknown(t *testing.T) {
 	cases := map[string]string{
-		`7 // 2`:                      "7 // 2",     // нет интерпретатора символа
-		`7 foo 2`:                     "7 foo 2",    // нет интерпретатора препозиции-терма
-		`"a" + 1`:                     `"a" + 1`,    // нет интерпретации для таких аргументов
-		`Frobnicate`:                  "Frobnicate", // имя не определено
-		`1 +`:                         "1 +",        // препозиция в конце
-		`1 + 2 + 3`:                   "1 + 2 + 3",  // две препозиции в слоте
-		`1 / 0`:                       "1 / 0",
-		`print`:                       "print",      // препозиция без операнда
-		`x : 5`:                       "x : 5",      // препозиция определяется алиасом или фреймом
-		`double : [ X ] . 1 double 2`: "1 double 2", // фрейм-препозиция — только в начале
+		`7 // 2`:                    "7 // 2",     // нет интерпретатора символа
+		`7 foo 2`:                   "7 foo 2",    // нет интерпретатора препозиции-терма
+		`"a" + 1`:                   `"a" + 1`,    // нет интерпретации для таких аргументов
+		`Frobnicate`:                "Frobnicate", // имя не определено
+		`1 +`:                       "1 +",        // препозиция в конце
+		`1 + 2 + 3`:                 "1 + 2 + 3",  // две препозиции в слоте
+		`1 / 0`:                     "1 / 0",
+		`print`:                     "print",     // препозиция без операнда
+		`x : 5`:                     "x : 5",     // препозиция определяется алиасом или фреймом
+		`dupla : [ X ] . 1 dupla 2`: "1 dupla 2", // фрейм-препозиция — только в начале
 	}
 	for src, rec := range cases {
 		_, in, asked, err := run(t, src, 100, true)
@@ -196,9 +196,9 @@ func TestBoundaries(t *testing.T) {
 func TestFramesUsed(t *testing.T) {
 	in := New(100, nil)
 	for src, want := range map[string]string{
-		`2 + 3`:         "arithmetica",
-		`2 > 3`:         "logica",
-		`( 2 + 3 ) > 4`: "arithmetica logica",
+		`2 + 3`:         "arifm",
+		`2 > 3`:         "logic",
+		`( 2 + 3 ) > 4`: "arifm logic",
 		`'a`:            "",
 	} {
 		if _, err := in.Run(src, NewEnv(nil)); err != nil {
@@ -221,11 +221,11 @@ func TestModels(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	want := "arithmetica: [2 + 3] -> 5|logica: [( 2 + 3 ) > 4] -> @true"
+	want := "arifm: [2 + 3] -> 5|logic: [( 2 + 3 ) > 4] -> @true"
 	if got := strings.Join(added, "|"); got != want {
 		t.Fatalf("модели:\n%s\nожидалось\n%s", got, want)
 	}
-	if len(in.Frame("arithmetica").Models) != 1 || len(in.Frame("logica").Models) != 1 {
+	if len(in.Frame("arifm").Models) != 1 || len(in.Frame("logic").Models) != 1 {
 		t.Fatal("повторная предикация не дублирует модель; с именами — модели нет")
 	}
 }

@@ -73,17 +73,17 @@ func openSession(dir string) (*Session, error) {
 	s.env = env
 	// модели фреймов-интерпретаторов: «[ предикация ] -> интерпретация» (9.11)
 	for _, f := range s.in.Frames {
-		b, err := os.ReadFile(s.file(f.Name + ".ason"))
+		b, err := os.ReadFile(s.file(f.Name))
 		if err != nil {
 			continue
 		}
 		vs, err := ason.Parse(string(b))
 		if err != nil {
-			return nil, fmt.Errorf("%s.ason: %w", f.Name, err)
+			return nil, fmt.Errorf("%s: %w", f.Name, err)
 		}
 		for i := 0; i+2 < len(vs); i += 3 {
 			if vs[i].Kind != ason.Array || vs[i+1].Kind != ason.Op || vs[i+1].Text != "->" {
-				return nil, fmt.Errorf("%s.ason: строка %d: ожидалась модель «[ … ] -> …»", f.Name, vs[i].Line)
+				return nil, fmt.Errorf("%s: строка %d: ожидалась модель «[ … ] -> …»", f.Name, vs[i].Line)
 			}
 			f.Add(disp.Model{Pred: ason.Format(vs[i].Items), Value: vs[i+2]})
 		}
@@ -115,7 +115,7 @@ func openSession(dir string) (*Session, error) {
 		}
 	}
 	s.in.OnModel = func(f *disp.Frame, m disp.Model) {
-		if err := appendFile(s.file(f.Name+".ason"), "[ "+m.Pred+" ] -> "+m.Value.String()+"\n"); err != nil {
+		if err := appendFile(s.file(f.Name), "[ "+m.Pred+" ] -> "+m.Value.String()+"\n"); err != nil {
 			log.Print(err)
 		}
 	}
