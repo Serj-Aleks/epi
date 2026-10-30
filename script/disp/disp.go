@@ -23,8 +23,9 @@ type Prep func(a, b *ason.Value) (ason.Value, bool)
 
 // Interp — среда интерпретации.
 type Interp struct {
-	Preps   map[string]Prep // символ препозиции → интерпретатор
-	Limit   int             // лимит шагов (0.16)
+	Frames  []*Frame // фреймы-интерпретаторы препозиций (9.11)
+	Used    []string // фреймы, интерпретировавшие последнюю Run
+	Limit   int      // лимит шагов (0.16)
 	Ask     func(q string) bool
 	Unknown []string // база нераспознанных предикаций (канонический текст)
 	steps   int
@@ -38,9 +39,36 @@ func (s Stopped) Error() string {
 	return fmt.Sprintf("остановлено пользователем после %d шагов", s.Steps)
 }
 
-// New — среда с интерпретаторами арифметики и сравнения.
+// Frame — фрейм-интерпретатор (9.11). Kernel — неизменяемая часть:
+// препозиции, которые он интерпретирует. Динамическая часть растёт в
+// контексте (алиасы, определения) и в базе моделей сессии.
+type Frame struct {
+	Name   string
+	Kernel map[string]Prep
+}
+
+// prep находит интерпретатор символа препозиции и его фрейм.
+func (in *Interp) prep(sym string) (Prep, *Frame) {
+	for _, f := range in.Frames {
+		if p, ok := f.Kernel[sym]; ok {
+			return p, f
+		}
+	}
+	return nil, nil
+}
+
+func (in *Interp) use(f *Frame) {
+	for _, n := range in.Used {
+		if n == f.Name {
+			return
+		}
+	}
+	in.Used = append(in.Used, f.Name)
+}
+
+// New — среда с фреймами-интерпретаторами arithmetica и logica.
 func New(limit int, ask func(string) bool) *Interp {
-	return &Interp{Preps: basePreps(), Limit: limit, Ask: ask, allowed: limit}
+	return &Interp{Frames: baseFrames(), Limit: limit, Ask: ask, allowed: limit}
 }
 
 // Env — контекст: модели «имя -> предикация». Имена сравниваются по ason.Key.
@@ -217,6 +245,7 @@ func readPred(seg []ason.Value) pred {
 
 // Run читает текст и интерпретирует его в контексте env.
 func (in *Interp) Run(text string, env *Env) (ason.Value, error) {
+	in.Used = nil
 	vs, err := ason.Parse(text)
 	if err != nil {
 		return none, err
@@ -356,16 +385,17 @@ func (in *Interp) slot(s *slot, env *Env, right bool) (ason.Value, error) {
 		}
 		pb = &b
 	}
-	f := in.Preps[sym]
+	f, fr := in.prep(sym)
 	if f == nil {
 		in.unknown(s.toks(), fmt.Sprintf("— нет интерпретатора препозиции «%s»", ptok.Text))
 		return none, nil
 	}
 	v, ok := f(pa, pb)
 	if !ok {
-		in.unknown(s.toks(), fmt.Sprintf("— «%s» не интерпретирует такие аргументы", ptok.Text))
+		in.unknown(s.toks(), fmt.Sprintf("— «%s» (%s) не интерпретирует такие аргументы", ptok.Text, fr.Name))
 		return none, nil
 	}
+	in.use(fr)
 	return v, nil
 }
 
@@ -483,7 +513,7 @@ func flag(b bool) ason.Value {
 	return vfals
 }
 
-func basePreps() map[string]Prep {
+func baseFrames() []*Frame {
 	arith := func(op func(x, y float64) (float64, bool)) Prep {
 		return func(a, b *ason.Value) (ason.Value, bool) {
 			x, xi, ok1 := num(a)
@@ -530,7 +560,7 @@ func basePreps() map[string]Prep {
 			return p(a, b)
 		}
 	}
-	return map[string]Prep{
+	arithmetica := map[string]Prep{
 		"+": plusOnlyInfix(arith(func(x, y float64) (float64, bool) { return x + y, true })),
 		"-": arith(func(x, y float64) (float64, bool) { return x - y, true }),
 		"*": plusOnlyInfix(arith(func(x, y float64) (float64, bool) { return x * y, true })),
@@ -542,6 +572,8 @@ func basePreps() map[string]Prep {
 			}
 			return number(x/y, false), true
 		}),
+	}
+	logica := map[string]Prep{
 		"<":  plusOnlyInfix(cmp(func(x, y float64) bool { return x < y })),
 		">":  plusOnlyInfix(cmp(func(x, y float64) bool { return x > y })),
 		"<=": plusOnlyInfix(cmp(func(x, y float64) bool { return x <= y })),
@@ -549,6 +581,7 @@ func basePreps() map[string]Prep {
 		"=":  eq(false),
 		"<>": eq(true),
 	}
+	return []*Frame{{Name: "arithmetica", Kernel: arithmetica}, {Name: "logica", Kernel: logica}}
 }
 
 //go:embed lexicon.ason

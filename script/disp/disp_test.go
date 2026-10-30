@@ -191,3 +191,21 @@ func TestBoundaries(t *testing.T) {
 		t.Errorf("две предикации в одной части без точки — не распознано: %v", in.Unknown)
 	}
 }
+
+// Фреймы-интерпретаторы (9.11): арифметика и логика — разные фреймы.
+func TestFramesUsed(t *testing.T) {
+	in := New(100, nil)
+	for src, want := range map[string]string{
+		`2 + 3`:         "arithmetica",
+		`2 > 3`:         "logica",
+		`( 2 + 3 ) > 4`: "arithmetica logica",
+		`'a`:            "",
+	} {
+		if _, err := in.Run(src, NewEnv(nil)); err != nil {
+			t.Fatal(err)
+		}
+		if got := strings.Join(in.Used, " "); got != want {
+			t.Errorf("%q: %q, ожидалось %q", src, got, want)
+		}
+	}
+}
