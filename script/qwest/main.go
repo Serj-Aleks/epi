@@ -8,7 +8,7 @@
 // (кнопками); открытый можно продолжать, любой — читать. Закрытый сеанс —
 // файл только для чтения.
 //
-// Запуск: go run ./qwest [-addr 127.0.0.1:8790] [-data папка]
+// Запуск: go run ./qwest [-addr 127.0.0.1:1944] [-data папка]
 package main
 
 import (
@@ -355,7 +355,7 @@ func (q *Qwest) handle(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	addr := flag.String("addr", "127.0.0.1:8790", "адрес")
+	addr := flag.String("addr", "127.0.0.1:1944", "адрес")
 	dir := flag.String("data", "qwest", "папка данных Qwest")
 	flag.Parse()
 	q, err := open(*dir)
