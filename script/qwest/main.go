@@ -238,7 +238,7 @@ func (s *Session) handle(w http.ResponseWriter, req *http.Request) {
 
 func main() {
 	addr := flag.String("addr", "127.0.0.1:8790", "адрес")
-	dir := flag.String("data", "qwest-data", "папка сессии")
+	dir := flag.String("data", "qwest", "папка данных Qwest")
 	flag.Parse()
 	s, err := openSession(*dir)
 	if err != nil {
