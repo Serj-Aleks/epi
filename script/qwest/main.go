@@ -293,11 +293,13 @@ func (q *Qwest) handle(w http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(w).Encode(q.state())
 	case "/api/new": // открыть новый сеанс: seans-<сегодня>.uic
 		name := "seans-" + time.Now().Format("2006-01-02") + ".uic"
-		if _, err := os.Stat(q.seans(name)); err == nil {
-			fail(http.StatusConflict, "сеанс "+name+" уже есть: его можно продолжить, если он не закрыт")
-			return
-		}
-		if err := os.WriteFile(q.seans(name), nil, 0644); err != nil {
+		// новый сеанс — на следующий день; в тот же день сеанс продолжается
+		if st, err := os.Stat(q.seans(name)); err == nil {
+			if st.Mode().Perm()&0200 == 0 {
+				fail(http.StatusConflict, "сеанс "+name+" сегодня уже закрыт; его можно открыть для чтения")
+				return
+			}
+		} else if err := os.WriteFile(q.seans(name), nil, 0644); err != nil {
 			fail(http.StatusInternalServerError, err.Error())
 			return
 		}

@@ -8,8 +8,9 @@
 package disp
 
 import (
-	_ "embed"
+	"embed"
 	"fmt"
+	"io/fs"
 	"math"
 	"strconv"
 	"strings"
@@ -639,13 +640,29 @@ func baseFrames() []*Frame {
 	return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic}}
 }
 
-//go:embed lexicon.ason
-var lexicon string
+// lexic — системный лексикон: папка, внутри — классификация. preposit —
+// препозиции, файл на каждую: определение алиаса (`plus : +`).
+//
+//go:embed lexic
+var lexic embed.FS
 
-// Global — контекст верхнего уровня с системным лексиконом (lexicon.ason).
+// Global — контекст верхнего уровня с системным лексиконом (lexic).
 func (in *Interp) Global() (*Env, error) {
 	env := NewEnv(nil)
-	if _, err := in.Run(lexicon, env); err != nil {
+	err := fs.WalkDir(lexic, "lexic", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := lexic.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if _, err := in.Run(string(b), env); err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, fmt.Errorf("лексикон: %w", err)
 	}
 	return env, nil
