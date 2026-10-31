@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/fs"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -130,6 +131,8 @@ type Env struct {
 type binding struct {
 	pred []ason.Value // правая часть модели «имя -> …»
 	env  *Env         // контекст, в котором она записана
+	// параметры фрейма: «Фрейм.Параметр : …» (9.12); параметров вне фрейма нет
+	params map[string]*binding
 }
 
 func NewEnv(parent *Env) *Env { return &Env{vars: map[string]*binding{}, parent: parent} }
@@ -397,6 +400,13 @@ func (in *Interp) slot(s *slot, env *Env, right bool) (ason.Value, error) {
 			in.unknown(s.toks(), fmt.Sprintf("— «%s» со строчной буквы — препозиция, она определяется алиасом или фреймом; объект пишется с прописной: «%s : …»", s.def.Text, upperFirst(s.def.Text)))
 			return none, nil
 		}
+		if s.def.Kind == ason.Field { // «Фрейм.Параметр : значение» (9.12)
+			return in.defParam(s, toks, env)
+		}
+		if !ason.IsPrepTerm(s.def.Text) && !(len(toks) == 1 && toks[0].Kind == ason.Array) {
+			in.unknown(s.toks(), fmt.Sprintf("— «%s» с прописной буквы — фрейм; значение получает параметр фрейма: «%s.A : …»", s.def.Text, s.def.Text))
+			return none, nil
+		}
 		if len(toks) == 1 && toks[0].Kind == ason.Expr { // ( ) — вычислить сейчас (9.3)
 			v, err := in.operand(toks, env, false)
 			if err != nil {
@@ -494,6 +504,8 @@ func (in *Interp) operand(a []ason.Value, env *Env, right bool) (ason.Value, err
 		return b.pred[0], nil
 	case ason.Term:
 		return in.apply(a, env)
+	case ason.Field:
+		return in.param(a, env)
 	}
 	return v, nil
 }
@@ -510,6 +522,9 @@ func (in *Interp) apply(a []ason.Value, env *Env) (ason.Value, error) {
 			return in.call(b, a[1], env)
 		}
 		return in.call(b, ason.Value{Kind: ason.Object}, env)
+	}
+	if len(b.pred) == 0 { // фрейм только с параметрами
+		return frameValue(b), nil
 	}
 	if len(a) == 2 {
 		in.unknown(a, "— «"+a[0].Text+"» не фрейм")
@@ -688,4 +703,76 @@ func caseHint(toks []ason.Value, env *Env) string {
 		}
 	}
 	return ""
+}
+
+// splitField: «Фрейм.Параметр» → фрейм и параметр; оба — с прописной (9.9, 9.12).
+func splitField(t string) (frame, param string, ok bool) {
+	parts := strings.Split(t, ".")
+	if len(parts) != 2 || ason.IsPrepTerm(parts[0]) || ason.IsPrepTerm(parts[1]) {
+		return "", "", false
+	}
+	return parts[0], parts[1], true
+}
+
+// defParam: «Фрейм.Параметр : значение». Значение связывается без вычисления
+// (9.3), `( )` — вычислить сейчас. Фрейма нет — он появляется с этим параметром.
+func (in *Interp) defParam(s *slot, toks []ason.Value, env *Env) (ason.Value, error) {
+	frame, param, ok := splitField(s.def.Text)
+	if !ok {
+		in.unknown(s.toks(), "— параметр пишется «Фрейм.Параметр», оба с прописной буквы")
+		return none, nil
+	}
+	if len(toks) == 1 && toks[0].Kind == ason.Expr {
+		v, err := in.operand(toks, env, false)
+		if err != nil {
+			return none, err
+		}
+		toks = []ason.Value{v}
+	}
+	fb, _ := env.find(frame)
+	if fb == nil {
+		fb = &binding{env: env}
+		env.set(frame, fb)
+	}
+	if fb.params == nil {
+		fb.params = map[string]*binding{}
+	}
+	fb.params[ason.Key(param)] = &binding{pred: toks, env: env}
+	return none, nil
+}
+
+// param: значение «Фрейм.Параметр» — модель параметра интерпретируется при обращении.
+func (in *Interp) param(a []ason.Value, env *Env) (ason.Value, error) {
+	frame, param, ok := splitField(a[0].Text)
+	if !ok {
+		in.unknown(a, "— параметр пишется «Фрейм.Параметр», оба с прописной буквы")
+		return none, nil
+	}
+	fb, _ := env.find(frame)
+	if fb == nil {
+		in.unknown(a, fmt.Sprintf("— фрейм «%s» не определён", frame))
+		return none, nil
+	}
+	pb := fb.params[ason.Key(param)]
+	if pb == nil {
+		in.unknown(a, fmt.Sprintf("— у фрейма «%s» нет параметра «%s»", frame, param))
+		return none, nil
+	}
+	r, _, err := in.block(pb.pred, pb.env)
+	return r, err
+}
+
+// frameValue: фрейм как значение — объектный блок его параметров.
+func frameValue(b *binding) ason.Value {
+	keys := make([]string, 0, len(b.params))
+	for k := range b.params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	v := ason.Value{Kind: ason.Object, Items: []ason.Value{}}
+	for _, k := range keys {
+		v.Items = append(v.Items, ason.Value{Kind: ason.Term, Text: k}, ason.Value{Kind: ason.Op, Text: ":"})
+		v.Items = append(v.Items, b.params[k].pred...)
+	}
+	return v
 }

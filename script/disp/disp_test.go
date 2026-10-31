@@ -35,30 +35,30 @@ func expect(t *testing.T, cases map[string]string) {
 
 func TestArithmetic(t *testing.T) {
 	expect(t, map[string]string{
-		`( 2 + 3 )`:     "5",
-		`2 + 3`:         "5",
-		`7 - 10`:        "-3",
-		`- 4`:           "-4",
-		`6 * 7`:         "42",
-		`7 / 2`:         "3.5",
-		`1.5 + 1`:       "2.5",
-		`( 2 + 3 ) * 4`: "20",
-		`10 > 3`:        "@true",
-		`3 >= 4`:        "@false",
-		`"a" = "A"`:     "@true",
-		`2 <> 2.0`:      "@false",
-		`X : 5 . X * X`: "25",
+		`( 2 + 3 )`:           "5",
+		`2 + 3`:               "5",
+		`7 - 10`:              "-3",
+		`- 4`:                 "-4",
+		`6 * 7`:               "42",
+		`7 / 2`:               "3.5",
+		`1.5 + 1`:             "2.5",
+		`( 2 + 3 ) * 4`:       "20",
+		`10 > 3`:              "@true",
+		`3 >= 4`:              "@false",
+		`"a" = "A"`:           "@true",
+		`2 <> 2.0`:            "@false",
+		`X.A : 5 . X.A * X.A`: "25",
 	})
 }
 
 // Модель: истинный левый слот — правый слот и конец блока; ложный — дальше (9.1).
 func TestModel(t *testing.T) {
 	expect(t, map[string]string{
-		`10 > 3 -> 'ok`:                       "ok",
-		`1 > 3 -> 'a . 2 > 3 -> 'b . 'c`:      "c",
-		`1 > 3 -> 'a . 5 > 3 -> 'b . 'c`:      "b",
-		`X : 2 . X > 1 -> [ Y : 10 . Y + X ]`: "12",
-		`X : 2 . X > 1 -> Y : 7 . Y`:          "@none",
+		`10 > 3 -> 'ok`:                                 "ok",
+		`1 > 3 -> 'a . 2 > 3 -> 'b . 'c`:                "c",
+		`1 > 3 -> 'a . 5 > 3 -> 'b . 'c`:                "b",
+		`X.A : 2 . X.A > 1 -> [ X.B : 10 . X.B + X.A ]`: "12",
+		`X.A : 2 . X.A > 1 -> X.B : 7 . X.B`:            "@none",
 	})
 	_, _, _, err := run(t, `5 -> 'a`, 100)
 	if err == nil || !strings.Contains(err.Error(), "не флаг") {
@@ -68,7 +68,7 @@ func TestModel(t *testing.T) {
 
 // Цикл — фрейм, применяющий сам себя (9.2); « : » связывает, ( ) вычисляет сейчас (9.3).
 func TestLoop(t *testing.T) {
-	src := "I : 0\nSum : 0\nCount : [\n    I < 10 -> [ I : (I + 1) . Sum : (Sum + I) . Count ]\n]\nCount\nSum"
+	src := "C.I : 0\nC.Sum : 0\nCount : [\n    C.I < 10 -> [ C.I : (C.I + 1) . C.Sum : (C.Sum + C.I) . Count ]\n]\nCount\nC.Sum"
 	got, _, _, err := run(t, src, 1000)
 	if err != nil || got != "55" {
 		t.Fatalf("цикл: %q %v", got, err)
@@ -78,8 +78,8 @@ func TestLoop(t *testing.T) {
 // Связывание без вычисления: живая формула и алиас.
 func TestBinding(t *testing.T) {
 	expect(t, map[string]string{
-		`A : 1 . B : A + 10 . A : 5 . B`:   "15",
-		`A : 1 . B : (A + 10) . A : 5 . B`: "11",
+		`F.A : 1 . F.B : F.A + 10 . F.A : 5 . F.B`:   "15",
+		`F.A : 1 . F.B : (F.A + 10) . F.A : 5 . F.B`: "11",
 	})
 }
 
@@ -87,8 +87,8 @@ func TestBinding(t *testing.T) {
 // фрейм-объект с прописной — аппликация по имени.
 func TestFrames(t *testing.T) {
 	expect(t, map[string]string{
-		"dupla : [ X * 2 ]\nN : 4\ndupla { X : N + 1 }": "10",
-		`Twice : [ X * 2 ] . Twice { X : 21 }`:          "42",
+		"dupla : [ X * 2 ]\nF.N : 4\ndupla { X : F.N + 1 }": "10",
+		`Twice : [ X * 2 ] . Twice { X : 21 }`:              "42",
 	})
 }
 
@@ -125,7 +125,7 @@ func TestLimit(t *testing.T) {
 	if !errors.As(err, &st) || len(asked) != 2 || st.Steps != 100 {
 		t.Fatalf("лимит: %v, вопросов %d", err, len(asked))
 	}
-	got, _, asked, err := run(t, "I : 0\nC : [ I < 30 -> [ I : (I + 1) . C ] ]\nC\nI", 50, true, true, true, true, true, true)
+	got, _, asked, err := run(t, "S.I : 0\nC : [ S.I < 30 -> [ S.I : (S.I + 1) . C ] ]\nC\nS.I", 50, true, true, true, true, true, true)
 	if err != nil || got != "30" || len(asked) == 0 {
 		t.Fatalf("продолжение после лимита: %q %v %d", got, err, len(asked))
 	}
@@ -134,10 +134,10 @@ func TestLimit(t *testing.T) {
 // Регистр значим по первой букве (9.9); буквы любого алфавита (0.17).
 func TestNames(t *testing.T) {
 	expect(t, map[string]string{
-		"Число : 5\nудвоить : [ X * 2 ]\nудвоить { X : Число }": "10",
-		`Число : 5 . ЧИСЛО + 1`:                                 "6",
+		"Мера.Число : 5\nудвоить : [ X * 2 ]\nудвоить { X : Мера.Число }": "10",
+		`Мера.Число : 5 . МЕРА.ЧИСЛО + 1`:                                 "6",
 	})
-	_, in, _, _ := run(t, `Число : 5 . число + 1`, 100, true)
+	_, in, _, _ := run(t, `Мера.Число : 5 . число + 1`, 100, true)
 	if len(in.Unknown) != 1 {
 		t.Errorf("«число» со строчной — препозиция, не объект «Число»: %v", in.Unknown)
 	}
@@ -150,7 +150,7 @@ func TestAliases(t *testing.T) {
 		`minus : - . minus 4`:                 "-4",
 		`plus : + . summa : plus . 2 summa 3`: "5",
 		`major : > . 10 major 3 -> 'ok`:       "ok",
-		`X : (- 5) . X`:                       "-5",
+		`F.X : (- 5) . F.X`:                   "-5",
 		`plus : + . plus : - . 7 plus 2`:      "5",
 	})
 	_, in, _, err := run(t, `pow : // . 2 pow 3`, 100, true)
@@ -175,18 +175,18 @@ func TestLexicon(t *testing.T) {
 // может стоять в конце предикации.
 func TestBoundaries(t *testing.T) {
 	expect(t, map[string]string{
-		`X : 5 - 4 . X`: "1",
-		"X : 5\n- 4\nX": "5",
-		"X : 5\n- 4":    "-4",
-		`X : 5 . - 4`:   "-4",
-		`X : 1 . . X .`: "1",
-		"X : 1\n\n\nX":  "1",
+		`F.X : 5 - 4 . F.X`: "1",
+		"F.X : 5\n- 4\nF.X": "5",
+		"F.X : 5\n- 4":      "-4",
+		`F.X : 5 . - 4`:     "-4",
+		`F.X : 1 . . F.X .`: "1",
+		"F.X : 1\n\n\nF.X":  "1",
 	})
-	got, in, _, _ := run(t, "A : 2 plus\n3", 100, true)
-	if got != "3" || len(in.Unknown) != 1 || in.Unknown[0] != "A : 2 plus" {
+	got, in, _, _ := run(t, "F.A : 2 plus\n3", 100, true)
+	if got != "3" || len(in.Unknown) != 1 || in.Unknown[0] != "F.A : 2 plus" {
 		t.Errorf("препозиция в конце строки — конец предикации: %q %v", got, in.Unknown)
 	}
-	_, in, _, _ = run(t, `I : 1 Count`, 100, true)
+	_, in, _, _ = run(t, `F.I : 1 Count`, 100, true)
 	if len(in.Unknown) != 1 {
 		t.Errorf("две предикации в одной части без точки — не распознано: %v", in.Unknown)
 	}
@@ -216,7 +216,7 @@ func TestModels(t *testing.T) {
 	in := New(100, nil)
 	var added []string
 	in.OnModel = func(f *Frame, m Model) { added = append(added, f.Name+": ["+m.Pred+"] -> "+m.Value.String()) }
-	for _, src := range []string{`( 2 + 3 ) > 4`, `2 + 3`, `X : 2 . X + 1`, `7 // 2`} {
+	for _, src := range []string{`( 2 + 3 ) > 4`, `2 + 3`, `F.X : 2 . F.X + 1`, `7 // 2`} {
 		if _, err := in.Run(src, NewEnv(nil)); err != nil {
 			t.Fatal(err)
 		}
@@ -241,5 +241,28 @@ func TestLimitPerRun(t *testing.T) {
 	v, err := in.Run(`2 + 3`, env)
 	if err != nil || v.String() != "5" {
 		t.Fatalf("после остановки: %v %v", v, err)
+	}
+}
+
+// Параметры фрейма (9.12): «Фрейм.Параметр»; параметров вне фрейма нет.
+func TestParams(t *testing.T) {
+	expect(t, map[string]string{
+		`X.A : 5 . X.A * X.A`:                        "25",
+		`X.A : 5 . X.B : 7 . X`:                      "{ A : 5 B : 7 }",
+		`X.A : 2 . X.B : X.A * 3 . X.A : 10 . X.B`:   "30",
+		`X.A : 2 . X.B : (X.A * 3) . X.A : 10 . X.B`: "6",
+		`Q.A : 2 . Q.A > 1 -> 'ok`:                   "ok",
+	})
+	for src, rec := range map[string]string{
+		`X : 5`:         "X : 5",
+		`X.B`:           "X.B",
+		`X.A : 1 . X.B`: "X.B",
+		`x.A : 1`:       "x.A : 1",
+		`X.a : 1`:       "X.a : 1",
+	} {
+		_, in, _, err := run(t, src, 100, true)
+		if err != nil || len(in.Unknown) != 1 || in.Unknown[0] != rec {
+			t.Errorf("%q: записано %q, ошибка %v", src, in.Unknown, err)
+		}
 	}
 }
