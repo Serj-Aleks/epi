@@ -169,6 +169,11 @@ func (q *Qwest) switchTo(name string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
+	if len(vs) > 0 && !hasArrow(vs) { // сеанс прежнего вида — только предикации
+		if vs, err = q.migrateSeans(name, vs, st.Mode().Perm()); err != nil {
+			return err
+		}
+	}
 	// сеанс заново не выполняется (9.13.4а): строки — модели
 	// «[ предикация ] -> интерпретация», диалог показывается, каким был
 	var turns []Turn
@@ -368,4 +373,50 @@ func main() {
 	})
 	log.Printf("Qwest: http://%s (данные: %s)", *addr, *dir)
 	log.Fatal(http.ListenAndServe(*addr, nil))
+}
+
+func hasArrow(vs []ason.Value) bool {
+	for _, v := range vs {
+		if v.Kind == ason.Op && v.Text == "->" {
+			return true
+		}
+	}
+	return false
+}
+
+// migrateSeans: сеанс прежнего вида (только предикации автора) один раз
+// интерпретируется заново без вопросов и переписывается моделями
+// «[ предикация ] -> интерпретация»; права файла (закрыт / открыт) сохраняются.
+func (q *Qwest) migrateSeans(name string, vs []ason.Value, perm os.FileMode) ([]ason.Value, error) {
+	ask := q.in.Ask
+	q.in.Ask = func(string) bool { return false }
+	defer func() { q.in.Ask = ask }()
+	known := len(q.in.Unknown)
+	var sb strings.Builder
+	for _, v := range vs {
+		text := v.Text
+		if v.Kind == ason.Array {
+			text = ason.Format(v.Items)
+		}
+		val, err := q.in.Run(text, q.env)
+		t := Turn{Pred: text, Answer: val.String()}
+		if err != nil {
+			t.Answer, t.Error = err.Error(), true
+		}
+		sb.WriteString(record(t))
+	}
+	q.in.Unknown = q.in.Unknown[:known]
+	path := q.seans(name)
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, []byte(sb.String()), perm); err != nil {
+		return nil, err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return nil, err
+	}
+	out, err := ason.Parse(sb.String())
+	if err != nil {
+		return nil, fmt.Errorf("%s после переноса: %w", name, err)
+	}
+	return out, nil
 }
