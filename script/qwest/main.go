@@ -2,9 +2,11 @@
 // (claude/ason-spec.md, раздел 9.11). Предикация вводится в строке, ответ
 // диспетчера — следующей строкой диалога.
 //
-// Данные (папка qwest): фреймы-интерпретаторы (arifm, logic) с моделями
-// интерпретаций, ignor.uic — нераспознанные предикации, prtcl — протокол:
-// сеансы seans-<дата открытия>.uic. Сеанс открывается и закрывается автором
+// Данные (папка qwest): lexic — темы и фреймы (фреймы-интерпретаторы arifm,
+// logic — в теме preposit, мета-файл .uic), ignor.uic — нераспознанные
+// предикации, prtcl — протокол:
+// сеансы seans-<дата открытия>.uic, строки — модели «[ предикация ] ->
+// интерпретация». Сеанс открывается и закрывается автором
 // (кнопками); открытый можно продолжать, любой — читать. Закрытый сеанс —
 // файл только для чтения.
 //
@@ -80,21 +82,13 @@ func open(dir string) (*Qwest, error) {
 	}
 	q := &Qwest{dir: dir}
 	q.in = disp.New(limit, func(string) bool { return false })
-	// модели фреймов-интерпретаторов: «[ предикация ] -> интерпретация» (9.11)
+	// фреймы-интерпретаторы: lexic/preposit (9.13); прежние файлы переносятся
 	for _, f := range q.in.Frames {
-		b, err := os.ReadFile(q.file(f.Name))
-		if err != nil {
-			continue
+		if err := q.loadFrame(f); err != nil {
+			return nil, err
 		}
-		vs, err := ason.Parse(string(b))
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", f.Name, err)
-		}
-		for i := 0; i+2 < len(vs); i += 3 {
-			if vs[i].Kind != ason.Array || vs[i+1].Kind != ason.Op || vs[i+1].Text != "->" {
-				return nil, fmt.Errorf("%s: строка %d: ожидалась модель «[ … ] -> …»", f.Name, vs[i].Line)
-			}
-			f.Add(disp.Model{Pred: ason.Format(vs[i].Items), Value: vs[i+2]})
+		if err := q.migrateFrame(f); err != nil {
+			return nil, err
 		}
 	}
 	if b, err := os.ReadFile(q.file("ignor.uic")); err == nil {
@@ -109,10 +103,16 @@ func open(dir string) (*Qwest, error) {
 		}
 	}
 	q.in.OnModel = func(f *disp.Frame, m disp.Model) {
-		if err := appendFile(q.file(f.Name), "[ "+m.Pred+" ] -> "+m.Value.String()+"\n"); err != nil {
+		if err := q.writeFrame(f); err != nil {
 			log.Print(err)
 		}
 	}
+	// контекст общий (9.13.4а): определения не принадлежат сеансу
+	env, err := q.in.Global()
+	if err != nil {
+		return nil, err
+	}
+	q.env = env
 	// при запуске — последний открытый сеанс, если есть
 	ss, err := q.list()
 	if err != nil {
@@ -161,11 +161,6 @@ func (q *Qwest) switchTo(name string) error {
 	if err != nil {
 		return err
 	}
-	env, err := q.in.Global()
-	if err != nil {
-		return err
-	}
-	q.cur, q.closed, q.env, q.turns = name, st.Mode().Perm()&0200 == 0, env, nil
 	b, err := os.ReadFile(q.seans(name))
 	if err != nil {
 		return err
@@ -174,35 +169,39 @@ func (q *Qwest) switchTo(name string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
-	ask := q.in.Ask
-	q.in.Ask = func(string) bool { return false }
-	defer func() { q.in.Ask = ask }()
-	known := len(q.in.Unknown)
-	for _, v := range vs {
-		text := v.Text
-		if v.Kind == ason.Array {
-			text = ason.Format(v.Items)
+	// сеанс заново не выполняется (9.13.4а): строки — модели
+	// «[ предикация ] -> интерпретация», диалог показывается, каким был
+	var turns []Turn
+	for i := 0; i+2 < len(vs); i += 3 {
+		if vs[i+1].Kind != ason.Op || vs[i+1].Text != "->" {
+			return fmt.Errorf("%s: строка %d: ожидалась модель «[ … ] -> …»", name, vs[i].Line)
 		}
-		val, err := q.in.Run(text, q.env)
-		t := Turn{Pred: text, Answer: val.String(), Frames: append([]string(nil), q.in.Used...)}
-		if err != nil {
-			t.Answer, t.Error = err.Error(), true
+		t := Turn{Pred: vs[i].Text, Answer: vs[i+2].String()}
+		if vs[i].Kind == ason.Array {
+			t.Pred = ason.Format(vs[i].Items)
 		}
-		q.turns = append(q.turns, t)
+		if vs[i+2].Kind == ason.String { // интерпретация — строка (в том числе сообщение об ошибке)
+			t.Answer = vs[i+2].Text
+		}
+		turns = append(turns, t)
 	}
-	q.in.Unknown = q.in.Unknown[:known]
+	q.cur, q.closed, q.turns = name, st.Mode().Perm()&0200 == 0, turns
 	return nil
 }
 
-// input: предикация автора как строка сеанса — блок данных `[ … ]` (9.3);
-// нечитаемый ввод — строкой.
-func input(text string) string {
-	if _, err := ason.Parse(text); err != nil {
-		return ason.Value{Kind: ason.String, Text: text}.String() + "\n"
+// record: шаг диалога как строка сеанса — модель «[ предикация ] -> интерпретация»;
+// нечитаемая предикация и сообщение об ошибке — строками.
+func record(t Turn) string {
+	pred := "[ " + t.Pred + " ]"
+	if _, err := ason.Parse(t.Pred); err != nil {
+		pred = ason.Value{Kind: ason.String, Text: t.Pred}.String()
 	}
-	return "[ " + text + " ]\n"
+	ans := t.Answer
+	if vs, err := ason.Parse(ans); t.Error || err != nil || len(vs) != 1 {
+		ans = ason.Value{Kind: ason.String, Text: t.Answer}.String()
+	}
+	return pred + " -> " + ans + "\n"
 }
-
 func appendFile(path, text string) error {
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -249,7 +248,7 @@ func (q *Qwest) wait(r *run) Reply {
 	case t := <-r.done:
 		q.pending, q.pPred, q.pQuest = nil, "", ""
 		q.turns = append(q.turns, t)
-		if err := appendFile(q.seans(q.cur), input(t.Pred)); err != nil {
+		if err := appendFile(q.seans(q.cur), record(t)); err != nil {
 			log.Print(err)
 		}
 		return Reply{Turn: &t}
