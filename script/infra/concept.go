@@ -50,7 +50,7 @@ func isGauss(s string) bool {
 }
 
 // frameDir: <данные>/lexic/<тема>/<буквы имени>, файл — <имя>.uic (как в ПИ).
-func (q *Qwest) frameFile(theme, name string) string {
+func (q *Script) frameFile(theme, name string) string {
 	parts := []string{q.dir, "lexic", theme}
 	for _, r := range strings.ToUpper(name) {
 		parts = append(parts, string(r))
@@ -67,7 +67,7 @@ func frameURI(name string) string {
 }
 
 // loadFrame читает модели фрейма-интерпретатора из .uic.
-func (q *Qwest) loadFrame(f *disp.Frame) error {
+func (q *Script) loadFrame(f *disp.Frame) error {
 	path := q.frameFile("preposit", f.Name)
 	file, err := os.Open(path)
 	if os.IsNotExist(err) {
@@ -113,7 +113,7 @@ func (q *Qwest) loadFrame(f *disp.Frame) error {
 }
 
 // writeFrame пишет мета-файл фрейма целиком (через временный файл).
-func (q *Qwest) writeFrame(f *disp.Frame) error {
+func (q *Script) writeFrame(f *disp.Frame) error {
 	path := q.frameFile("preposit", f.Name)
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
@@ -142,7 +142,7 @@ func (q *Qwest) writeFrame(f *disp.Frame) error {
 
 // loadAliases: концепты темы preposit со слотом alias (`r-m +`) становятся
 // алиасами препозиций в общем контексте (9.8): `plus : +`.
-func (q *Qwest) loadAliases() error {
+func (q *Script) loadAliases() error {
 	root := filepath.Join(q.dir, "lexic", "preposit")
 	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if os.IsNotExist(err) {
@@ -176,7 +176,7 @@ func (q *Qwest) loadAliases() error {
 
 // migrateFrame: прежний файл фрейма в корне данных («[ … ] -> …») переносится
 // в lexic и удаляется.
-func (q *Qwest) migrateFrame(f *disp.Frame) error {
+func (q *Script) migrateFrame(f *disp.Frame) error {
 	old := filepath.Join(q.dir, f.Name)
 	b, err := os.ReadFile(old)
 	if os.IsNotExist(err) {

@@ -1,4 +1,5 @@
-// Qwest — строка взаимодействия с диспетчером предикаций в браузере
+// script — интерфейс среды (ason-spec 0.3; до 02.11.2026 — Qwest): строка
+// взаимодействия с диспетчером предикаций в браузере
 // (claude/ason-spec.md, раздел 9.11). Предикация вводится в строке, ответ
 // диспетчера — следующей строкой диалога.
 //
@@ -60,8 +61,8 @@ type run struct {
 	done      chan []Turn
 }
 
-// Qwest — состояние: фреймы-интерпретаторы общие, контекст — у сеанса.
-type Qwest struct {
+// Script — состояние: фреймы-интерпретаторы общие, контекст — у сеанса.
+type Script struct {
 	mu      sync.Mutex
 	in      *disp.Interp
 	dir     string
@@ -76,11 +77,11 @@ type Qwest struct {
 
 const limit = 10000
 
-func open(dir string) (*Qwest, error) {
+func open(dir string) (*Script, error) {
 	if err := os.MkdirAll(filepath.Join(dir, "prtcl"), 0755); err != nil {
 		return nil, err
 	}
-	q := &Qwest{dir: dir}
+	q := &Script{dir: dir}
 	q.in = disp.New(limit, func(string) bool { return false })
 	// фреймы-интерпретаторы: lexic/preposit (9.13); прежние файлы переносятся
 	for _, f := range q.in.Frames {
@@ -129,11 +130,11 @@ func open(dir string) (*Qwest, error) {
 	return q, nil
 }
 
-func (q *Qwest) ignor() string            { return filepath.Join(q.dir, "prtcl", "ignor.uic") }
-func (q *Qwest) seans(name string) string { return filepath.Join(q.dir, "prtcl", name) }
+func (q *Script) ignor() string            { return filepath.Join(q.dir, "prtcl", "ignor.uic") }
+func (q *Script) seans(name string) string { return filepath.Join(q.dir, "prtcl", name) }
 
 // list: сеансы протокола, новые первыми; закрытый — файл только для чтения.
-func (q *Qwest) list() ([]Seans, error) {
+func (q *Script) list() ([]Seans, error) {
 	es, err := os.ReadDir(filepath.Join(q.dir, "prtcl"))
 	if err != nil {
 		return nil, err
@@ -156,7 +157,7 @@ func (q *Qwest) list() ([]Seans, error) {
 
 // switchTo: сделать сеанс текущим. Контекст сеанса восстанавливается:
 // его предикации интерпретируются заново без вопросов.
-func (q *Qwest) switchTo(name string) error {
+func (q *Script) switchTo(name string) error {
 	st, err := os.Stat(q.seans(name))
 	if err != nil {
 		return err
@@ -221,7 +222,7 @@ func appendFile(path, text string) error {
 
 // start: интерпретация в отдельной горутине; вопросы диспетчера (0.7, 0.16)
 // уходят в браузер, ответы возвращаются.
-func (q *Qwest) start(text string) *run {
+func (q *Script) start(text string) *run {
 	r := &run{questions: make(chan string), answers: make(chan bool), done: make(chan []Turn, 1)}
 	known := len(q.in.Unknown)
 	q.in.Ask = func(question string) bool {
@@ -254,7 +255,7 @@ func (q *Qwest) start(text string) *run {
 }
 
 // wait: следующий вопрос или результат.
-func (q *Qwest) wait(r *run) Reply {
+func (q *Script) wait(r *run) Reply {
 	select {
 	case question := <-r.questions:
 		q.pending, q.pQuest = r, question
@@ -271,7 +272,7 @@ func (q *Qwest) wait(r *run) Reply {
 	}
 }
 
-func (q *Qwest) state() map[string]any {
+func (q *Script) state() map[string]any {
 	ss, err := q.list()
 	if err != nil {
 		log.Print(err)
@@ -283,7 +284,7 @@ func (q *Qwest) state() map[string]any {
 	}
 }
 
-func (q *Qwest) handle(w http.ResponseWriter, req *http.Request) {
+func (q *Script) handle(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -388,7 +389,7 @@ func main() {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(page)
 	})
-	log.Printf("Qwest: http://%s (данные: %s)", *addr, dir)
+	log.Printf("script: http://%s (данные: %s)", *addr, dir)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
@@ -404,7 +405,7 @@ func hasArrow(vs []format.Value) bool {
 // migrateSeans: сеанс прежнего вида (только предикации автора) один раз
 // интерпретируется заново без вопросов и переписывается моделями
 // «[ предикация ] -> интерпретация»; права файла (закрыт / открыт) сохраняются.
-func (q *Qwest) migrateSeans(name string, vs []format.Value, perm os.FileMode) ([]format.Value, error) {
+func (q *Script) migrateSeans(name string, vs []format.Value, perm os.FileMode) ([]format.Value, error) {
 	ask := q.in.Ask
 	q.in.Ask = func(string) bool { return false }
 	defer func() { q.in.Ask = ask }()
