@@ -44,7 +44,7 @@ type Turn struct {
 
 // Reply — ответ сервера: шаг завершён (Turn) или диспетчер спрашивает.
 type Reply struct {
-	Turn     *Turn  `json:"turn,omitempty"`
+	Turns    []Turn `json:"turns,omitempty"`
 	Question string `json:"question,omitempty"`
 }
 
@@ -57,7 +57,7 @@ type Seans struct {
 type run struct {
 	questions chan string
 	answers   chan bool
-	done      chan Turn
+	done      chan []Turn
 }
 
 // Qwest — состояние: фреймы-интерпретаторы общие, контекст — у сеанса.
@@ -222,24 +222,33 @@ func appendFile(path, text string) error {
 // start: интерпретация в отдельной горутине; вопросы диспетчера (0.7, 0.16)
 // уходят в браузер, ответы возвращаются.
 func (q *Qwest) start(text string) *run {
-	r := &run{questions: make(chan string), answers: make(chan bool), done: make(chan Turn, 1)}
+	r := &run{questions: make(chan string), answers: make(chan bool), done: make(chan []Turn, 1)}
 	known := len(q.in.Unknown)
 	q.in.Ask = func(question string) bool {
 		r.questions <- question
 		return <-r.answers
 	}
 	go func() {
-		v, err := q.in.Run(text, q.env)
-		t := Turn{Pred: text, Answer: v.String(), Frames: append([]string(nil), q.in.Used...)}
+		// на каждую предикацию строки — свой ответ (9.11.8)
+		preds, err := disp.Split(text)
 		if err != nil {
-			t.Answer, t.Error = err.Error(), true
+			preds = []string{text} // нечитаемый ввод — одна строка с сообщением
+		}
+		var ts []Turn
+		for _, p := range preds {
+			v, err := q.in.Run(p, q.env)
+			t := Turn{Pred: p, Answer: v.String(), Frames: append([]string(nil), q.in.Used...)}
+			if err != nil {
+				t.Answer, t.Error = err.Error(), true
+			}
+			ts = append(ts, t)
 		}
 		for _, u := range q.in.Unknown[known:] {
 			if e := appendFile(q.ignor(), "[ "+u+" ]\n"); e != nil {
 				log.Print(e)
 			}
 		}
-		r.done <- t
+		r.done <- ts
 	}()
 	return r
 }
@@ -250,13 +259,15 @@ func (q *Qwest) wait(r *run) Reply {
 	case question := <-r.questions:
 		q.pending, q.pQuest = r, question
 		return Reply{Question: question}
-	case t := <-r.done:
+	case ts := <-r.done:
 		q.pending, q.pPred, q.pQuest = nil, "", ""
-		q.turns = append(q.turns, t)
-		if err := appendFile(q.seans(q.cur), record(t)); err != nil {
-			log.Print(err)
+		for _, t := range ts {
+			q.turns = append(q.turns, t)
+			if err := appendFile(q.seans(q.cur), record(t)); err != nil {
+				log.Print(err)
+			}
 		}
-		return Reply{Turn: &t}
+		return Reply{Turns: ts}
 	}
 }
 

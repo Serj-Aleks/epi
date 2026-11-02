@@ -97,7 +97,15 @@ async function act(path, body) {
 
 // ответ сервера: шаг завершён или вопрос диспетчера
 function handle(t, rep) {
-  if (rep.turn) { addAnswer(t, rep.turn); inp.disabled = !writable; inp.focus(); return; }
+  if (rep.turns) { // на каждую предикацию строки — свой ответ (9.11.8)
+    rep.turns.forEach((turn, i) => {
+      const tt = i === 0 ? t : addPred(turn.pred);
+      if (i === 0) tt.querySelector(".pred").textContent = turn.pred;
+      addAnswer(tt, turn);
+    });
+    if (!rep.turns.length) t.remove();
+    inp.disabled = !writable; inp.focus(); return;
+  }
   const q = el("q", rep.question);
   const yes = document.createElement("button"); yes.textContent = "✓"; yes.title = "yes (y)";
   const no = document.createElement("button"); no.textContent = "✕"; no.title = "no (n)";

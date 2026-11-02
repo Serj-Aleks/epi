@@ -274,6 +274,20 @@ func segments(vs []format.Value) [][]format.Value {
 	return segs
 }
 
+// Split делит текст на предикации верхнего уровня (9.10) в каноническом
+// тексте: на каждую — свой ответ (9.11.8).
+func Split(text string) ([]string, error) {
+	vs, err := format.Parse(text)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, seg := range segments(vs) {
+		out = append(out, format.Format(seg))
+	}
+	return out, nil
+}
+
 // readPred читает предикацию из части seg; часть должна быть ровно одной
 // предикацией, иначе она не распознана целиком.
 func readPred(seg []format.Value) pred {
