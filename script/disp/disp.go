@@ -381,6 +381,14 @@ func (in *Interp) unknown(toks []format.Value, why string) {
 	}
 }
 
+// Unreadable: текст не прочитан (лексика) — это тоже предикация без
+// обработчика (0.7): не ошибка, вопрос «записать?» и запись в базу.
+func (in *Interp) Unreadable(text string, err error) {
+	if in.Ask != nil && in.Ask(fmt.Sprintf("предикация «%s» не прочитана: %v. Записать её?", text, err)) {
+		in.Unknown = append(in.Unknown, text)
+	}
+}
+
 // resolve: чем интерпретируется препозиция-токен: символом (сим != "")
 // или фреймом-интерпретатором (frame != nil). Алиасы раскрываются.
 func resolve(v format.Value, env *Env) (sym string, frame *binding) {

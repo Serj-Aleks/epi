@@ -235,10 +235,11 @@ func (q *Script) start(text string) *run {
 	go func() {
 		// на каждую предикацию строки — свой ответ (9.11.8)
 		preds, err := disp.Split(text)
-		if err != nil {
-			preds = []string{text} // нечитаемый ввод — одна строка с сообщением
-		}
 		var ts []Turn
+		if err != nil { // не прочитано — как нераспознанное (0.7): вопрос, не ошибка
+			q.in.Unreadable(text, err)
+			ts = append(ts, Turn{Pred: text, Answer: "@none"})
+		}
 		for _, p := range preds {
 			v, err := q.in.Run(p, q.env)
 			t := Turn{Pred: p, Answer: v.String(), Frames: append([]string(nil), q.in.Used...)}
@@ -248,7 +249,11 @@ func (q *Script) start(text string) *run {
 			ts = append(ts, t)
 		}
 		for _, u := range q.in.Unknown[known:] {
-			if e := appendFile(q.ignor(), "[ "+u+" ]\n"); e != nil {
+			line := "[ " + u + " ]"
+			if _, err := format.Parse(u); err != nil { // нечитаемое — строкой
+				line = format.Value{Kind: format.String, Text: u}.String()
+			}
+			if e := appendFile(q.ignor(), line+"\n"); e != nil {
 				log.Print(e)
 			}
 		}

@@ -133,6 +133,8 @@ func (q *Script) switchTheme(name string) error {
 		for _, v := range vs {
 			if v.Kind == format.Array {
 				q.in.Unknown = append(q.in.Unknown, format.Format(v.Items))
+			} else if v.Kind == format.String {
+				q.in.Unknown = append(q.in.Unknown, v.Text)
 			}
 		}
 	}
