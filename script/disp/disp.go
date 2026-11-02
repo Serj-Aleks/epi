@@ -27,7 +27,9 @@ type Interp struct {
 	Frames  []*Frame                // фреймы-интерпретаторы препозиций (9.11)
 	Used    []string                // фреймы, интерпретировавшие последнюю Run
 	OnModel func(f *Frame, m Model) // новая модель во фрейме-интерпретаторе
-	Limit   int                     // лимит шагов (0.16)
+	// OnParam: «Фрейм.Параметр : …» записано (фреймы автора сохраняются в теме)
+	OnParam func(frame, param string, pred []format.Value)
+	Limit   int // лимит шагов (0.16)
 	Ask     func(q string) bool
 	Unknown []string // база нераспознанных предикаций (канонический текст)
 	steps   int
@@ -722,6 +724,9 @@ func (in *Interp) defParam(s *slot, toks []format.Value, env *Env) (format.Value
 		fb.params = map[string]*binding{}
 	}
 	fb.params[format.Key(param)] = &binding{pred: toks, env: env}
+	if in.OnParam != nil {
+		in.OnParam(frame, param, toks)
+	}
 	return none, nil
 }
 

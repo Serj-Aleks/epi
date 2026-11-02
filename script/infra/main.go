@@ -3,9 +3,10 @@
 // (claude/ason-spec.md, раздел 9.11). Предикация вводится в строке, ответ
 // диспетчера — следующей строкой диалога.
 //
-// Данные — рядом с кодом, в папке script (ason-spec 0.20): lexic — темы и
-// концепты (в теме preposit — алиасы plus, minus и фреймы-интерпретаторы
-// arifm, logic, мета-файлы .uic); prtcl — протокол: ignor.uic —
+// Данные — рядом с кодом, в папке script (ason-spec 0.20): lexic — системный
+// лексикон (класс preposit: алиасы plus, minus, фреймы-интерпретаторы arifm,
+// logic, мета-файлы .uic); thema — темы автора (9.14): в каждой концепты и
+// протокол prtcl: ignor.uic —
 // нераспознанные предикации, сеансы seans-<дата открытия>.uic, строки —
 // модели «[ предикация ] -> интерпретация». Сеанс открывается и закрывается
 // автором (кнопками); открытый можно продолжать, любой — читать. Закрытый
@@ -66,6 +67,7 @@ type Script struct {
 	mu      sync.Mutex
 	in      *disp.Interp
 	dir     string
+	theme   string // активная тема (папка thema/<имя>) или ""
 	cur     string // текущий сеанс (имя файла) или ""
 	closed  bool
 	env     *disp.Env
@@ -78,9 +80,6 @@ type Script struct {
 const limit = 10000
 
 func open(dir string) (*Script, error) {
-	if err := os.MkdirAll(filepath.Join(dir, "prtcl"), 0755); err != nil {
-		return nil, err
-	}
 	q := &Script{dir: dir}
 	q.in = disp.New(limit, func(string) bool { return false })
 	// фреймы-интерпретаторы: lexic/preposit (9.13); прежние файлы переносятся
@@ -92,50 +91,40 @@ func open(dir string) (*Script, error) {
 			return nil, err
 		}
 	}
-	if b, err := os.ReadFile(q.ignor()); err == nil {
-		vs, err := format.Parse(string(b))
-		if err != nil {
-			return nil, fmt.Errorf("ignor.uic: %w", err)
-		}
-		for _, v := range vs {
-			if v.Kind == format.Array {
-				q.in.Unknown = append(q.in.Unknown, format.Format(v.Items))
-			}
-		}
-	}
 	q.in.OnModel = func(f *disp.Frame, m disp.Model) {
 		if err := q.writeFrame(f); err != nil {
 			log.Print(err)
 		}
 	}
-	// контекст общий (9.13.4а): определения не принадлежат сеансу;
-	// алиасы препозиций — концепты темы preposit
+	// фреймы автора сохраняются в активной теме (9.14)
+	q.in.OnParam = func(frame, param string, pred []format.Value) {
+		if err := q.writeConcept(frame, param, pred); err != nil {
+			log.Print(err)
+		}
+	}
+	// контекст — у темы (9.14): системные алиасы и концепты темы
 	q.env = disp.NewEnv(nil)
 	if err := q.loadAliases(); err != nil {
 		return nil, err
 	}
-	// при запуске — последний открытый сеанс, если есть
-	ss, err := q.list()
-	if err != nil {
+	if err := q.startTheme(); err != nil {
 		return nil, err
-	}
-	for _, s := range ss {
-		if !s.Closed {
-			if err := q.switchTo(s.Name); err != nil {
-				return nil, err
-			}
-			break
-		}
 	}
 	return q, nil
 }
 
-func (q *Script) ignor() string            { return filepath.Join(q.dir, "prtcl", "ignor.uic") }
-func (q *Script) seans(name string) string { return filepath.Join(q.dir, "prtcl", name) }
+func (q *Script) ignor() string            { return filepath.Join(q.themaDir(), "prtcl", "ignor.uic") }
+func (q *Script) seans(name string) string { return filepath.Join(q.themaDir(), "prtcl", name) }
 
 // list: сеансы протокола, новые первыми; закрытый — файл только для чтения.
 func (q *Script) list() ([]Seans, error) {
-	es, err := os.ReadDir(filepath.Join(q.dir, "prtcl"))
+	if q.theme == "" {
+		return nil, nil
+	}
+	es, err := os.ReadDir(filepath.Join(q.themaDir(), "prtcl"))
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -193,6 +182,20 @@ func (q *Script) switchTo(name string) error {
 	}
 	q.cur, q.closed, q.turns = name, st.Mode().Perm()&0200 == 0, turns
 	return nil
+}
+
+// newSeans: открыть сеанс seans-<сегодня>.uic. Новый сеанс — на следующий
+// день; в тот же день сеанс продолжается.
+func (q *Script) newSeans() error {
+	name := "seans-" + time.Now().Format("2006-01-02") + ".uic"
+	if st, err := os.Stat(q.seans(name)); err == nil {
+		if st.Mode().Perm()&0200 == 0 {
+			return fmt.Errorf("сеанс %s сегодня уже закрыт; его можно открыть для чтения", name)
+		}
+	} else if err := os.WriteFile(q.seans(name), nil, 0644); err != nil {
+		return err
+	}
+	return q.switchTo(name)
 }
 
 // record: шаг диалога как строка сеанса — модель «[ предикация ] -> интерпретация»;
@@ -277,7 +280,12 @@ func (q *Script) state() map[string]any {
 	if err != nil {
 		log.Print(err)
 	}
+	ts, err := q.themes()
+	if err != nil {
+		log.Print(err)
+	}
 	return map[string]any{
+		"themes": ts, "theme": q.theme,
 		"seanses": ss, "current": q.cur, "closed": q.closed, "turns": q.turns,
 		// ожидающий вопрос отдаётся тоже: страницу можно перезагрузить, не потеряв его
 		"pending": map[string]string{"pred": q.pPred, "question": q.pQuest},
@@ -290,6 +298,7 @@ func (q *Script) handle(w http.ResponseWriter, req *http.Request) {
 	defer q.mu.Unlock()
 	var body struct {
 		Text   string `json:"text"`
+		To     string `json:"to"`
 		Answer bool   `json:"answer"`
 		Name   string `json:"name"`
 	}
@@ -307,20 +316,42 @@ func (q *Script) handle(w http.ResponseWriter, req *http.Request) {
 	switch req.URL.Path {
 	case "/api/state":
 		json.NewEncoder(w).Encode(q.state())
-	case "/api/new": // открыть новый сеанс: seans-<сегодня>.uic
-		name := "seans-" + time.Now().Format("2006-01-02") + ".uic"
-		// новый сеанс — на следующий день; в тот же день сеанс продолжается
-		if st, err := os.Stat(q.seans(name)); err == nil {
-			if st.Mode().Perm()&0200 == 0 {
-				fail(http.StatusConflict, "сеанс "+name+" сегодня уже закрыт; его можно открыть для чтения")
+	case "/api/thema/new": // новая тема (9.14)
+		if err := q.createTheme(strings.TrimSpace(body.Name)); err != nil {
+			fail(http.StatusBadRequest, err.Error())
+			return
+		}
+		if q.cur == "" { // в новой теме сразу открывается сеанс
+			if err := q.newSeans(); err != nil {
+				fail(http.StatusConflict, err.Error())
 				return
 			}
-		} else if err := os.WriteFile(q.seans(name), nil, 0644); err != nil {
+		}
+		json.NewEncoder(w).Encode(q.state())
+	case "/api/thema/open":
+		t, ok := q.themeExists(body.Name)
+		if !ok {
+			fail(http.StatusNotFound, "нет такой темы")
+			return
+		}
+		if err := q.switchTheme(t); err != nil {
 			fail(http.StatusInternalServerError, err.Error())
 			return
 		}
-		if err := q.switchTo(name); err != nil {
-			fail(http.StatusInternalServerError, err.Error())
+		json.NewEncoder(w).Encode(q.state())
+	case "/api/thema/rename":
+		if err := q.renameTheme(body.Name, strings.TrimSpace(body.To)); err != nil {
+			fail(http.StatusBadRequest, err.Error())
+			return
+		}
+		json.NewEncoder(w).Encode(q.state())
+	case "/api/new": // открыть новый сеанс: seans-<сегодня>.uic
+		if q.theme == "" {
+			fail(http.StatusConflict, "темы нет: сначала создайте тему")
+			return
+		}
+		if err := q.newSeans(); err != nil {
+			fail(http.StatusConflict, err.Error())
 			return
 		}
 		json.NewEncoder(w).Encode(q.state())

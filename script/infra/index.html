@@ -23,6 +23,8 @@
   button:hover, button:focus { border-color: var(--acc); color: var(--acc); outline: none; }
   button:disabled { opacity: .3; cursor: default; border-color: var(--line); color: var(--fg); }
   #note { color: var(--err); font-size: 13px; }
+  .gap { width: 16px; }
+  input::placeholder { color: var(--dim); }
   #log { flex: 1; overflow-y: auto; padding: 24px 16px 8px;
     background: repeating-linear-gradient(to bottom, transparent 0 23px, var(--rule) 23px 24px) 0 24px / 100% 24px local; }
   .turn { margin: 0 0 24px; }
@@ -44,6 +46,10 @@
 <body>
 <header>
   <span id="note"></span>
+  <select id="thema" title="thema"></select>
+  <button id="tnew" title="new thema">＋</button>
+  <button id="tren" title="rename thema">✎</button>
+  <span class="gap"></span>
   <select id="seans" title="seans"></select>
   <button id="new" title="new seans">＋</button>
   <button id="close" title="close seans">■</button>
@@ -53,7 +59,9 @@
 <script>
 const log = document.getElementById("log"), inp = document.getElementById("i");
 const sel = document.getElementById("seans"), note = document.getElementById("note");
-let hist = [], hpos = 0, writable = false;
+const tsel = document.getElementById("thema");
+let hist = [], hpos = 0, writable = false, last = null;
+let mode = null; // ввод имени темы: "new" | "rename"
 
 function el(cls, text) { const d = document.createElement("div"); d.className = cls; if (text !== undefined) d.textContent = text; return d; }
 function scroll() { log.scrollTop = log.scrollHeight; }
@@ -73,7 +81,16 @@ async function api(path, body) {
 
 // состояние: список сеансов, текущий, его диалог
 function show(st) {
+  last = st; mode = null; inp.placeholder = "";
   note.textContent = "";
+  tsel.innerHTML = "";
+  if (!st.theme) { const o = document.createElement("option"); o.textContent = "—"; o.value = ""; tsel.append(o); }
+  for (const t of st.themes || []) {
+    const o = document.createElement("option"); o.value = o.textContent = t; o.selected = t === st.theme; tsel.append(o);
+  }
+  document.getElementById("tren").disabled = !st.theme;
+  document.getElementById("new").disabled = !st.theme;
+  if (!st.theme) note.textContent = "создайте тему ＋";
   sel.innerHTML = "";
   if (!st.current) { const o = document.createElement("option"); o.textContent = "—"; o.value = ""; sel.append(o); }
   for (const s of st.seanses || []) {
@@ -122,6 +139,13 @@ function handle(t, rep) {
 
 document.getElementById("f").onsubmit = async (e) => {
   e.preventDefault();
+  if (mode) { // имя темы
+    const name = inp.value.trim(); if (!name) return;
+    const m = mode; inp.value = "";
+    if (m === "new") act("/api/thema/new", { name });
+    else act("/api/thema/rename", { name: last.theme, to: name });
+    return;
+  }
   const text = inp.value.trim(); if (!text || !writable) return;
   hist.push(text); hpos = hist.length; inp.value = ""; inp.disabled = true;
   const t = addPred(text);
@@ -130,10 +154,20 @@ document.getElementById("f").onsubmit = async (e) => {
 };
 
 inp.addEventListener("keydown", (e) => {
+  if (mode) { if (e.key === "Escape") { inp.value = ""; show(last); } return; }
   if (e.key === "ArrowUp" && hpos > 0) { inp.value = hist[--hpos]; e.preventDefault(); }
   if (e.key === "ArrowDown") { hpos = Math.min(hist.length, hpos + 1); inp.value = hist[hpos] || ""; e.preventDefault(); }
 });
 
+function askName(m) {
+  mode = m; inp.disabled = false;
+  inp.value = m === "rename" ? last.theme : "";
+  inp.placeholder = m === "rename" ? "новое имя темы (Esc — отмена)" : "имя новой темы (Esc — отмена)";
+  inp.focus();
+}
+document.getElementById("tnew").onclick = () => askName("new");
+document.getElementById("tren").onclick = () => askName("rename");
+tsel.onchange = () => { if (tsel.value) act("/api/thema/open", { name: tsel.value }); };
 document.getElementById("new").onclick = () => act("/api/new", {});
 document.getElementById("close").onclick = () => act("/api/close", {});
 sel.onchange = () => { if (sel.value) act("/api/open", { name: sel.value }); };
