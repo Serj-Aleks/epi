@@ -159,18 +159,6 @@ func TestAliases(t *testing.T) {
 	}
 }
 
-func TestLexicon(t *testing.T) {
-	in := New(100, nil)
-	env, err := in.Global()
-	if err != nil {
-		t.Fatal(err)
-	}
-	v, err := in.Run(`( 2 plus 3 ) minus 1`, env)
-	if err != nil || v.String() != "4" {
-		t.Fatalf("лексикон: %v %v", v, err)
-	}
-}
-
 // Граница предикаций — точка « . » или перевод строки (9.10); препозиция не
 // может стоять в конце предикации.
 func TestBoundaries(t *testing.T) {

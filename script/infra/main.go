@@ -2,15 +2,15 @@
 // (claude/ason-spec.md, раздел 9.11). Предикация вводится в строке, ответ
 // диспетчера — следующей строкой диалога.
 //
-// Данные (папка qwest): lexic — темы и фреймы (фреймы-интерпретаторы arifm,
-// logic — в теме preposit, мета-файл .uic), ignor.uic — нераспознанные
-// предикации, prtcl — протокол:
-// сеансы seans-<дата открытия>.uic, строки — модели «[ предикация ] ->
-// интерпретация». Сеанс открывается и закрывается автором
-// (кнопками); открытый можно продолжать, любой — читать. Закрытый сеанс —
-// файл только для чтения.
+// Данные — рядом с кодом, в папке script (ason-spec 0.20): lexic — темы и
+// концепты (в теме preposit — алиасы plus, minus и фреймы-интерпретаторы
+// arifm, logic, мета-файлы .uic); prtcl — протокол: ignor.uic —
+// нераспознанные предикации, сеансы seans-<дата открытия>.uic, строки —
+// модели «[ предикация ] -> интерпретация». Сеанс открывается и закрывается
+// автором (кнопками); открытый можно продолжать, любой — читать. Закрытый
+// сеанс — файл только для чтения.
 //
-// Запуск: go run ./qwest [-addr localhost:1944] [-data папка]
+// Запуск из папки script: go run ./infra [-addr localhost:1944]
 package main
 
 import (
@@ -27,8 +27,8 @@ import (
 	"sync"
 	"time"
 
-	"epi/script/ason"
 	"epi/script/disp"
+	"epi/script/format"
 )
 
 //go:embed index.html
@@ -91,14 +91,14 @@ func open(dir string) (*Qwest, error) {
 			return nil, err
 		}
 	}
-	if b, err := os.ReadFile(q.file("ignor.uic")); err == nil {
-		vs, err := ason.Parse(string(b))
+	if b, err := os.ReadFile(q.ignor()); err == nil {
+		vs, err := format.Parse(string(b))
 		if err != nil {
 			return nil, fmt.Errorf("ignor.uic: %w", err)
 		}
 		for _, v := range vs {
-			if v.Kind == ason.Array {
-				q.in.Unknown = append(q.in.Unknown, ason.Format(v.Items))
+			if v.Kind == format.Array {
+				q.in.Unknown = append(q.in.Unknown, format.Format(v.Items))
 			}
 		}
 	}
@@ -107,12 +107,12 @@ func open(dir string) (*Qwest, error) {
 			log.Print(err)
 		}
 	}
-	// контекст общий (9.13.4а): определения не принадлежат сеансу
-	env, err := q.in.Global()
-	if err != nil {
+	// контекст общий (9.13.4а): определения не принадлежат сеансу;
+	// алиасы препозиций — концепты темы preposit
+	q.env = disp.NewEnv(nil)
+	if err := q.loadAliases(); err != nil {
 		return nil, err
 	}
-	q.env = env
 	// при запуске — последний открытый сеанс, если есть
 	ss, err := q.list()
 	if err != nil {
@@ -129,7 +129,7 @@ func open(dir string) (*Qwest, error) {
 	return q, nil
 }
 
-func (q *Qwest) file(name string) string  { return filepath.Join(q.dir, name) }
+func (q *Qwest) ignor() string            { return filepath.Join(q.dir, "prtcl", "ignor.uic") }
 func (q *Qwest) seans(name string) string { return filepath.Join(q.dir, "prtcl", name) }
 
 // list: сеансы протокола, новые первыми; закрытый — файл только для чтения.
@@ -165,7 +165,7 @@ func (q *Qwest) switchTo(name string) error {
 	if err != nil {
 		return err
 	}
-	vs, err := ason.Parse(string(b))
+	vs, err := format.Parse(string(b))
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
@@ -178,14 +178,14 @@ func (q *Qwest) switchTo(name string) error {
 	// «[ предикация ] -> интерпретация», диалог показывается, каким был
 	var turns []Turn
 	for i := 0; i+2 < len(vs); i += 3 {
-		if vs[i+1].Kind != ason.Op || vs[i+1].Text != "->" {
+		if vs[i+1].Kind != format.Op || vs[i+1].Text != "->" {
 			return fmt.Errorf("%s: строка %d: ожидалась модель «[ … ] -> …»", name, vs[i].Line)
 		}
 		t := Turn{Pred: vs[i].Text, Answer: vs[i+2].String()}
-		if vs[i].Kind == ason.Array {
-			t.Pred = ason.Format(vs[i].Items)
+		if vs[i].Kind == format.Array {
+			t.Pred = format.Format(vs[i].Items)
 		}
-		if vs[i+2].Kind == ason.String { // интерпретация — строка (в том числе сообщение об ошибке)
+		if vs[i+2].Kind == format.String { // интерпретация — строка (в том числе сообщение об ошибке)
 			t.Answer = vs[i+2].Text
 		}
 		turns = append(turns, t)
@@ -198,12 +198,12 @@ func (q *Qwest) switchTo(name string) error {
 // нечитаемая предикация и сообщение об ошибке — строками.
 func record(t Turn) string {
 	pred := "[ " + t.Pred + " ]"
-	if _, err := ason.Parse(t.Pred); err != nil {
-		pred = ason.Value{Kind: ason.String, Text: t.Pred}.String()
+	if _, err := format.Parse(t.Pred); err != nil {
+		pred = format.Value{Kind: format.String, Text: t.Pred}.String()
 	}
 	ans := t.Answer
-	if vs, err := ason.Parse(ans); t.Error || err != nil || len(vs) != 1 {
-		ans = ason.Value{Kind: ason.String, Text: t.Answer}.String()
+	if vs, err := format.Parse(ans); t.Error || err != nil || len(vs) != 1 {
+		ans = format.Value{Kind: format.String, Text: t.Answer}.String()
 	}
 	return pred + " -> " + ans + "\n"
 }
@@ -235,7 +235,7 @@ func (q *Qwest) start(text string) *run {
 			t.Answer, t.Error = err.Error(), true
 		}
 		for _, u := range q.in.Unknown[known:] {
-			if e := appendFile(q.file("ignor.uic"), "[ "+u+" ]\n"); e != nil {
+			if e := appendFile(q.ignor(), "[ "+u+" ]\n"); e != nil {
 				log.Print(e)
 			}
 		}
@@ -360,9 +360,15 @@ func (q *Qwest) handle(w http.ResponseWriter, req *http.Request) {
 
 func main() {
 	addr := flag.String("addr", "localhost:1944", "адрес")
-	dir := flag.String("data", "qwest", "папка данных Qwest")
 	flag.Parse()
-	q, err := open(*dir)
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
+		log.Fatal("запуск — из папки script: go run ./infra")
+	}
+	q, err := open(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -371,13 +377,13 @@ func main() {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(page)
 	})
-	log.Printf("Qwest: http://%s (данные: %s)", *addr, *dir)
+	log.Printf("Qwest: http://%s (данные: %s)", *addr, dir)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
-func hasArrow(vs []ason.Value) bool {
+func hasArrow(vs []format.Value) bool {
 	for _, v := range vs {
-		if v.Kind == ason.Op && v.Text == "->" {
+		if v.Kind == format.Op && v.Text == "->" {
 			return true
 		}
 	}
@@ -387,7 +393,7 @@ func hasArrow(vs []ason.Value) bool {
 // migrateSeans: сеанс прежнего вида (только предикации автора) один раз
 // интерпретируется заново без вопросов и переписывается моделями
 // «[ предикация ] -> интерпретация»; права файла (закрыт / открыт) сохраняются.
-func (q *Qwest) migrateSeans(name string, vs []ason.Value, perm os.FileMode) ([]ason.Value, error) {
+func (q *Qwest) migrateSeans(name string, vs []format.Value, perm os.FileMode) ([]format.Value, error) {
 	ask := q.in.Ask
 	q.in.Ask = func(string) bool { return false }
 	defer func() { q.in.Ask = ask }()
@@ -395,8 +401,8 @@ func (q *Qwest) migrateSeans(name string, vs []ason.Value, perm os.FileMode) ([]
 	var sb strings.Builder
 	for _, v := range vs {
 		text := v.Text
-		if v.Kind == ason.Array {
-			text = ason.Format(v.Items)
+		if v.Kind == format.Array {
+			text = format.Format(v.Items)
 		}
 		val, err := q.in.Run(text, q.env)
 		t := Turn{Pred: text, Answer: val.String()}
@@ -414,7 +420,7 @@ func (q *Qwest) migrateSeans(name string, vs []ason.Value, perm os.FileMode) ([]
 	if err := os.Rename(tmp, path); err != nil {
 		return nil, err
 	}
-	out, err := ason.Parse(sb.String())
+	out, err := format.Parse(sb.String())
 	if err != nil {
 		return nil, fmt.Errorf("%s после переноса: %w", name, err)
 	}

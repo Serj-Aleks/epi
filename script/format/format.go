@@ -1,6 +1,6 @@
 // Package ason читает текст ASON (лексика EPI, claude/ason-spec.md, раздел 2)
 // в дерево значений и пишет дерево обратно в канонический текст.
-package ason
+package format
 
 import (
 	"fmt"

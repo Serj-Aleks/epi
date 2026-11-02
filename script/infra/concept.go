@@ -1,6 +1,6 @@
 package main
 
-// Фреймы-интерпретаторы в lexic (ason-spec 9.13): тема preposit, путь фрейма
+// Концепты в lexic (ason-spec 9.13): тема preposit, путь концепта
 // из букв имени (как в ПИ), мета-файл .uic — модели парами строк
 // «l-<ключ> левый слот» / «r-<ключ> правый слот». Системная часть — буквы
 // (n name, q uri, h content, m alias, p preposit, f prefix, v suffix,
@@ -15,8 +15,8 @@ import (
 	"sort"
 	"strings"
 
-	"epi/script/ason"
 	"epi/script/disp"
+	"epi/script/format"
 )
 
 const gaussABC = "oiztyvslanxedbhfmg" // 18-ричный алфавит индекса Гаусса (как в ТЕМП)
@@ -103,7 +103,7 @@ func (q *Qwest) loadFrame(f *disp.Frame) error {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 	for _, k := range order {
-		vs, err := ason.Parse(right[k])
+		vs, err := format.Parse(right[k])
 		if err != nil || len(vs) != 1 {
 			return fmt.Errorf("%s: модель %s: правый слот «%s» — не одно значение", path, k, right[k])
 		}
@@ -140,6 +140,40 @@ func (q *Qwest) writeFrame(f *disp.Frame) error {
 	return os.Rename(tmp, path)
 }
 
+// loadAliases: концепты темы preposit со слотом alias (`r-m +`) становятся
+// алиасами препозиций в общем контексте (9.8): `plus : +`.
+func (q *Qwest) loadAliases() error {
+	root := filepath.Join(q.dir, "lexic", "preposit")
+	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".uic") {
+			return err
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		var name, alias string
+		for _, line := range strings.Split(string(b), "\n") {
+			if strings.HasPrefix(line, "r-n ") {
+				name = strings.TrimSpace(line[4:])
+			}
+			if strings.HasPrefix(line, "r-m ") {
+				alias = strings.TrimSpace(line[4:])
+			}
+		}
+		if name == "" || alias == "" {
+			return nil
+		}
+		if _, err := q.in.Run(name+" : "+alias, q.env); err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+		return nil
+	})
+}
+
 // migrateFrame: прежний файл фрейма в корне данных («[ … ] -> …») переносится
 // в lexic и удаляется.
 func (q *Qwest) migrateFrame(f *disp.Frame) error {
@@ -151,13 +185,13 @@ func (q *Qwest) migrateFrame(f *disp.Frame) error {
 	if err != nil {
 		return err
 	}
-	vs, err := ason.Parse(string(b))
+	vs, err := format.Parse(string(b))
 	if err != nil {
 		return fmt.Errorf("%s: %w", old, err)
 	}
 	for i := 0; i+2 < len(vs); i += 3 {
-		if vs[i].Kind == ason.Array && vs[i+1].Kind == ason.Op && vs[i+1].Text == "->" {
-			f.Add(disp.Model{Pred: ason.Format(vs[i].Items), Value: vs[i+2]})
+		if vs[i].Kind == format.Array && vs[i+1].Kind == format.Op && vs[i+1].Text == "->" {
+			f.Add(disp.Model{Pred: format.Format(vs[i].Items), Value: vs[i+2]})
 		}
 	}
 	if err := q.writeFrame(f); err != nil {
