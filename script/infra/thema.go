@@ -210,13 +210,26 @@ func (q *Script) writeConcept(frame, param string, pred []format.Value) error {
 	return writeLines(path, lines)
 }
 
-// loadConcepts: концепты темы — параметры фреймов в контекст темы. Имя фрейма —
-// из имени файла; файл прежнего вида переписывается.
+// loadConcepts: системные концепты (lexic/constans — фрейм констант Const) и
+// концепты темы — параметры фреймов в контекст темы; концепт темы с тем же
+// именем дополняет и переопределяет системный в этой теме (Const.Pi : 3).
 func (q *Script) loadConcepts() error {
 	on := q.in.OnParam
 	q.in.OnParam = nil
 	defer func() { q.in.OnParam = on }()
-	return filepath.WalkDir(q.themaDir(), func(path string, d os.DirEntry, err error) error {
+	if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {
+		return err
+	}
+	return q.loadConceptsIn(q.themaDir())
+}
+
+// loadConceptsIn: концепты в папке root. Имя фрейма — из пути; файл прежнего
+// вида переписывается.
+func (q *Script) loadConceptsIn(root string) error {
+	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if os.IsNotExist(err) && path == root {
+			return nil
+		}
 		if err != nil {
 			return err
 		}
@@ -230,7 +243,7 @@ func (q *Script) loadConcepts() error {
 		if err != nil {
 			return err
 		}
-		name := conceptName(path, q.themaDir())
+		name := conceptName(path, root)
 		var lines []string
 		if isLegacy(b) {
 			_, models, err := readLegacy(path)
