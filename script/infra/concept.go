@@ -142,6 +142,9 @@ func (q *Script) syncFrame(f *disp.Frame) error {
 // loadAliases: файлы препозиций, кроме интерпретаторов, — предикации
 // (`plus : +`), они выполняются в общем контексте (9.8).
 func (q *Script) loadAliases() error {
+	on := q.in.OnAlias
+	q.in.OnAlias = nil
+	defer func() { q.in.OnAlias = on }()
 	frames := map[string]bool{}
 	for _, f := range q.in.Frames {
 		frames[strings.ToLower(f.Name)+".uic"] = true

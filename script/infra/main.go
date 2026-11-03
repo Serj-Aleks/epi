@@ -94,6 +94,15 @@ func open(dir string) (*Script, error) {
 			log.Print(err)
 		}
 	}
+	// алиасы препозиций — системный лексикон, общий для всех тем (9.15)
+	q.in.OnAlias = func(name, target string) {
+		if q.in.Frame(name) != nil { // имя интерпретатора — не алиас
+			return
+		}
+		if err := writeLines(q.frameFile("preposit", name), []string{name + " : " + target}); err != nil {
+			log.Print(err)
+		}
+	}
 	// контекст — у темы (9.14): системные алиасы и концепты темы
 	q.env = disp.NewEnv(nil)
 	if err := q.loadAliases(); err != nil {

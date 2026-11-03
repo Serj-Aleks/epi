@@ -28,6 +28,8 @@ type Interp struct {
 	Used   []string // фреймы, интерпретировавшие последнюю Run
 	// OnParam: «Фрейм.Параметр : …» записано (фреймы автора сохраняются в теме)
 	OnParam func(frame, param string, pred []format.Value)
+	// OnAlias: «имя : препозиция» записано (алиасы — системный лексикон, 9.15)
+	OnAlias func(name, target string)
 	Limit   int // лимит шагов (0.16)
 	Ask     func(q string) bool
 	Unknown []string // база нераспознанных предикаций (канонический текст)
@@ -359,6 +361,9 @@ func resolve(v format.Value, env *Env) (sym string, frame *binding) {
 			return v.Text, nil
 		}
 		b, _ := env.find(v.Text)
+		if b == nil && v.Kind == format.Term { // терм ядра интерпретатора (sin, ln)
+			return v.Text, nil
+		}
 		if b == nil || len(b.pred) != 1 {
 			return "", nil
 		}
@@ -399,6 +404,9 @@ func (in *Interp) slot(s *slot, env *Env, right bool) (format.Value, error) {
 			toks = []format.Value{v}
 		}
 		env.set(s.def.Text, &binding{pred: toks, env: env})
+		if s.alias && in.OnAlias != nil {
+			in.OnAlias(s.def.Text, format.Format(toks))
+		}
 		return none, nil
 	}
 	if s.op == nil && s.prefix == nil {
@@ -631,7 +639,48 @@ func baseFrames() []*Frame {
 		"=":  eq(false),
 		"<>": eq(true),
 	}
-	return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic}}
+	boolean := func(op func(x, y bool) bool) Prep {
+		return func(a, b *format.Value) (format.Value, bool) {
+			x, ok1 := flagOf(a)
+			y, ok2 := flagOf(b)
+			if !ok1 || !ok2 {
+				return none, false
+			}
+			return flag(op(x, y)), true
+		}
+	}
+	logic["&"] = boolean(func(x, y bool) bool { return x && y })
+	logic["|"] = boolean(func(x, y bool) bool { return x || y })
+	// функция одного аргумента: только в начале предикации («sin 0.5»)
+	unary := func(fn func(x float64) (float64, bool)) Prep {
+		return func(a, b *format.Value) (format.Value, bool) {
+			x, _, ok := num(b)
+			if a != nil || !ok {
+				return none, false
+			}
+			r, ok := fn(x)
+			if !ok || math.IsNaN(r) || math.IsInf(r, 0) {
+				return none, false
+			}
+			return number(r, false), true
+		}
+	}
+	all := func(fn func(float64) float64) func(float64) (float64, bool) {
+		return func(x float64) (float64, bool) { return fn(x), true }
+	}
+	unit := func(fn func(float64) float64) func(float64) (float64, bool) {
+		return func(x float64) (float64, bool) { return fn(x), x >= -1 && x <= 1 }
+	}
+	trgnm := map[string]Prep{
+		"sin": unary(all(math.Sin)), "cos": unary(all(math.Cos)), "tan": unary(all(math.Tan)),
+		"asin": unary(unit(math.Asin)), "acos": unary(unit(math.Acos)), "atan": unary(all(math.Atan)),
+	}
+	lnrfm := map[string]Prep{
+		"ln":  unary(func(x float64) (float64, bool) { return math.Log(x), x > 0 }),
+		"exp": unary(all(math.Exp)),
+	}
+	return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic},
+		{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm}}
 }
 
 func upperFirst(s string) string {
@@ -728,4 +777,18 @@ func frameValue(b *binding) format.Value {
 		v.Items = append(v.Items, b.params[k].pred...)
 	}
 	return v
+}
+
+// flagOf: значение — флаг @true / @false.
+func flagOf(v *format.Value) (bool, bool) {
+	if v == nil || v.Kind != format.Literal {
+		return false, false
+	}
+	switch v.Text {
+	case "@true":
+		return true, true
+	case "@false":
+		return false, true
+	}
+	return false, false
 }

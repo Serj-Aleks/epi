@@ -77,7 +77,8 @@ func (e *Error) Error() string {
 
 // Operators — операторы: всегда отдельный токен.
 var Operators = map[string]bool{"+": true, "-": true, "*": true, "/": true, "//": true,
-	"%": true, ":": true, ".": true, "<": true, ">": true, "<=": true, ">=": true, "=": true, "<>": true, "->": true}
+	"%": true, ":": true, ".": true, "<": true, ">": true, "<=": true, ">=": true, "=": true, "<>": true, "->": true,
+	"&": true, "|": true}
 
 // Терм начинается с буквы любого алфавита (решение 29.10.2026); системный
 // лексикон — общеупотребительные символы и термы латино-эллинской этимологии.
