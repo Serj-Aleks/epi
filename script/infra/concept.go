@@ -1,11 +1,20 @@
 package main
 
-// Концепты в lexic (ason-spec 9.13): тема preposit, путь концепта
-// из букв имени (как в ПИ), мета-файл .uic — модели парами строк
-// «l-<ключ> левый слот» / «r-<ключ> правый слот». Системная часть — буквы
-// (n name, q uri, h content, m alias, p preposit, f prefix, v suffix,
-// b attrib, w defs, u process, o i-process, x counts), модели интерпретаций —
-// индекс Гаусса из 4 знаков.
+// Файлы концептов (ason-spec 0.23): модель — одна строка в записи скрипта,
+// ключей и индексов нет. Системная часть — только то, что не выводится из
+// имени, места файла и моделей (имя и путь — из места, число моделей — число
+// строк). Путь концепта — из букв имени (как в ПИ): <тема>/<буквы>/<имя>.uic.
+//
+//	интерпретатор  lexic/preposit/A/R/I/F/M/arifm.uic
+//	               Preposit : [ * + - / ]
+//	               [ 2 + 3 ] -> 5
+//	алиас          lexic/preposit/P/L/U/S/plus.uic
+//	               plus : +
+//	концепт автора thema/<Тема>/X/x.uic
+//	               A : 5
+//
+// Файлы прежнего вида (пары «l-<ключ> …» / «r-<ключ> …», ПИ) читаются один раз
+// и переписываются в новом виде.
 
 import (
 	"bufio"
@@ -19,26 +28,40 @@ import (
 	"epi/script/format"
 )
 
-const gaussABC = "oiztyvslanxedbhfmg" // 18-ричный алфавит индекса Гаусса (как в ТЕМП)
-const gaussLen = 4                    // порядок индекса
-
-var systemSlots = []struct{ letter, name string }{
-	{"n", "name"}, {"q", "uri"}, {"h", "content"}, {"m", "alias"}, {"p", "preposit"},
-	{"f", "prefix"}, {"v", "suffix"}, {"b", "attrib"}, {"w", "defs"},
-	{"u", "process"}, {"o", "i-process"}, {"x", "counts"},
-}
-
-func gauss(n int) string {
-	b := make([]byte, gaussLen)
-	for i := gaussLen - 1; i >= 0; i-- {
-		b[i] = gaussABC[n%18]
-		n /= 18
+// letterPath: <корень>/<буквы имени>/<имя>.uic.
+func letterPath(root, name string) string {
+	parts := []string{root}
+	for _, r := range strings.ToUpper(name) {
+		parts = append(parts, string(r))
 	}
-	return string(b)
+	return filepath.Join(append(parts, strings.ToLower(name)+".uic")...)
 }
+
+func (q *Script) frameFile(theme, name string) string {
+	return letterPath(filepath.Join(q.dir, "lexic", theme), name)
+}
+
+// writeLines: файл целиком через временный файл.
+func writeLines(path string, lines []string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+// isLegacy: файл прежнего вида (ПИ) — строки «l-…» / «r-…».
+func isLegacy(b []byte) bool { return strings.HasPrefix(string(b), "l-") }
+
+// ---- прежний вид (только чтение) ----
+
+const gaussABC = "oiztyvslanxedbhfmg"
 
 func isGauss(s string) bool {
-	if len(s) != gaussLen {
+	if len(s) != 4 {
 		return false
 	}
 	for _, c := range s {
@@ -49,32 +72,13 @@ func isGauss(s string) bool {
 	return true
 }
 
-// frameDir: <данные>/lexic/<тема>/<буквы имени>, файл — <имя>.uic (как в ПИ).
-func (q *Script) frameFile(theme, name string) string {
-	parts := []string{q.dir, "lexic", theme}
-	for _, r := range strings.ToUpper(name) {
-		parts = append(parts, string(r))
-	}
-	return filepath.Join(append(parts, strings.ToLower(name)+".uic")...)
-}
-
-func frameURI(name string) string {
-	var p []string
-	for _, r := range strings.ToUpper(name) {
-		p = append(p, string(r))
-	}
-	return strings.Join(p, "/")
-}
-
-// loadFrame читает модели фрейма-интерпретатора из .uic.
-func (q *Script) loadFrame(f *disp.Frame) error {
-	path := q.frameFile("preposit", f.Name)
+// readLegacy: системная часть (буква → значение) и модели по порядку записи.
+func readLegacy(path string) (map[string]string, [][2]string, error) {
+	sys := map[string]string{}
+	var models [][2]string
 	file, err := os.Open(path)
-	if os.IsNotExist(err) {
-		return nil
-	}
 	if err != nil {
-		return err
+		return sys, nil, err
 	}
 	defer file.Close()
 	left, right := map[string]string{}, map[string]string{}
@@ -88,86 +92,120 @@ func (q *Script) loadFrame(f *disp.Frame) error {
 		}
 		key, val, _ := strings.Cut(line[2:], " ")
 		if !isGauss(key) {
-			continue // системная часть пишется заново из ядра фрейма
-		}
-		if _, seen := left[key]; !seen && line[0] == 'l' {
-			order = append(order, key)
+			if line[0] == 'r' {
+				sys[key] = val
+			}
+			continue
 		}
 		if line[0] == 'l' {
+			if _, seen := left[key]; !seen {
+				order = append(order, key)
+			}
 			left[key] = val
 		} else {
 			right[key] = val
 		}
 	}
-	if err := sc.Err(); err != nil {
+	for _, k := range order {
+		models = append(models, [2]string{left[k], right[k]})
+	}
+	return sys, models, sc.Err()
+}
+
+// ---- интерпретаторы ----
+
+// loadFrame читает модели фрейма-интерпретатора; прежний вид переписывается.
+func (q *Script) loadFrame(f *disp.Frame) error {
+	path := q.frameFile("preposit", f.Name)
+	b, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if isLegacy(b) {
+		_, models, err := readLegacy(path)
+		if err != nil {
+			return err
+		}
+		for _, m := range models {
+			vs, err := format.Parse(m[1])
+			if err != nil || len(vs) != 1 {
+				return fmt.Errorf("%s: правый слот «%s» — не одно значение", path, m[1])
+			}
+			f.Add(disp.Model{Pred: m[0], Value: vs[0]})
+		}
+		return q.writeFrame(f)
+	}
+	vs, err := format.Parse(string(b))
+	if err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
-	for _, k := range order {
-		vs, err := format.Parse(right[k])
-		if err != nil || len(vs) != 1 {
-			return fmt.Errorf("%s: модель %s: правый слот «%s» — не одно значение", path, k, right[k])
+	for i := 0; i < len(vs); {
+		switch {
+		case i+2 < len(vs) && vs[i].Kind == format.Term && vs[i+1].Kind == format.Op && vs[i+1].Text == ":":
+			i += 3 // системный слот (Preposit : [ … ]) — ядро задано кодом
+		case i+2 < len(vs) && vs[i].Kind == format.Array && vs[i+1].Kind == format.Op && vs[i+1].Text == "->":
+			f.Add(disp.Model{Pred: format.Format(vs[i].Items), Value: vs[i+2]})
+			i += 3
+		default:
+			return fmt.Errorf("%s: строка %d: ожидалась модель «[ … ] -> …»", path, vs[i].Line)
 		}
-		f.Add(disp.Model{Pred: left[k], Value: vs[0]})
 	}
 	return nil
 }
 
-// writeFrame пишет мета-файл фрейма целиком (через временный файл).
+// writeFrame: «Preposit : [ … ]» и модели «[ предикация ] -> интерпретация».
 func (q *Script) writeFrame(f *disp.Frame) error {
-	path := q.frameFile("preposit", f.Name)
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
 	preps := make([]string, 0, len(f.Kernel))
 	for p := range f.Kernel {
 		preps = append(preps, p)
 	}
 	sort.Strings(preps)
-	right := map[string]string{"name": f.Name, "uri": frameURI(f.Name),
-		"preposit": strings.Join(preps, " "), "counts": gauss(len(f.Models))}
-	var sb strings.Builder
-	for _, s := range systemSlots {
-		fmt.Fprintf(&sb, "l-%s %s\nr-%s %s\n", s.letter, s.name, s.letter, right[s.name])
+	lines := []string{"Preposit : [ " + strings.Join(preps, " ") + " ]"}
+	for _, m := range f.Models {
+		lines = append(lines, "[ "+m.Pred+" ] -> "+m.Value.String())
 	}
-	for i, m := range f.Models {
-		k := gauss(i + 1)
-		fmt.Fprintf(&sb, "l-%s %s\nr-%s %s\n", k, m.Pred, k, m.Value.String())
-	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, []byte(sb.String()), 0644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return writeLines(q.frameFile("preposit", f.Name), lines)
 }
 
-// loadAliases: концепты темы preposit со слотом alias (`r-m +`) становятся
-// алиасами препозиций в общем контексте (9.8): `plus : +`.
+// ---- алиасы ----
+
+// loadAliases: файлы препозиций, кроме интерпретаторов, — предикации
+// (`plus : +`), они выполняются в общем контексте (9.8).
 func (q *Script) loadAliases() error {
+	frames := map[string]bool{}
+	for _, f := range q.in.Frames {
+		frames[strings.ToLower(f.Name)+".uic"] = true
+	}
 	root := filepath.Join(q.dir, "lexic", "preposit")
 	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".uic") {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".uic") || frames[d.Name()] {
 			return err
 		}
 		b, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		var name, alias string
-		for _, line := range strings.Split(string(b), "\n") {
-			if strings.HasPrefix(line, "r-n ") {
-				name = strings.TrimSpace(line[4:])
+		text := string(b)
+		if isLegacy(b) { // прежний вид: r-n имя, r-m алиас
+			sys, _, err := readLegacy(path)
+			if err != nil {
+				return err
 			}
-			if strings.HasPrefix(line, "r-m ") {
-				alias = strings.TrimSpace(line[4:])
+			if sys["n"] == "" || sys["m"] == "" {
+				return nil
+			}
+			text = sys["n"] + " : " + sys["m"]
+			if err := writeLines(path, []string{text}); err != nil {
+				return err
 			}
 		}
-		if name == "" || alias == "" {
-			return nil
-		}
-		if _, err := q.in.Run(name+" : "+alias, q.env); err != nil {
+		if _, err := q.in.Run(text, q.env); err != nil {
 			return fmt.Errorf("%s: %w", path, err)
 		}
 		return nil

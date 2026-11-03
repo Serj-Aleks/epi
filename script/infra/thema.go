@@ -2,13 +2,11 @@ package main
 
 // Темы автора (ason-spec 9.14): тема — проект, папка thema/<Имя>. В ней
 // протокол prtcl (сеансы, ignor.uic) и концепты автора — путь из букв имени,
-// мета-файл .uic, как в lexic. Параметр фрейма — модель «l-<индекс> Параметр» /
-// «r-<индекс> предикация»; повторное определение параметра перезаписывает его
-// модель (индекс сохраняется). Активная тема одна; системный лексикон (lexic) —
+// файл .uic: строки «Параметр : предикация» (0.23); повторное определение
+// параметра заменяет свою строку. Активная тема одна; системный лексикон (lexic) —
 // общий для всех тем.
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -181,90 +179,49 @@ func (q *Script) startTheme() error {
 }
 
 // conceptFile: <тема>/<буквы имени>/<имя>.uic.
-func (q *Script) conceptFile(name string) string {
-	parts := []string{q.themaDir()}
-	for _, r := range strings.ToUpper(name) {
-		parts = append(parts, string(r))
-	}
-	return filepath.Join(append(parts, strings.ToLower(name)+".uic")...)
+func (q *Script) conceptFile(name string) string { return letterPath(q.themaDir(), name) }
+
+// conceptLines: строки-модели концепта «Параметр : предикация» (0.23).
+func conceptLines(b []byte) ([]string, error) {
+	return disp.Split(string(b))
 }
 
-// readModels: системная часть (буква → значение) и модели по индексам Гаусса в порядке записи.
-func readModels(path string) (map[string]string, []string, map[string]string, map[string]string, error) {
-	sys, left, right := map[string]string{}, map[string]string{}, map[string]string{}
-	var order []string
-	file, err := os.Open(path)
-	if err != nil {
-		return sys, order, left, right, err
-	}
-	defer file.Close()
-	sc := bufio.NewScanner(file)
-	sc.Buffer(make([]byte, 1<<20), 1<<20)
-	for sc.Scan() {
-		line := sc.Text()
-		if len(line) < 3 || line[1] != '-' || (line[0] != 'l' && line[0] != 'r') {
-			continue
-		}
-		key, val, _ := strings.Cut(line[2:], " ")
-		if !isGauss(key) {
-			if line[0] == 'r' {
-				sys[key] = val
-			}
-			continue
-		}
-		if line[0] == 'l' {
-			if _, seen := left[key]; !seen {
-				order = append(order, key)
-			}
-			left[key] = val
-		} else {
-			right[key] = val
-		}
-	}
-	return sys, order, left, right, sc.Err()
+// lineKey: параметр строки «Параметр : …».
+func lineKey(line string) string {
+	k, _, _ := strings.Cut(line, " ")
+	return k
 }
 
-// writeConcept: параметр фрейма автора — в мета-файл концепта темы.
+// writeConcept: параметр фрейма автора — строка «Параметр : предикация» в
+// файле концепта; повторное определение заменяет свою строку.
 func (q *Script) writeConcept(frame, param string, pred []format.Value) error {
 	if q.theme == "" {
 		return nil
 	}
 	path := q.conceptFile(frame)
-	_, order, left, right, err := readModels(path)
-	if err != nil && !os.IsNotExist(err) {
+	var lines []string
+	if b, err := os.ReadFile(path); err == nil {
+		if lines, err = conceptLines(b); err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+	} else if !os.IsNotExist(err) {
 		return err
 	}
-	text := strings.ReplaceAll(format.Format(pred), "\n", " . ") // модель — одна строка
-	key := ""
-	for _, k := range order {
-		if format.SameTerm(left[k], param) {
-			key = k
+	text := param + " : " + strings.ReplaceAll(format.Format(pred), "\n", " . ")
+	found := false
+	for i, l := range lines {
+		if format.SameTerm(lineKey(l), param) {
+			lines[i], found = text, true
 		}
 	}
-	if key == "" {
-		key = gauss(len(order) + 1)
-		order = append(order, key)
+	if !found {
+		lines = append(lines, text)
 	}
-	left[key], right[key] = param, text
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-	vals := map[string]string{"name": frame, "uri": frameURI(frame), "counts": gauss(len(order))}
-	var sb strings.Builder
-	for _, s := range systemSlots {
-		fmt.Fprintf(&sb, "l-%s %s\nr-%s %s\n", s.letter, s.name, s.letter, vals[s.name])
-	}
-	for _, k := range order {
-		fmt.Fprintf(&sb, "l-%s %s\nr-%s %s\n", k, left[k], k, right[k])
-	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, []byte(sb.String()), 0644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return writeLines(path, lines)
 }
 
-// loadConcepts: концепты темы — параметры фреймов в контекст темы.
+// loadConcepts: концепты темы — параметры фреймов в контекст темы. Имя фрейма —
+// из имени файла; файл прежнего вида переписывается.
 func (q *Script) loadConcepts() error {
 	on := q.in.OnParam
 	q.in.OnParam = nil
@@ -279,15 +236,38 @@ func (q *Script) loadConcepts() error {
 		if d.IsDir() || !strings.HasSuffix(path, ".uic") {
 			return nil
 		}
-		sys, order, left, right, err := readModels(path)
+		b, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		for _, k := range order {
-			if _, err := q.in.Run(sys["n"]+"."+left[k]+" : "+right[k], q.env); err != nil {
+		name := conceptName(path, q.themaDir())
+		var lines []string
+		if isLegacy(b) {
+			_, models, err := readLegacy(path)
+			if err != nil {
+				return err
+			}
+			for _, m := range models {
+				lines = append(lines, m[0]+" : "+m[1])
+			}
+			if err := writeLines(path, lines); err != nil {
+				return err
+			}
+		} else if lines, err = conceptLines(b); err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+		for _, l := range lines {
+			if _, err := q.in.Run(name+"."+l, q.env); err != nil {
 				return fmt.Errorf("%s: %w", path, err)
 			}
 		}
 		return nil
 	})
+}
+
+// conceptName: имя концепта — из пути: буквы папок (регистр — как в пути,
+// первая — прописная по 9.9), например <тема>/X/x.uic → X.
+func conceptName(path, root string) string {
+	rel, _ := filepath.Rel(root, filepath.Dir(path))
+	return strings.ReplaceAll(rel, string(filepath.Separator), "")
 }
