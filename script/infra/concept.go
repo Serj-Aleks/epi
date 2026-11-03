@@ -7,7 +7,6 @@ package main
 //
 //	интерпретатор  lexic/preposit/A/R/I/F/M/arifm.uic
 //	               Preposit : [ * + - / ]
-//	               [ 2 + 3 ] -> 5
 //	алиас          lexic/preposit/P/L/U/S/plus.uic
 //	               plus : +
 //	концепт автора thema/<Тема>/X/x.uic
@@ -25,7 +24,6 @@ import (
 	"strings"
 
 	"epi/script/disp"
-	"epi/script/format"
 )
 
 // letterPath: <корень>/<буквы имени>/<имя>.uic.
@@ -114,8 +112,11 @@ func readLegacy(path string) (map[string]string, [][2]string, error) {
 
 // ---- интерпретаторы ----
 
-// loadFrame читает модели фрейма-интерпретатора; прежний вид переписывается.
-func (q *Script) loadFrame(f *disp.Frame) error {
+// syncFrame: файл интерпретатора — только системная часть «Preposit : [ … ]»;
+// прецеденты интерпретаций во фрейм не пишутся (решено 03.11.2026: история —
+// в протоколе). Существующий файл с прецедентами или прежнего вида
+// переписывается; нового файла не создаёт.
+func (q *Script) syncFrame(f *disp.Frame) error {
 	path := q.frameFile("preposit", f.Name)
 	b, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -124,50 +125,16 @@ func (q *Script) loadFrame(f *disp.Frame) error {
 	if err != nil {
 		return err
 	}
-	if isLegacy(b) {
-		_, models, err := readLegacy(path)
-		if err != nil {
-			return err
-		}
-		for _, m := range models {
-			vs, err := format.Parse(m[1])
-			if err != nil || len(vs) != 1 {
-				return fmt.Errorf("%s: правый слот «%s» — не одно значение", path, m[1])
-			}
-			f.Add(disp.Model{Pred: m[0], Value: vs[0]})
-		}
-		return q.writeFrame(f)
-	}
-	vs, err := format.Parse(string(b))
-	if err != nil {
-		return fmt.Errorf("%s: %w", path, err)
-	}
-	for i := 0; i < len(vs); {
-		switch {
-		case i+2 < len(vs) && vs[i].Kind == format.Term && vs[i+1].Kind == format.Op && vs[i+1].Text == ":":
-			i += 3 // системный слот (Preposit : [ … ]) — ядро задано кодом
-		case i+2 < len(vs) && vs[i].Kind == format.Array && vs[i+1].Kind == format.Op && vs[i+1].Text == "->":
-			f.Add(disp.Model{Pred: format.Format(vs[i].Items), Value: vs[i+2]})
-			i += 3
-		default:
-			return fmt.Errorf("%s: строка %d: ожидалась модель «[ … ] -> …»", path, vs[i].Line)
-		}
-	}
-	return nil
-}
-
-// writeFrame: «Preposit : [ … ]» и модели «[ предикация ] -> интерпретация».
-func (q *Script) writeFrame(f *disp.Frame) error {
 	preps := make([]string, 0, len(f.Kernel))
 	for p := range f.Kernel {
 		preps = append(preps, p)
 	}
 	sort.Strings(preps)
-	lines := []string{"Preposit : [ " + strings.Join(preps, " ") + " ]"}
-	for _, m := range f.Models {
-		lines = append(lines, "[ "+m.Pred+" ] -> "+m.Value.String())
+	line := "Preposit : [ " + strings.Join(preps, " ") + " ]"
+	if strings.TrimSpace(string(b)) == line {
+		return nil
 	}
-	return writeLines(q.frameFile("preposit", f.Name), lines)
+	return writeLines(path, []string{line})
 }
 
 // ---- алиасы ----
@@ -210,30 +177,4 @@ func (q *Script) loadAliases() error {
 		}
 		return nil
 	})
-}
-
-// migrateFrame: прежний файл фрейма в корне данных («[ … ] -> …») переносится
-// в lexic и удаляется.
-func (q *Script) migrateFrame(f *disp.Frame) error {
-	old := filepath.Join(q.dir, f.Name)
-	b, err := os.ReadFile(old)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	vs, err := format.Parse(string(b))
-	if err != nil {
-		return fmt.Errorf("%s: %w", old, err)
-	}
-	for i := 0; i+2 < len(vs); i += 3 {
-		if vs[i].Kind == format.Array && vs[i+1].Kind == format.Op && vs[i+1].Text == "->" {
-			f.Add(disp.Model{Pred: format.Format(vs[i].Items), Value: vs[i+2]})
-		}
-	}
-	if err := q.writeFrame(f); err != nil {
-		return err
-	}
-	return os.Remove(old)
 }

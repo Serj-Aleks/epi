@@ -198,26 +198,6 @@ func TestFramesUsed(t *testing.T) {
 	}
 }
 
-// Модели интерпретаций — в контексте фрейма-интерпретатора (9.11): каждая
-// интерпретированная предикация с явными значениями порождает модель в своём фрейме.
-func TestModels(t *testing.T) {
-	in := New(100, nil)
-	var added []string
-	in.OnModel = func(f *Frame, m Model) { added = append(added, f.Name+": ["+m.Pred+"] -> "+m.Value.String()) }
-	for _, src := range []string{`( 2 + 3 ) > 4`, `2 + 3`, `F.X : 2 . F.X + 1`, `7 // 2`} {
-		if _, err := in.Run(src, NewEnv(nil)); err != nil {
-			t.Fatal(err)
-		}
-	}
-	want := "arifm: [2 + 3] -> 5|logic: [( 2 + 3 ) > 4] -> @true"
-	if got := strings.Join(added, "|"); got != want {
-		t.Fatalf("модели:\n%s\nожидалось\n%s", got, want)
-	}
-	if len(in.Frame("arifm").Models) != 1 || len(in.Frame("logic").Models) != 1 {
-		t.Fatal("повторная предикация не дублирует модель; с именами — модели нет")
-	}
-}
-
 // Лимит шагов — на одну интерпретацию: после остановленной следующая начинается заново.
 func TestLimitPerRun(t *testing.T) {
 	in := New(50, func(string) bool { return false })

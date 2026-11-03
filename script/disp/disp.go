@@ -24,9 +24,8 @@ type Prep func(a, b *format.Value) (format.Value, bool)
 
 // Interp — среда интерпретации.
 type Interp struct {
-	Frames  []*Frame                // фреймы-интерпретаторы препозиций (9.11)
-	Used    []string                // фреймы, интерпретировавшие последнюю Run
-	OnModel func(f *Frame, m Model) // новая модель во фрейме-интерпретаторе
+	Frames []*Frame // фреймы-интерпретаторы препозиций (9.11)
+	Used   []string // фреймы, интерпретировавшие последнюю Run
 	// OnParam: «Фрейм.Параметр : …» записано (фреймы автора сохраняются в теме)
 	OnParam func(frame, param string, pred []format.Value)
 	Limit   int // лимит шагов (0.16)
@@ -44,30 +43,11 @@ func (s Stopped) Error() string {
 }
 
 // Frame — фрейм-интерпретатор (9.11). Kernel — неизменяемая часть:
-// препозиции, которые он интерпретирует. Динамическая часть растёт в
-// контексте (алиасы, определения) и в базе моделей сессии.
+// препозиции, которые он интерпретирует. Прецеденты интерпретаций во фрейм не
+// пишутся (решено 03.11.2026): история — в протоколе.
 type Frame struct {
 	Name   string
 	Kernel map[string]Prep
-	Models []Model // динамическая часть: модели интерпретаций (9.11)
-}
-
-// Model — модель интерпретации «[ предикация ] -> интерпретация» в контексте
-// фрейма-интерпретатора.
-type Model struct {
-	Pred  string
-	Value format.Value
-}
-
-// Add добавляет модель, если такой предикации во фрейме ещё нет; true — добавлена.
-func (f *Frame) Add(m Model) bool {
-	for _, x := range f.Models {
-		if x.Pred == m.Pred {
-			return false
-		}
-	}
-	f.Models = append(f.Models, m)
-	return true
 }
 
 // Frame находит фрейм-интерпретатор по имени.
@@ -78,24 +58,6 @@ func (in *Interp) Frame(name string) *Frame {
 		}
 	}
 	return nil
-}
-
-// pure: в предикации только значения, без имён — модель порождается только
-// для таких предикаций (явные числа, 9.11); параметризованные — следующий шаг.
-func pure(toks []format.Value) bool {
-	for _, t := range toks {
-		switch t.Kind {
-		case format.Term, format.GetTerm, format.Field, format.GetField, format.Path:
-			if !isPrepTok(t) {
-				return false
-			}
-		case format.Array, format.Expr, format.Object:
-			if !pure(t.Items) {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 // prep находит интерпретатор символа препозиции и его фрейм.
@@ -479,12 +441,6 @@ func (in *Interp) slot(s *slot, env *Env, right bool) (format.Value, error) {
 		return none, nil
 	}
 	in.use(fr)
-	if toks := s.toks(); pure(toks) {
-		m := Model{Pred: format.Format(toks), Value: v}
-		if fr.Add(m) && in.OnModel != nil {
-			in.OnModel(fr, m)
-		}
-	}
 	return v, nil
 }
 

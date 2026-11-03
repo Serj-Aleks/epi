@@ -82,18 +82,10 @@ const limit = 10000
 func open(dir string) (*Script, error) {
 	q := &Script{dir: dir}
 	q.in = disp.New(limit, func(string) bool { return false })
-	// фреймы-интерпретаторы: lexic/preposit (9.13); прежние файлы переносятся
+	// фреймы-интерпретаторы: lexic/preposit (9.13) — только системная часть
 	for _, f := range q.in.Frames {
-		if err := q.loadFrame(f); err != nil {
+		if err := q.syncFrame(f); err != nil {
 			return nil, err
-		}
-		if err := q.migrateFrame(f); err != nil {
-			return nil, err
-		}
-	}
-	q.in.OnModel = func(f *disp.Frame, m disp.Model) {
-		if err := q.writeFrame(f); err != nil {
-			log.Print(err)
 		}
 	}
 	// фреймы автора сохраняются в активной теме (9.14)
