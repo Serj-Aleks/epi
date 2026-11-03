@@ -115,14 +115,12 @@ func readLegacy(path string) (map[string]string, [][2]string, error) {
 // syncFrame: файл интерпретатора — только системная часть «Preposit : [ … ]»;
 // прецеденты интерпретаций во фрейм не пишутся (решено 03.11.2026: история —
 // в протоколе). Существующий файл с прецедентами или прежнего вида
-// переписывается; нового файла не создаёт.
+// переписывается; файл интерпретатора, которого нет, создаётся: каждый
+// интерпретатор системы виден в lexic (0.22).
 func (q *Script) syncFrame(f *disp.Frame) error {
 	path := q.frameFile("preposit", f.Name)
 	b, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	preps := make([]string, 0, len(f.Kernel))
