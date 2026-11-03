@@ -249,7 +249,7 @@ func (q *Script) start(text string) *run {
 			ts = append(ts, t)
 		}
 		for _, u := range q.in.Unknown[known:] {
-			line := "[ " + u + " ]"
+			line := u                                  // ignor.uic: предикация как есть, строкой файла
 			if _, err := format.Parse(u); err != nil { // нечитаемое — строкой
 				line = format.Value{Kind: format.String, Text: u}.String()
 			}

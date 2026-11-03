@@ -123,18 +123,8 @@ func (q *Script) renameTheme(old, name string) error {
 func (q *Script) switchTheme(name string) error {
 	q.theme, q.cur, q.closed, q.turns = name, "", false, nil
 	q.in.Unknown = nil
-	if b, err := os.ReadFile(q.ignor()); err == nil {
-		vs, err := format.Parse(string(b))
-		if err != nil {
-			return fmt.Errorf("ignor.uic: %w", err)
-		}
-		for _, v := range vs {
-			if v.Kind == format.Array {
-				q.in.Unknown = append(q.in.Unknown, format.Format(v.Items))
-			} else if v.Kind == format.String {
-				q.in.Unknown = append(q.in.Unknown, v.Text)
-			}
-		}
+	if err := q.loadIgnor(); err != nil {
+		return err
 	}
 	q.env = disp.NewEnv(nil)
 	if err := q.loadAliases(); err != nil {
@@ -270,4 +260,39 @@ func (q *Script) loadConcepts() error {
 func conceptName(path, root string) string {
 	rel, _ := filepath.Rel(root, filepath.Dir(path))
 	return strings.ReplaceAll(rel, string(filepath.Separator), "")
+}
+
+// loadIgnor: база нераспознанных темы — строка файла на предикацию (без
+// скобок); нечитаемый ввод — строкой в кавычках. Строки прежнего вида
+// «[ … ]» читаются, и файл один раз переписывается.
+func (q *Script) loadIgnor() error {
+	b, err := os.ReadFile(q.ignor())
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var lines []string
+	legacy := false
+	for _, l := range strings.Split(string(b), "\n") {
+		if l = strings.TrimSpace(l); l == "" {
+			continue
+		}
+		text, line := l, l
+		if vs, err := format.Parse(l); err == nil && len(vs) == 1 {
+			switch vs[0].Kind {
+			case format.Array:
+				text, line, legacy = format.Format(vs[0].Items), format.Format(vs[0].Items), true
+			case format.String:
+				text = vs[0].Text
+			}
+		}
+		q.in.Unknown = append(q.in.Unknown, text)
+		lines = append(lines, line)
+	}
+	if legacy {
+		return writeLines(q.ignor(), lines)
+	}
+	return nil
 }
