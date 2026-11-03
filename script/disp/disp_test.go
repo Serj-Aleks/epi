@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"epi/script/format"
 )
 
 // run: интерпретировать текст; ответы на вопросы системы — по очереди из answers.
@@ -269,5 +271,34 @@ func TestNewInterpreters(t *testing.T) {
 		if len(in.Unknown) != 1 {
 			t.Errorf("%s: ожидалось «не распознано»", src)
 		}
+	}
+}
+
+// Синоним концепта — параметр Alias (решено 03.11.2026).
+func TestAliasParam(t *testing.T) {
+	in := New(100, func(string) bool { return true })
+	env := NewEnv(nil)
+	var saved []string
+	in.OnParam = func(frame, param string, pred []format.Value) {
+		saved = append(saved, frame+"."+param+" : "+format.Format(pred))
+	}
+	for _, c := range []struct{ src, want string }{
+		{`X.A : 5 . X.Alias : [ Y Z ]`, "@none"},
+		{`Y.A * Z.A`, "25"},
+		{`Z.B : 7`, "@none"},
+		{`X.B`, "7"},
+		{`Y`, "{ A : 5 Alias : [ Y Z ] B : 7 }"},
+		{`W.A`, "@none"},
+	} {
+		v, err := in.Run(c.src, env)
+		if err != nil || v.String() != c.want {
+			t.Errorf("%s = %v %v, ожидалось %s", c.src, v, err, c.want)
+		}
+	}
+	if got := strings.Join(saved, "|"); got != "X.A : 5|X.Alias : [ Y Z ]|X.B : 7" {
+		t.Errorf("запись: %s", got)
+	}
+	if len(in.Unknown) != 1 {
+		t.Errorf("W.A — не распознано: %v", in.Unknown)
 	}
 }

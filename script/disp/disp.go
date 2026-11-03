@@ -498,7 +498,7 @@ func (in *Interp) operand(a []format.Value, env *Env, right bool) (format.Value,
 
 // apply: аппликация объекта по имени, с аргументами или без.
 func (in *Interp) apply(a []format.Value, env *Env) (format.Value, error) {
-	b, _ := env.find(a[0].Text)
+	b, _ := env.findFrame(a[0].Text)
 	if b == nil {
 		in.unknown(a, "— имя не определено")
 		return none, nil
@@ -728,7 +728,7 @@ func (in *Interp) defParam(s *slot, toks []format.Value, env *Env) (format.Value
 		}
 		toks = []format.Value{v}
 	}
-	fb, _ := env.find(frame)
+	fb, real := env.findFrame(frame) // синоним (Alias) — тот же фрейм
 	if fb == nil {
 		fb = &binding{env: env}
 		env.set(frame, fb)
@@ -738,7 +738,7 @@ func (in *Interp) defParam(s *slot, toks []format.Value, env *Env) (format.Value
 	}
 	fb.params[format.Key(param)] = &binding{pred: toks, env: env}
 	if in.OnParam != nil {
-		in.OnParam(frame, param, toks)
+		in.OnParam(real, param, toks)
 	}
 	return none, nil
 }
@@ -750,7 +750,7 @@ func (in *Interp) param(a []format.Value, env *Env) (format.Value, error) {
 		in.unknown(a, "— параметр пишется «Фрейм.Параметр», оба с прописной буквы")
 		return none, nil
 	}
-	fb, _ := env.find(frame)
+	fb, _ := env.findFrame(frame)
 	if fb == nil {
 		in.unknown(a, fmt.Sprintf("— фрейм «%s» не определён", frame))
 		return none, nil
@@ -791,4 +791,46 @@ func flagOf(v *format.Value) (bool, bool) {
 		return false, true
 	}
 	return false, false
+}
+
+// aliasParam — параметр-синоним концепта (решено 03.11.2026): `X.Alias : Y`
+// или `X.Alias : [ Y Z ]`; тогда `Y` обозначает тот же фрейм, что `X`.
+const aliasParam = "Alias"
+
+// findFrame: фрейм по имени или по синониму (параметр Alias); второе
+// значение — имя самого фрейма. Собственное имя важнее синонима.
+func (e *Env) findFrame(name string) (*binding, string) {
+	if b, _ := e.find(name); b != nil {
+		return b, name
+	}
+	for c := e; c != nil; c = c.parent {
+		keys := make([]string, 0, len(c.vars))
+		for k := range c.vars {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if p := c.vars[k].params[aliasParam]; p != nil && hasTerm(p.pred, name) {
+				return c.vars[k], k
+			}
+		}
+	}
+	return nil, name
+}
+
+// hasTerm: предикация — терм name или блок, где он есть.
+func hasTerm(pred []format.Value, name string) bool {
+	for _, v := range pred {
+		switch v.Kind {
+		case format.Term:
+			if format.SameTerm(v.Text, name) {
+				return true
+			}
+		case format.Array:
+			if hasTerm(v.Items, name) {
+				return true
+			}
+		}
+	}
+	return false
 }
