@@ -20,11 +20,9 @@ func open(dir string) (*Script, error) {
 q := &Script{dir: dir}
 q.in = disp.New(limit, func(string) bool { return false })
 // фреймы-интерпретаторы: lexic/preposit (9.13) — только системная часть
-for _, f := range q.in.Frames {
-	if err := q.syncFrame(f); err != nil {return nil, err}}
+for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 // фреймы автора сохраняются в активной теме (9.14)
-q.in.OnParam = func(frame, param string, pred []format.Value) {
-	if err := q.writeConcept(frame, param, pred); err != nil {log.Print(err)}}
+q.in.OnParam = func(frame, param string, pred []format.Value) {if err := q.writeConcept(frame, param, pred); err != nil {log.Print(err)}}
 // алиасы препозиций — системный лексикон, общий для всех тем (9.15)
 q.in.OnAlias = func(name, target string) {
 	if q.in.Frame(name) != nil {return} // имя интерпретатора — не алиас
@@ -74,8 +72,7 @@ q.cur, q.closed, q.turns = name, st.Mode().Perm()&0200 == 0, turns; return nil }
 // день; в тот же день сеанс продолжается.
 func (q *Script) newSeans() error {
 name := "seans-" + time.Now().Format("2006-01-02") + ".uic"
-if st, err := os.Stat(q.seans(name)); err == nil {
-	if st.Mode().Perm()&0200 == 0 {return fmt.Errorf("сеанс %s сегодня уже закрыт; его можно открыть для чтения", name)}} else if err := os.WriteFile(q.seans(name), nil, 0644); err != nil {return err}; return q.switchTo(name) }
+if st, err := os.Stat(q.seans(name)); err == nil {if st.Mode().Perm()&0200 == 0 {return fmt.Errorf("сеанс %s сегодня уже закрыт; его можно открыть для чтения", name)}} else if err := os.WriteFile(q.seans(name), nil, 0644); err != nil {return err}; return q.switchTo(name) }
 // record: шаг диалога как строка сеанса — модель «[ предикация ] -> интерпретация»;
 // нечитаемая предикация и сообщение об ошибке — строками.
 func record(t Turn) string {
@@ -86,15 +83,13 @@ if vs, err := format.Parse(ans); t.Error || err != nil || len(vs) != 1 {ans = fo
 func appendFile(path, text string) error {
 f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 if err != nil {return err}
-if _, err := f.WriteString(text); err != nil {
-	f.Close(); return err}; return f.Close() }
+if _, err := f.WriteString(text); err != nil {f.Close(); return err}; return f.Close() }
 // start: интерпретация в отдельной горутине; вопросы диспетчера (0.7, 0.16)
 // уходят в браузер, ответы возвращаются.
 func (q *Script) start(text string) *run {
 r := &run{questions: make(chan string), answers: make(chan bool), done: make(chan []Turn, 1)}
 known := len(q.in.Unknown)
-q.in.Ask = func(question string) bool {
-	r.questions <- question; return <-r.answers}
+q.in.Ask = func(question string) bool {r.questions <- question; return <-r.answers}
 go func() {
 	// на каждую предикацию строки — свой ответ (9.11.8)
 	preds, err := disp.Split(text)
@@ -140,63 +135,46 @@ var body struct {
 	To     string `json:"to"`
 	Answer bool   `json:"answer"`
 	Name   string `json:"name"`}
-if req.Method != http.MethodGet {
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest); return}}
+if req.Method != http.MethodGet {if err := json.NewDecoder(req.Body).Decode(&body); err != nil {http.Error(w, err.Error(), http.StatusBadRequest); return}}
 fail := func(code int, msg string) { http.Error(w, msg, code) }
-if q.pending != nil && req.URL.Path != "/api/answer" && req.URL.Path != "/api/state" {
-	fail(http.StatusConflict, "ждёт ответа на вопрос"); return}
+if q.pending != nil && req.URL.Path != "/api/answer" && req.URL.Path != "/api/state" {fail(http.StatusConflict, "ждёт ответа на вопрос"); return}
 switch req.URL.Path {
 case "/api/state":
 	json.NewEncoder(w).Encode(q.state())
 case "/api/thema/new": // новая тема (9.14)
-	if err := q.createTheme(strings.TrimSpace(body.Name)); err != nil {
-		fail(http.StatusBadRequest, err.Error()); return}
+	if err := q.createTheme(strings.TrimSpace(body.Name)); err != nil {fail(http.StatusBadRequest, err.Error()); return}
 	if q.cur == "" { // в новой теме сразу открывается сеанс
-		if err := q.newSeans(); err != nil {
-			fail(http.StatusConflict, err.Error()); return}}
+		if err := q.newSeans(); err != nil {fail(http.StatusConflict, err.Error()); return}}
 	json.NewEncoder(w).Encode(q.state())
 case "/api/thema/open":
 	t, ok := q.themeExists(body.Name)
-	if !ok {
-		fail(http.StatusNotFound, "нет такой темы"); return}
-	if err := q.switchTheme(t); err != nil {
-		fail(http.StatusInternalServerError, err.Error()); return}
+	if !ok {fail(http.StatusNotFound, "нет такой темы"); return}
+	if err := q.switchTheme(t); err != nil {fail(http.StatusInternalServerError, err.Error()); return}
 	json.NewEncoder(w).Encode(q.state())
 case "/api/thema/rename":
-	if err := q.renameTheme(body.Name, strings.TrimSpace(body.To)); err != nil {
-		fail(http.StatusBadRequest, err.Error()); return}
+	if err := q.renameTheme(body.Name, strings.TrimSpace(body.To)); err != nil {fail(http.StatusBadRequest, err.Error()); return}
 	json.NewEncoder(w).Encode(q.state())
 case "/api/new": // открыть новый сеанс: seans-<сегодня>.uic
-	if q.theme == "" {
-		fail(http.StatusConflict, "темы нет: сначала создайте тему"); return}
-	if err := q.newSeans(); err != nil {
-		fail(http.StatusConflict, err.Error()); return}
+	if q.theme == "" {fail(http.StatusConflict, "темы нет: сначала создайте тему"); return}
+	if err := q.newSeans(); err != nil {fail(http.StatusConflict, err.Error()); return}
 	json.NewEncoder(w).Encode(q.state())
 case "/api/open": // открыть сеанс: продолжить (не закрыт) или читать (закрыт)
-	if filepath.Base(body.Name) != body.Name || !strings.HasPrefix(body.Name, "seans-") {
-		fail(http.StatusBadRequest, "нет такого сеанса"); return}
-	if err := q.switchTo(body.Name); err != nil {
-		fail(http.StatusNotFound, err.Error()); return}
+	if filepath.Base(body.Name) != body.Name || !strings.HasPrefix(body.Name, "seans-") {fail(http.StatusBadRequest, "нет такого сеанса"); return}
+	if err := q.switchTo(body.Name); err != nil {fail(http.StatusNotFound, err.Error()); return}
 	json.NewEncoder(w).Encode(q.state())
 case "/api/close": // закрыть текущий сеанс: файл только для чтения
-	if q.cur == "" || q.closed {
-		fail(http.StatusConflict, "открытого сеанса нет"); return}
-	if err := os.Chmod(q.seans(q.cur), 0444); err != nil {
-		fail(http.StatusInternalServerError, err.Error()); return}
+	if q.cur == "" || q.closed {fail(http.StatusConflict, "открытого сеанса нет"); return}
+	if err := os.Chmod(q.seans(q.cur), 0444); err != nil {fail(http.StatusInternalServerError, err.Error()); return}
 	q.closed = true
 	json.NewEncoder(w).Encode(q.state())
 case "/api/eval":
 	text := strings.TrimSpace(body.Text)
-	if q.cur == "" || q.closed {
-		fail(http.StatusConflict, "открытого сеанса нет"); return}
-	if text == "" {
-		fail(http.StatusBadRequest, "пусто"); return}
+	if q.cur == "" || q.closed {fail(http.StatusConflict, "открытого сеанса нет"); return}
+	if text == "" {fail(http.StatusBadRequest, "пусто"); return}
 	q.pPred = text
 	json.NewEncoder(w).Encode(q.wait(q.start(text)))
 case "/api/answer":
-	if q.pending == nil {
-		fail(http.StatusConflict, "вопроса нет"); return}
+	if q.pending == nil {fail(http.StatusConflict, "вопроса нет"); return}
 	r := q.pending
 	r.answers <- body.Answer
 	json.NewEncoder(w).Encode(q.wait(r))
@@ -217,8 +195,7 @@ http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 log.Printf("script: http://%s (данные: %s)", *addr, dir)
 log.Fatal(http.ListenAndServe(*addr, nil)) }
 func hasArrow(vs []format.Value) bool {
-for _, v := range vs {
-	if v.Kind == format.Op && v.Text == "->" {return true}}; return false }
+for _, v := range vs {if v.Kind == format.Op && v.Text == "->" {return true}}; return false }
 // migrateSeans: сеанс прежнего вида (только предикации автора) один раз
 // интерпретируется заново без вопросов и переписывается моделями
 // «[ предикация ] -> интерпретация»; права файла (закрыт / открыт) сохраняются.

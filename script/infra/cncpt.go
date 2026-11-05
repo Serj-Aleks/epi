@@ -30,8 +30,7 @@ func isLegacy(b []byte) bool { return strings.HasPrefix(string(b), "l-") }
 // ---- прежний вид (только чтение) ----
 func isGauss(s string) bool {
 if len(s) != 4 {return false}
-for _, c := range s {
-	if !strings.ContainsRune(gaussABC, c) {return false}}; return true }
+for _, c := range s {if !strings.ContainsRune(gaussABC, c) {return false}}; return true }
 // readLegacy: системная часть (буква → значение) и модели по порядку записи.
 func readLegacy(path string) (map[string]string, [][2]string, error) {
 sys := map[string]string{}
@@ -47,8 +46,7 @@ for sc.Scan() {
 	line := sc.Text()
 	if len(line) < 3 || line[1] != '-' || (line[0] != 'l' && line[0] != 'r') {continue}
 	key, val, _ := strings.Cut(line[2:], " ")
-	if !isGauss(key) {
-		if line[0] == 'r' {sys[key] = val}; continue}
+	if !isGauss(key) {if line[0] == 'r' {sys[key] = val}; continue}
 	if line[0] == 'l' {
 		if _, seen := left[key]; !seen {order = append(order, key)}
 		left[key] = val} else {right[key] = val}}

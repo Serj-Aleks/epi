@@ -26,11 +26,9 @@ func (p *parser) seq(end rune, line, col int) ([]Value, error) {
 var items []Value
 for {
 	for p.pos < len(p.src) && isSpace(p.peek()) {p.next()}
-	if p.pos >= len(p.src) {
-		if end != 0 {return nil, p.errAt(line, col, "блок не закрыт: нет «%c»", end)}; return items, nil}
+	if p.pos >= len(p.src) {if end != 0 {return nil, p.errAt(line, col, "блок не закрыт: нет «%c»", end)}; return items, nil}
 	r := p.peek()
-	if r == end && end != 0 {
-		p.next(); return items, nil}
+	if r == end && end != 0 {p.next(); return items, nil}
 	if strings.ContainsRune("])}", r) {return nil, p.errAt(p.line, p.col, "лишняя закрывающая скобка «%c»", r)}
 	v, err := p.value()
 	if err != nil {return nil, err}
@@ -45,8 +43,7 @@ case '[', '(', '{':
 	p.next()
 	items, err := p.seq(closing(k), line, col)
 	if err != nil {return Value{}, err}
-	if k == Object {
-		if err := checkObject(items, line, col); err != nil {return Value{}, err}}
+	if k == Object {if err := checkObject(items, line, col); err != nil {return Value{}, err}}
 	if items == nil {items = []Value{}}; return Value{Kind: k, Items: items, Line: line, Col: col}, nil
 case '"':
 	p.next()
@@ -90,8 +87,7 @@ for p.pos < len(p.src) && !isDelim(p.peek()) {
 tok := string(p.src[start:p.pos])
 if Operators[tok] {return Value{Kind: Op, Text: tok, Line: line, Col: col}, nil}
 if len(tok) > 1 && strings.HasSuffix(tok, ":") {return Value{}, p.errAt(line, col, "определение пишется через пробел: «%s :»", strings.TrimSuffix(tok, ":"))} // решение 9.9
-for _, a := range atoms {
-	if a.re.MatchString(tok) {return Value{Kind: a.kind, Text: tok, Line: line, Col: col}, nil}}; return Value{}, p.errAt(line, col, "непонятный токен %q", tok) }
+for _, a := range atoms {if a.re.MatchString(tok) {return Value{Kind: a.kind, Text: tok, Line: line, Col: col}, nil}}; return Value{}, p.errAt(line, col, "непонятный токен %q", tok) }
 // after проверяет, что за строкой или тегом нет слитно продолжения.
 func (p *parser) after(v Value) (Value, error) {
 if p.pos < len(p.src) && !isDelim(p.peek()) {return Value{}, p.errAt(p.line, p.col, "после значения нужен пробел или скобка")}; return v, nil }

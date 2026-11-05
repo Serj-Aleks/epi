@@ -11,27 +11,22 @@ import ("fmt"; "math"; "sort"; "strconv"; "strings"; "unicode"; "epi/script/form
 func (s Stopped) Error() string {return fmt.Sprintf("остановлено пользователем после %d шагов", s.Steps) }
 // Frame находит фрейм-интерпретатор по имени.
 func (in *Interp) Frame(name string) *Frame {
-for _, f := range in.Frames {
-	if f.Name == name {return f}}; return nil }
+for _, f := range in.Frames {if f.Name == name {return f}}; return nil }
 // prep находит интерпретатор символа препозиции и его фрейм.
 func (in *Interp) prep(sym string) (Prep, *Frame) {
-for _, f := range in.Frames {
-	if p, ok := f.Kernel[sym]; ok {return p, f}}; return nil, nil }
+for _, f := range in.Frames {if p, ok := f.Kernel[sym]; ok {return p, f}}; return nil, nil }
 func (in *Interp) use(f *Frame) {
-for _, n := range in.Used {
-	if n == f.Name {return}}
+for _, n := range in.Used {if n == f.Name {return}}
 in.Used = append(in.Used, f.Name) }
 // New — среда с фреймами-интерпретаторами arifm и logic (имена — пять литер, 0.18).
 func New(limit int, ask func(string) bool) *Interp {return &Interp{Frames: baseFrames(), Limit: limit, Ask: ask, allowed: limit} }
 func NewEnv(parent *Env) *Env { return &Env{vars: map[string]*binding{}, parent: parent} }
 func (e *Env) find(name string) (*binding, *Env) {
-for c := e; c != nil; c = c.parent {
-	if b, ok := c.vars[format.Key(name)]; ok {return b, c}}; return nil, nil }
+for c := e; c != nil; c = c.parent {if b, ok := c.vars[format.Key(name)]; ok {return b, c}}; return nil, nil }
 // set: имя, уже связанное в иерархии контекстов, перевязывается там; новое —
 // связывается в текущем контексте.
 func (e *Env) set(name string, b *binding) {
-if _, c := e.find(name); c != nil {
-	c.vars[format.Key(name)] = b; return}
+if _, c := e.find(name); c != nil {c.vars[format.Key(name)] = b; return}
 e.vars[format.Key(name)] = b }
 // ---- разбор последовательности на предикации ----
 // isPrepTok: токен — препозиция: символ (кроме `->` и `:`) или терм со
@@ -77,8 +72,7 @@ s.ok = true; return s, i }
 func segments(vs []format.Value) [][]format.Value {
 var segs [][]format.Value
 start := 0
-cut := func(end int) {
-	if end > start {segs = append(segs, vs[start:end])}}
+cut := func(end int) {if end > start {segs = append(segs, vs[start:end])}}
 for i, v := range vs {
 	switch {
 	case v.Kind == format.Op && v.Text == ".":
@@ -139,9 +133,7 @@ for _, seg := range segments(vs) {
 	default: return none, false, fmt.Errorf("строка %d: левый слот модели дал не флаг: %s", p.toks[0].Line, f)}}; return res, false, nil }
 func (in *Interp) step() error {
 in.steps++
-if in.Limit > 0 && in.steps > in.allowed {
-	if in.Ask != nil && in.Ask(fmt.Sprintf("исчерпан лимит %d шагов. Продолжать?", in.Limit)) {
-		in.allowed += in.Limit; return nil}; return Stopped{in.steps - 1}}; return nil }
+if in.Limit > 0 && in.steps > in.allowed {if in.Ask != nil && in.Ask(fmt.Sprintf("исчерпан лимит %d шагов. Продолжать?", in.Limit)) {in.allowed += in.Limit; return nil}; return Stopped{in.steps - 1}}; return nil }
 func (in *Interp) unknown(toks []format.Value, why string) {
 text := format.Format(toks)
 if in.Ask != nil && in.Ask(fmt.Sprintf("предикация «%s» %s. Записать её?", text, why)) {in.Unknown = append(in.Unknown, text)} }
@@ -168,11 +160,9 @@ if s.def != nil {
 	d := *s
 	d.def = nil
 	toks := d.toks()
-	if format.IsPrepTerm(s.def.Text) && !s.alias && !(len(toks) == 1 && toks[0].Kind == format.Array) {
-		in.unknown(s.toks(), fmt.Sprintf("— «%s» со строчной буквы — препозиция, она определяется алиасом или фреймом; объект пишется с прописной: «%s : …»", s.def.Text, upperFirst(s.def.Text))); return none, nil}
+	if format.IsPrepTerm(s.def.Text) && !s.alias && !(len(toks) == 1 && toks[0].Kind == format.Array) {in.unknown(s.toks(), fmt.Sprintf("— «%s» со строчной буквы — препозиция, она определяется алиасом или фреймом; объект пишется с прописной: «%s : …»", s.def.Text, upperFirst(s.def.Text))); return none, nil}
 	if s.def.Kind == format.Field {return in.defParam(s, toks, env)} // «Фрейм.Параметр : значение» (9.12)
-	if !format.IsPrepTerm(s.def.Text) && !(len(toks) == 1 && toks[0].Kind == format.Array) {
-		in.unknown(s.toks(), fmt.Sprintf("— «%s» с прописной буквы — фрейм; значение получает параметр фрейма: «%s.A : …»", s.def.Text, s.def.Text)); return none, nil}
+	if !format.IsPrepTerm(s.def.Text) && !(len(toks) == 1 && toks[0].Kind == format.Array) {in.unknown(s.toks(), fmt.Sprintf("— «%s» с прописной буквы — фрейм; значение получает параметр фрейма: «%s.A : …»", s.def.Text, s.def.Text)); return none, nil}
 	if len(toks) == 1 && toks[0].Kind == format.Expr { // ( ) — вычислить сейчас (9.3)
 		v, err := in.operand(toks, env, false)
 		if err != nil {return none, err}
@@ -184,8 +174,7 @@ ptok := s.op
 if s.prefix != nil {ptok = s.prefix}
 sym, frame := resolve(*ptok, env)
 if frame != nil { // препозиция-фрейм: только в начале, аргументы — объектный блок
-	if s.prefix == nil || s.a[0].Kind != format.Object {
-		in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(frame, s.a[0], env)}
+	if s.prefix == nil || s.a[0].Kind != format.Object {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(frame, s.a[0], env)}
 a, err := in.operand(s.a, env, false)
 if err != nil {return none, err}
 pa, pb := &a, (*format.Value)(nil)
@@ -194,11 +183,9 @@ if s.prefix != nil {pa, pb = nil, &a} else {
 	if err != nil {return none, err}
 	pb = &b}
 f, fr := in.prep(sym)
-if f == nil {
-	in.unknown(s.toks(), fmt.Sprintf("— нет интерпретатора препозиции «%s»", ptok.Text)); return none, nil}
+if f == nil {in.unknown(s.toks(), fmt.Sprintf("— нет интерпретатора препозиции «%s»", ptok.Text)); return none, nil}
 v, ok := f(pa, pb)
-if !ok {
-	in.unknown(s.toks(), fmt.Sprintf("— «%s» (%s) не интерпретирует такие аргументы", ptok.Text, fr.Name)); return none, nil}
+if !ok {in.unknown(s.toks(), fmt.Sprintf("— «%s» (%s) не интерпретирует такие аргументы", ptok.Text, fr.Name)); return none, nil}
 in.use(fr); return v, nil }
 func (s *slot) toks() []format.Value {
 var t []format.Value
@@ -212,25 +199,21 @@ switch v.Kind {
 case format.Expr:
 	r, _, err := in.block(v.Items, env); return r, err
 case format.Array:
-	if right {
-		r, _, err := in.block(v.Items, NewEnv(env)); return r, err}; return v, nil
+	if right {r, _, err := in.block(v.Items, NewEnv(env)); return r, err}; return v, nil
 case format.LitTerm: return format.Value{Kind: format.Term, Text: v.Text[1:]}, nil
 case format.GetTerm:
 	b, _ := env.find(v.Text[1:])
-	if b == nil || len(b.pred) != 1 {
-		in.unknown(a, "— имя не определено"); return none, nil}; return b.pred[0], nil
+	if b == nil || len(b.pred) != 1 {in.unknown(a, "— имя не определено"); return none, nil}; return b.pred[0], nil
 case format.Term: return in.apply(a, env)
 case format.Field: return in.param(a, env)}; return v, nil }
 // apply: аппликация объекта по имени, с аргументами или без.
 func (in *Interp) apply(a []format.Value, env *Env) (format.Value, error) {
 b, _ := env.findFrame(a[0].Text)
-if b == nil {
-	in.unknown(a, "— имя не определено"); return none, nil}
+if b == nil {in.unknown(a, "— имя не определено"); return none, nil}
 if len(b.pred) == 1 && b.pred[0].Kind == format.Array { // фрейм
 	if len(a) == 2 {return in.call(b, a[1], env)}; return in.call(b, format.Value{Kind: format.Object}, env)}
 if len(b.pred) == 0 {return frameValue(b), nil} // фрейм только с параметрами
-if len(a) == 2 {
-	in.unknown(a, "— «"+a[0].Text+"» не фрейм"); return none, nil}
+if len(a) == 2 {in.unknown(a, "— «"+a[0].Text+"» не фрейм"); return none, nil}
 // модель «имя -> предикация»: живая формула, интерпретируется при обращении
 r, _, err := in.block(b.pred, b.env); return r, err }
 // call: экземпляр фрейма — контекст, дочерний к контексту описания фрейма;
@@ -272,8 +255,7 @@ eq := func(neg bool) Prep {return func(a, b *format.Value) (format.Value, bool) 
 		x, _, ok1 := num(a)
 		y, _, ok2 := num(b)
 		e := ok1 && ok2 && x == y || !(ok1 && ok2) && a.Kind == b.Kind && strings.EqualFold(a.String(), b.String()); return flag(e != neg), true}}
-plusOnlyInfix := func(p Prep) Prep {return func(a, b *format.Value) (format.Value, bool) {
-		if a == nil {return none, false}; return p(a, b)}}
+plusOnlyInfix := func(p Prep) Prep {return func(a, b *format.Value) (format.Value, bool) {if a == nil {return none, false}; return p(a, b)}}
 arifm := map[string]Prep{
 	"+": plusOnlyInfix(arith(func(x, y float64) (float64, bool) { return x + y, true })),
 	"-": arith(func(x, y float64) (float64, bool) { return x - y, true }),
@@ -316,9 +298,7 @@ if len(r) > 0 {r[0] = unicode.ToUpper(r[0])}; return string(r) }
 // caseHint: подсказка, если в предикации неопределённый терм со строчной
 // буквы — он читается как препозиция (9.9), а имелся в виду, вероятно, объект.
 func caseHint(toks []format.Value, env *Env) string {
-for _, t := range toks {
-	if t.Kind == format.Term && format.IsPrepTerm(t.Text) {
-		if b, _ := env.find(t.Text); b == nil {return fmt.Sprintf(" («%s» со строчной буквы — препозиция; объект пишется с прописной: «%s»)", t.Text, upperFirst(t.Text))}}}; return "" }
+for _, t := range toks {if t.Kind == format.Term && format.IsPrepTerm(t.Text) {if b, _ := env.find(t.Text); b == nil {return fmt.Sprintf(" («%s» со строчной буквы — препозиция; объект пишется с прописной: «%s»)", t.Text, upperFirst(t.Text))}}}; return "" }
 // splitField: «Фрейм.Параметр» → фрейм и параметр; оба — с прописной (9.9, 9.12).
 func splitField(t string) (frame, param string, ok bool) {
 parts := strings.Split(t, ".")
@@ -327,8 +307,7 @@ if len(parts) != 2 || format.IsPrepTerm(parts[0]) || format.IsPrepTerm(parts[1])
 // (9.3), `( )` — вычислить сейчас. Фрейма нет — он появляется с этим параметром.
 func (in *Interp) defParam(s *slot, toks []format.Value, env *Env) (format.Value, error) {
 frame, param, ok := splitField(s.def.Text)
-if !ok {
-	in.unknown(s.toks(), "— параметр пишется «Фрейм.Параметр», оба с прописной буквы"); return none, nil}
+if !ok {in.unknown(s.toks(), "— параметр пишется «Фрейм.Параметр», оба с прописной буквы"); return none, nil}
 if len(toks) == 1 && toks[0].Kind == format.Expr {
 	v, err := in.operand(toks, env, false)
 	if err != nil {return none, err}
@@ -343,14 +322,11 @@ if in.OnParam != nil {in.OnParam(real, param, toks)}; return none, nil }
 // param: значение «Фрейм.Параметр» — модель параметра интерпретируется при обращении.
 func (in *Interp) param(a []format.Value, env *Env) (format.Value, error) {
 frame, param, ok := splitField(a[0].Text)
-if !ok {
-	in.unknown(a, "— параметр пишется «Фрейм.Параметр», оба с прописной буквы"); return none, nil}
+if !ok {in.unknown(a, "— параметр пишется «Фрейм.Параметр», оба с прописной буквы"); return none, nil}
 fb, _ := env.findFrame(frame)
-if fb == nil {
-	in.unknown(a, fmt.Sprintf("— фрейм «%s» не определён", frame)); return none, nil}
+if fb == nil {in.unknown(a, fmt.Sprintf("— фрейм «%s» не определён", frame)); return none, nil}
 pb := fb.params[format.Key(param)]
-if pb == nil {
-	in.unknown(a, fmt.Sprintf("— у фрейма «%s» нет параметра «%s»", frame, param)); return none, nil}
+if pb == nil {in.unknown(a, fmt.Sprintf("— у фрейма «%s» нет параметра «%s»", frame, param)); return none, nil}
 r, _, err := in.block(pb.pred, pb.env); return r, err }
 // frameValue: фрейм как значение — объектный блок его параметров.
 func frameValue(b *binding) format.Value {
@@ -375,8 +351,7 @@ for c := e; c != nil; c = c.parent {
 	keys := make([]string, 0, len(c.vars))
 	for k := range c.vars {keys = append(keys, k)}
 	sort.Strings(keys)
-	for _, k := range keys {
-		if p := c.vars[k].params[aliasParam]; p != nil && hasTerm(p.pred, name) {return c.vars[k], k}}}; return nil, name }
+	for _, k := range keys {if p := c.vars[k].params[aliasParam]; p != nil && hasTerm(p.pred, name) {return c.vars[k], k}}}; return nil, name }
 // hasTerm: предикация — терм name или блок, где он есть.
 func hasTerm(pred []format.Value, name string) bool {
 for _, v := range pred {

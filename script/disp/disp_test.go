@@ -165,8 +165,7 @@ cases := []struct{ src, want, frames string }{
 for _, c := range cases {
 	in := New(100, func(string) bool { return true })
 	v, err := in.Run(c.src, NewEnv(nil))
-	if c.want == "" {
-		if len(in.Unknown) == 0 {t.Errorf("%s: ожидалось «не распознано», получено %v", c.src, v)}; continue}
+	if c.want == "" {if len(in.Unknown) == 0 {t.Errorf("%s: ожидалось «не распознано», получено %v", c.src, v)}; continue}
 	if err != nil || v.String() != c.want || strings.Join(in.Used, " ") != c.frames {t.Errorf("%s = %v %v (%v), ожидалось %s (%s)", c.src, v, err, in.Used, c.want, c.frames)}}
 for _, src := range []string{`ln 0`, `ln -1`, `asin 2`, `1 & 2`, `2 sin 3`} {
 	in := New(100, func(string) bool { return true })

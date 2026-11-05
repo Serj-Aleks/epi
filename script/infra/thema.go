@@ -14,8 +14,7 @@ es, err := os.ReadDir(q.themaRoot())
 if os.IsNotExist(err) {return nil, nil}
 if err != nil {return nil, err}
 var ts []string
-for _, e := range es {
-	if e.IsDir() {ts = append(ts, e.Name())}}
+for _, e := range es {if e.IsDir() {ts = append(ts, e.Name())}}
 sort.Strings(ts); return ts, nil }
 // checkName: имя темы — как имя объекта: с прописной буквы (9.9), любой
 // алфавит, без пробелов и разделителей пути.
@@ -29,8 +28,7 @@ case strings.ContainsAny(name, "/\\:*?\"<>|") || strings.IndexFunc(name, unicode
 // themeExists: имя занято (без учёта регистра, кроме первой буквы — 9.9).
 func (q *Script) themeExists(name string) (string, bool) {
 ts, _ := q.themes()
-for _, t := range ts {
-	if format.SameTerm(t, name) {return t, true}}; return "", false }
+for _, t := range ts {if format.SameTerm(t, name) {return t, true}}; return "", false }
 // createTheme: новая тема. Первая тема забирает протокол прежнего вида
 // (script/prtcl) — он становится её протоколом.
 func (q *Script) createTheme(name string) error {
@@ -41,8 +39,7 @@ if err != nil {return err}
 dir := filepath.Join(q.themaRoot(), name)
 if err := os.MkdirAll(dir, 0755); err != nil {return err}
 legacy := filepath.Join(q.dir, "prtcl")
-if _, err := os.Stat(legacy); len(ts) == 0 && err == nil {
-	if err := os.Rename(legacy, filepath.Join(dir, "prtcl")); err != nil {return err}} else if err := os.MkdirAll(filepath.Join(dir, "prtcl"), 0755); err != nil {return err}; return q.switchTheme(name) }
+if _, err := os.Stat(legacy); len(ts) == 0 && err == nil {if err := os.Rename(legacy, filepath.Join(dir, "prtcl")); err != nil {return err}} else if err := os.MkdirAll(filepath.Join(dir, "prtcl"), 0755); err != nil {return err}; return q.switchTheme(name) }
 // renameTheme: переименование папки темы; ссылок на имя темы внутри нет.
 func (q *Script) renameTheme(old, name string) error {
 if err := checkName(name); err != nil {return err}
@@ -62,8 +59,7 @@ if err := q.loadAliases(); err != nil {return err}
 if err := q.loadConcepts(); err != nil {return err}
 ss, err := q.list()
 if err != nil {return err}
-for _, s := range ss {
-	if !s.Closed {return q.switchTo(s.Name)}}; return nil }
+for _, s := range ss {if !s.Closed {return q.switchTo(s.Name)}}; return nil }
 // startTheme: при запуске — тема последнего открытого сеанса; нет такого —
 // первая по алфавиту; тем нет — ни одной (интерфейс предложит создать).
 func (q *Script) startTheme() error {
@@ -74,8 +70,7 @@ for _, t := range ts {
 	q.theme = t
 	ss, err := q.list()
 	if err != nil {return err}
-	for _, s := range ss {
-		if !s.Closed && s.Name > last {best, last = t, s.Name}}}; return q.switchTheme(best) }
+	for _, s := range ss {if !s.Closed && s.Name > last {best, last = t, s.Name}}}; return q.switchTheme(best) }
 // conceptFile: <тема>/<буквы имени>/<имя>.uic.
 func (q *Script) conceptFile(name string) string { return letterPath(q.themaDir(), name) }
 // conceptLines: строки-модели концепта «Параметр : предикация» (0.23).
@@ -89,12 +84,10 @@ func (q *Script) writeConcept(frame, param string, pred []format.Value) error {
 if q.theme == "" {return nil}
 path := q.conceptFile(frame)
 var lines []string
-if b, err := os.ReadFile(path); err == nil {
-	if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
+if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
 text := param + " : " + strings.ReplaceAll(format.Format(pred), "\n", " . ")
 found := false
-for i, l := range lines {
-	if format.SameTerm(lineKey(l), param) {lines[i], found = text, true}}
+for i, l := range lines {if format.SameTerm(lineKey(l), param) {lines[i], found = text, true}}
 if !found {lines = append(lines, text)}; return writeLines(path, lines) }
 // loadConcepts: системные концепты (lexic/constans — фрейм констант Const) и
 // концепты темы — параметры фреймов в контекст темы; концепт темы с тем же
@@ -120,8 +113,7 @@ func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root
 		if err != nil {return err}
 		for _, m := range models {lines = append(lines, m[0]+" : "+m[1])}
 		if err := writeLines(path, lines); err != nil {return err}} else if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}
-	for _, l := range lines {
-		if _, err := q.in.Run(name+"."+l, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
+	for _, l := range lines {if _, err := q.in.Run(name+"."+l, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
 // conceptName: имя концепта — из пути: буквы папок (регистр — как в пути,
 // первая — прописная по 9.9), например <тема>/X/x.uic → X.
 func conceptName(path, root string) string {

@@ -35,18 +35,15 @@ var epiExamples = []string{
 func TestExamplesParseAndRoundTrip(t *testing.T) {
 for _, src := range append(authorExamples, epiExamples...) {
 	v, err := Parse(src)
-	if err != nil {
-		t.Errorf("%q: %v", src, err); continue}
+	if err != nil {t.Errorf("%q: %v", src, err); continue}
 	canon := Format(v)
 	v2, err := Parse(canon)
-	if err != nil {
-		t.Errorf("канонический текст не читается: %q: %v", canon, err); continue}
+	if err != nil {t.Errorf("канонический текст не читается: %q: %v", canon, err); continue}
 	if !same(v, v2) {t.Errorf("обход меняет дерево: %q → %q", src, canon)}
 	if Format(v2) != canon {t.Errorf("канонический текст меняется при повторном обходе: %q", canon)}} }
 func same(a, b []Value) bool {
 if len(a) != len(b) {return false}
-for i := range a {
-	if a[i].Kind != b[i].Kind || a[i].Text != b[i].Text || !same(a[i].Items, b[i].Items) {return false}}; return true }
+for i := range a {if a[i].Kind != b[i].Kind || a[i].Text != b[i].Text || !same(a[i].Items, b[i].Items) {return false}}; return true }
 // Каждый вид значения из перечня 2.2 и форма терма из 2.3.
 func TestKinds(t *testing.T) {
 cases := map[string]Kind{
@@ -63,8 +60,7 @@ cases := map[string]Kind{
 	`l-n`: Term, `length?`: Term,}
 for src, want := range cases {
 	v, err := Parse(src)
-	if err != nil {
-		t.Errorf("%q: %v", src, err); continue}
+	if err != nil {t.Errorf("%q: %v", src, err); continue}
 	if len(v) != 1 || v[0].Kind != want {t.Errorf("%q: получено %v, ожидалось %v", src, v, want)}} }
 func TestStrings(t *testing.T) {
 v, err := Parse(`"a \"b\" \\ c\nd"`)
@@ -107,8 +103,7 @@ cases := map[string]string{
 	`ab"c"`:             "кавычка внутри токена",}
 for src, want := range cases {
 	v, err := Parse(src)
-	if err == nil {
-		t.Errorf("%q: ошибка не найдена, получено %v", src, v); continue}
+	if err == nil {t.Errorf("%q: ошибка не найдена, получено %v", src, v); continue}
 	if v != nil {t.Errorf("%q: при ошибке есть частичный результат", src)}
 	if !strings.Contains(err.Error(), want) {t.Errorf("%q: %q, ожидалось %q", src, err, want)}} }
 // Термы любого алфавита (решение 29.10.2026).
