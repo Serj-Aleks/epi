@@ -135,11 +135,12 @@ function handle(t, rep) {
     rep.options.forEach(o => {
       const b = document.createElement("button"); b.textContent = o; q.append(b);
       b.onclick = () => {
-        if (o !== last.theme) { choose(o, o); return; }
-        // объект — концепт темы: имя можно поправить (форма слова — синоним концепта)
+        if (o !== last.theme && o !== "atrbt") { choose(o, o); return; }
+        // объект (концепт темы) или атрибут: имя можно поправить (форма слова — синоним)
+        const pre = o === "atrbt" ? "atrbt:" : "thema:";
         mode = "concept"; inp.disabled = false; inp.value = word.charAt(0).toUpperCase() + word.slice(1);
-        inp.placeholder = "имя концепта темы " + o + " (Enter — принять, Esc — пропустить)"; inp.focus();
-        conceptDone = (name) => choose(name ? "thema:" + name : "✕", name ? o + ": " + name : "✕");
+        inp.placeholder = (o === "atrbt" ? "имя атрибута" : "имя концепта темы " + o) + " (Enter — принять, Esc — пропустить)"; inp.focus();
+        conceptDone = (name) => choose(name ? pre + name : "✕", name ? o + ": " + name : "✕");
       };
     });
     return;

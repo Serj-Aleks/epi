@@ -81,8 +81,9 @@ k, _, _ := strings.Cut(line, " "); return k }
 // writeConcept: параметр фрейма автора — строка «Параметр : предикация» в
 // файле концепта; повторное определение заменяет свою строку.
 func (q *Script) writeConcept(frame, param string, pred []format.Value) error {
-if q.theme == "" {return nil}
-path := q.conceptFile(frame)
+if q.theme == "" {return nil}; return writeParam(q.conceptFile(frame), param, pred) }
+// writeParam: строка «Параметр : предикация» в файле концепта path.
+func writeParam(path, param string, pred []format.Value) error {
 var lines []string
 if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
 text := param + " : " + strings.ReplaceAll(format.Format(pred), "\n", " . ")
