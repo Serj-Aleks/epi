@@ -21,6 +21,7 @@ q := &Script{dir: dir}
 q.in = disp.New(limit, func(string) bool { return false })
 // фреймы-интерпретаторы: lexic/preposit (9.13) — только системная часть
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
+q.in.Frame("trans").Kernel["trans"] = q.trans // транслятор (9.16): ядро — словари среды
 // фреймы автора сохраняются в активной теме (9.14)
 q.in.OnParam = func(frame, param string, pred []format.Value) {if err := q.writeConcept(frame, param, pred); err != nil {log.Print(err)}}
 q.in.OnFrame = func(name string, body []format.Value) {if err := q.writeBody(name, body); err != nil {log.Print(err)}}
@@ -88,9 +89,10 @@ if _, err := f.WriteString(text); err != nil {f.Close(); return err}; return f.C
 // start: интерпретация в отдельной горутине; вопросы диспетчера (0.7, 0.16)
 // уходят в браузер, ответы возвращаются.
 func (q *Script) start(text string) *run {
-r := &run{questions: make(chan string), answers: make(chan bool), done: make(chan []Turn, 1)}
+r := &run{questions: make(chan ask), answers: make(chan string), done: make(chan []Turn, 1)}
 known := len(q.in.Unknown)
-q.in.Ask = func(question string) bool {r.questions <- question; return <-r.answers}
+q.in.Ask = func(question string) bool {r.questions <- ask{Text: question}; return <-r.answers == "y"}
+q.choose = func(text string, opts []string) string {r.questions <- ask{Text: text, Options: opts}; return <-r.answers}
 go func() {
 	// на каждую предикацию строки — свой ответ (9.11.8)
 	preds, err := disp.Split(text)
@@ -111,10 +113,10 @@ go func() {
 // wait: следующий вопрос или результат.
 func (q *Script) wait(r *run) Reply {
 select {
-case question := <-r.questions:
-	q.pending, q.pQuest = r, question; return Reply{Question: question}
+case a := <-r.questions:
+	q.pending, q.pQuest, q.pOpts = r, a.Text, a.Options; return Reply{Question: a.Text, Options: a.Options}
 case ts := <-r.done:
-	q.pending, q.pPred, q.pQuest = nil, "", ""
+	q.pending, q.pPred, q.pQuest, q.pOpts = nil, "", "", nil
 	for _, t := range ts {
 		q.turns = append(q.turns, t)
 		if err := appendFile(q.seans(q.cur), record(t)); err != nil {log.Print(err)}}; return Reply{Turns: ts}} }
@@ -126,7 +128,7 @@ if err != nil {log.Print(err)}; return map[string]any{
 	"themes": ts, "theme": q.theme,
 	"seanses": ss, "current": q.cur, "closed": q.closed, "turns": q.turns,
 	// ожидающий вопрос отдаётся тоже: страницу можно перезагрузить, не потеряв его
-	"pending": map[string]string{"pred": q.pPred, "question": q.pQuest},} }
+	"pending": map[string]any{"pred": q.pPred, "question": q.pQuest, "options": q.pOpts},} }
 func (q *Script) handle(w http.ResponseWriter, req *http.Request) {
 w.Header().Set("Content-Type", "application/json")
 q.mu.Lock()
@@ -135,6 +137,7 @@ var body struct {
 	Text   string `json:"text"`
 	To     string `json:"to"`
 	Answer bool   `json:"answer"`
+	Choice string `json:"choice"` // ответ на вопрос с выбором
 	Name   string `json:"name"`}
 if req.Method != http.MethodGet {if err := json.NewDecoder(req.Body).Decode(&body); err != nil {http.Error(w, err.Error(), http.StatusBadRequest); return}}
 fail := func(code int, msg string) { http.Error(w, msg, code) }
@@ -177,7 +180,9 @@ case "/api/eval":
 case "/api/answer":
 	if q.pending == nil {fail(http.StatusConflict, "вопроса нет"); return}
 	r := q.pending
-	r.answers <- body.Answer
+	a := map[bool]string{true: "y", false: "n"}[body.Answer]
+	if body.Choice != "" {a = body.Choice}
+	r.answers <- a
 	json.NewEncoder(w).Encode(q.wait(r))
 default:
 	http.NotFound(w, req)} }

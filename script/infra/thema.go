@@ -138,10 +138,9 @@ func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root
 		if !isParam(l) {body = append(body, l); continue}
 		if _, err := q.in.Run(name+"."+l, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}
 	if len(body) > 0 {if _, err := q.in.Run(name+" : [ "+strings.Join(body, " . ")+" ]", q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
-// conceptName: имя концепта — из пути: буквы папок (регистр — как в пути,
-// первая — прописная по 9.9), например <тема>/X/x.uic → X.
-func conceptName(path, root string) string {
-rel, _ := filepath.Rel(root, filepath.Dir(path)); return strings.ReplaceAll(rel, string(filepath.Separator), "") }
+// conceptName: имя концепта — из имени файла с прописной первой буквой (9.9):
+// <тема>/К/В/А/Д/Р/А/Т/квадрат.uic → Квадрат (остальные буквы — без учёта регистра).
+func conceptName(path, root string) string { return capital(strings.TrimSuffix(filepath.Base(path), ".uic")) }
 // loadIgnor: база нераспознанных темы — строка файла на предикацию (без
 // скобок); нечитаемый ввод — строкой в кавычках. Строки прежнего вида
 // «[ … ]» читаются, и файл один раз переписывается.

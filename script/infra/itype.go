@@ -12,14 +12,19 @@ type Turn struct {
 // Reply — ответ сервера: шаг завершён (Turn) или диспетчер спрашивает.
 type Reply struct {
 	Turns    []Turn `json:"turns,omitempty"`
-	Question string `json:"question,omitempty"`}
+	Question string   `json:"question,omitempty"`
+	Options  []string `json:"options,omitempty"`} // вопрос с выбором (trans): варианты ответа
 // Seans — сеанс протокола.
 type Seans struct {
 	Name   string `json:"name"`
 	Closed bool   `json:"closed"`}
+// ask — вопрос диспетчера или транслятора; Options пусто — вопрос «да / нет».
+type ask struct {
+	Text    string
+	Options []string}
 type run struct {
-	questions chan string
-	answers   chan bool
+	questions chan ask
+	answers   chan string // «y», «n» или выбранный вариант
 	done      chan []Turn}
 // Script — состояние: фреймы-интерпретаторы общие, контекст — у сеанса.
 type Script struct {
@@ -33,6 +38,8 @@ type Script struct {
 	turns   []Turn
 	pending *run
 	pPred   string // предикация, по которой ждёт ответа вопрос
-	pQuest  string}
+	pQuest  string
+	pOpts   []string
+	choose  func(text string, opts []string) string} // вопрос с выбором в текущей интерпретации
 const limit = 10000
 const gaussABC = "oiztyvslanxedbhfmg"
