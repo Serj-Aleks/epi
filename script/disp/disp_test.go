@@ -188,3 +188,11 @@ for _, c := range []struct{ src, want string }{
 	if err != nil || v.String() != c.want {t.Errorf("%s = %v %v, ожидалось %s", c.src, v, err, c.want)}}
 if got := strings.Join(saved, "|"); got != "X.A : 5|X.Alias : [ Y Z ]|X.B : 7" {t.Errorf("запись: %s", got)}
 if len(in.Unknown) != 1 {t.Errorf("W.A — не распознано: %v", in.Unknown)} }
+// Тело фрейма не стирает его параметры (концепт — параметры и импликации, 9.2).
+func TestFrameKeepsParams(t *testing.T) {
+in := New(100, func(string) bool { return true })
+var body string
+in.OnFrame = func(name string, b []format.Value) {body = name + " : " + format.Format(b)}
+v, err := in.Run("F.A : 1 . F : [ F.A < 3 -> [ F.A : ( F.A + 1 ) . F ] ] . F . F.A", NewEnv(nil))
+if err != nil || v.String() != "3" {t.Fatalf("F.A = %v %v", v, err)}
+if body != "F : F.A < 3 -> [ F.A : ( F.A + 1 ) . F ]" {t.Fatalf("тело: %q", body)} }

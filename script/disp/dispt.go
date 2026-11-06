@@ -167,7 +167,10 @@ if s.def != nil {
 		v, err := in.operand(toks, env, false)
 		if err != nil {return none, err}
 		toks = []format.Value{v}}
-	env.set(s.def.Text, &binding{pred: toks, env: env})
+	nb := &binding{pred: toks, env: env}
+	if old, _ := env.find(s.def.Text); old != nil && !format.IsPrepTerm(s.def.Text) {nb.params = old.params} // параметры фрейма сохраняются
+	env.set(s.def.Text, nb)
+	if in.OnFrame != nil && !format.IsPrepTerm(s.def.Text) && len(toks) == 1 && toks[0].Kind == format.Array {in.OnFrame(s.def.Text, toks[0].Items)}
 	if s.alias && in.OnAlias != nil {in.OnAlias(s.def.Text, format.Format(toks))}; return none, nil}
 if s.op == nil && s.prefix == nil {return in.operand(s.a, env, right)}
 ptok := s.op

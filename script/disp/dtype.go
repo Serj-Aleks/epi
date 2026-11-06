@@ -12,6 +12,8 @@ type Interp struct {
 	OnParam func(frame, param string, pred []format.Value)
 	// OnAlias: «имя : препозиция» записано (алиасы — системный лексикон, 9.15)
 	OnAlias func(name, target string)
+	// OnFrame: «Фрейм : [ … ]» — тело фрейма записано (импликации концепта)
+	OnFrame func(name string, body []format.Value)
 	Limit   int // лимит шагов (0.16)
 	Ask     func(q string) bool
 	Unknown []string // база нераспознанных предикаций (канонический текст)

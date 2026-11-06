@@ -23,6 +23,7 @@ q.in = disp.New(limit, func(string) bool { return false })
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 // фреймы автора сохраняются в активной теме (9.14)
 q.in.OnParam = func(frame, param string, pred []format.Value) {if err := q.writeConcept(frame, param, pred); err != nil {log.Print(err)}}
+q.in.OnFrame = func(name string, body []format.Value) {if err := q.writeBody(name, body); err != nil {log.Print(err)}}
 // алиасы препозиций — системный лексикон, общий для всех тем (9.15)
 q.in.OnAlias = func(name, target string) {
 	if q.in.Frame(name) != nil {return} // имя интерпретатора — не алиас

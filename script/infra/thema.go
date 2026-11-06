@@ -87,15 +87,35 @@ var lines []string
 if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
 text := param + " : " + strings.ReplaceAll(format.Format(pred), "\n", " . ")
 found := false
-for i, l := range lines {if format.SameTerm(lineKey(l), param) {lines[i], found = text, true}}
-if !found {lines = append(lines, text)}; return writeLines(path, lines) }
+for i, l := range lines {if isParam(l) && format.SameTerm(lineKey(l), param) {lines[i], found = text, true}}
+if !found {lines = append(lines, "") // новый параметр — перед телом фрейма
+	k := len(lines) - 1
+	for k > 0 && !isParam(lines[k-1]) {lines[k] = lines[k-1]; k--}
+	lines[k] = text}; return writeLines(path, lines) }
+// isParam: строка концепта — параметр «Имя : значение» (имя без точки, с
+// прописной); иначе — строка тела фрейма (импликация, предикация).
+func isParam(l string) bool {
+f := strings.Fields(l)
+if len(f) < 3 || f[1] != ":" || strings.Contains(f[0], ".") {return false}
+r, _ := utf8.DecodeRuneInString(f[0]); return unicode.IsUpper(r) }
+// writeBody: тело фрейма («Фрейм : [ … ]») — строками после параметров
+// концепта (импликации, ason-spec 9.2): концепт — набор параметров и импликаций.
+func (q *Script) writeBody(frame string, body []format.Value) error {
+if q.theme == "" {return nil}
+path := q.conceptFile(frame)
+var lines []string
+if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
+var out []string
+for _, l := range lines {if isParam(l) {out = append(out, l)}}
+preds, err := disp.Split(format.Format(body))
+if err != nil {return err}; return writeLines(path, append(out, preds...)) }
 // loadConcepts: системные концепты (lexic/constans — фрейм констант Const) и
 // концепты темы — параметры фреймов в контекст темы; концепт темы с тем же
 // именем дополняет и переопределяет системный в этой теме (Const.Pi : 3).
 func (q *Script) loadConcepts() error {
-on := q.in.OnParam
-q.in.OnParam = nil
-defer func() { q.in.OnParam = on }()
+on, of := q.in.OnParam, q.in.OnFrame
+q.in.OnParam, q.in.OnFrame = nil, nil
+defer func() {q.in.OnParam, q.in.OnFrame = on, of}()
 if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {return err}; return q.loadConceptsIn(q.themaDir()) }
 // loadConceptsIn: концепты в папке root. Имя фрейма — из пути; файл прежнего
 // вида переписывается.
@@ -113,7 +133,11 @@ func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root
 		if err != nil {return err}
 		for _, m := range models {lines = append(lines, m[0]+" : "+m[1])}
 		if err := writeLines(path, lines); err != nil {return err}} else if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}
-	for _, l := range lines {if _, err := q.in.Run(name+"."+l, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
+	var body []string
+	for _, l := range lines {
+		if !isParam(l) {body = append(body, l); continue}
+		if _, err := q.in.Run(name+"."+l, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}
+	if len(body) > 0 {if _, err := q.in.Run(name+" : [ "+strings.Join(body, " . ")+" ]", q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
 // conceptName: имя концепта — из пути: буквы папок (регистр — как в пути,
 // первая — прописная по 9.9), например <тема>/X/x.uic → X.
 func conceptName(path, root string) string {
