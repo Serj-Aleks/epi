@@ -196,3 +196,13 @@ in.OnFrame = func(name string, b []format.Value) {body = name + " : " + format.F
 v, err := in.Run("F.A : 1 . F : [ F.A < 3 -> [ F.A : ( F.A + 1 ) . F ] ] . F . F.A", NewEnv(nil))
 if err != nil || v.String() != "3" {t.Fatalf("F.A = %v %v", v, err)}
 if body != "F : F.A < 3 -> [ F.A : ( F.A + 1 ) . F ]" {t.Fatalf("тело: %q", body)} }
+// Цикл второго уровня: recur (zycle, 9.2).
+func TestRecur(t *testing.T) {
+in := New(100, func(string) bool { return true })
+env := NewEnv(nil)
+v, err := in.Run("S.Sum : 0 . S.L : [ 1 2 3 4 ] . recur { In : S.L As : S.I Corpus : [ S.Sum : ( S.Sum + S.I ) ] } . S.Sum", env)
+if err != nil || v.String() != "10" {t.Fatalf("S.Sum = %v %v", v, err)}
+v, _ = in.Run("recur { In : [ 2 3 ] As : S.I Corpus : [ S.I * S.I ] }", env)
+if v.String() != "9" || strings.Join(in.Used, " ") != "arifm zycle" {t.Fatalf("последний шаг = %v (%v)", v, in.Used)}
+in.Run("recur { In : 5 As : S.I Corpus : [ S.I ] }", env)
+if len(in.Unknown) != 1 {t.Fatalf("In не блок — не распознано: %v", in.Unknown)} }

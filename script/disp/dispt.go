@@ -176,6 +176,7 @@ if s.op == nil && s.prefix == nil {return in.operand(s.a, env, right)}
 ptok := s.op
 if s.prefix != nil {ptok = s.prefix}
 sym, frame := resolve(*ptok, env)
+if frame == nil && sym == "recur" {return in.recur(s, env)} // цикл (zycle, 9.2)
 if frame != nil { // препозиция-фрейм: только в начале, аргументы — объектный блок
 	if s.prefix == nil || s.a[0].Kind != format.Object {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(frame, s.a[0], env)}
 a, err := in.operand(s.a, env, false)
@@ -294,7 +295,8 @@ trgnm := map[string]Prep{
 lnrfm := map[string]Prep{
 	"ln":  unary(func(x float64) (float64, bool) { return math.Log(x), x > 0 }),
 	"exp": unary(all(math.Exp)),}; return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic},
-	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm}} }
+	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm},
+	{Name: "zycle", Kernel: map[string]Prep{"recur": func(a, b *format.Value) (format.Value, bool) {return none, false}}}} } // recur — в Interp.recur
 func upperFirst(s string) string {
 r := []rune(s)
 if len(r) > 0 {r[0] = unicode.ToUpper(r[0])}; return string(r) }
@@ -363,3 +365,25 @@ for _, v := range pred {
 		if format.SameTerm(v.Text, name) {return true}
 	case format.Array:
 		if hasTerm(v.Items, name) {return true}}}; return false }
+// recur: цикл второго уровня (zycle, 9.2) — «recur { In : [ … ] As : Фрейм.Параметр
+// Corpus : [ … ] }»: элементы In по очереди кладутся в параметр As, Corpus
+// интерпретируется на каждом шаге; интерпретация — последнего шага.
+func (in *Interp) recur(s *slot, env *Env) (format.Value, error) {
+fail := func(why string) (format.Value, error) {in.unknown(s.toks(), "— recur "+why); return none, nil}
+if s.prefix == nil || s.op != nil || len(s.a) != 1 || s.a[0].Kind != format.Object {return fail("интерпретирует только «recur { In : … As : … Corpus : [ … ] }»")}
+var src, as, corpus []format.Value
+for _, e := range s.a[0].Entries() {
+	switch format.Key(e.Key.Text) {
+	case "In": src = e.Value
+	case "As": as = e.Value
+	case "Corpus": corpus = e.Value}}
+if src == nil || len(as) != 1 || as[0].Kind != format.Field || len(corpus) != 1 || corpus[0].Kind != format.Array {return fail("— нужны In, As (Фрейм.Параметр) и Corpus ([ … ])")}
+items, err := in.operand(src, env, false)
+if err != nil {return none, err}
+if items.Kind != format.Array {return fail("— In должен быть блоком [ … ]")}
+r := none
+for _, it := range items.Items {
+	if _, err := in.defParam(&slot{def: &as[0]}, []format.Value{it}, env); err != nil {return none, err}
+	if err := in.step(); err != nil {return none, err}
+	if r, _, err = in.block(corpus[0].Items, env); err != nil {return none, err}}
+in.use(in.Frame("zycle")); return r, nil }
