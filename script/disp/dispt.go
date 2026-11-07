@@ -177,6 +177,12 @@ ptok := s.op
 if s.prefix != nil {ptok = s.prefix}
 sym, frame := resolve(*ptok, env)
 if frame == nil && sym == "recur" {return in.recur(s, env)} // цикл (zycle, 9.2)
+if r := in.Raw[sym]; frame == nil && r != nil { // операнд — без вычисления
+	_, fr := in.prep(sym)
+	if s.prefix == nil || s.op != nil || len(s.a) != 1 {in.unknown(s.toks(), "— «"+sym+"» пишется в начале с одним операндом"); return none, nil}
+	v, ok := r(s.a[0])
+	if !ok {in.unknown(s.toks(), "— «"+sym+"» не интерпретирует такой операнд"); return none, nil}
+	if fr != nil {in.use(fr)}; return v, nil}
 if frame != nil { // препозиция-фрейм: только в начале, аргументы — объектный блок
 	if s.prefix == nil || s.a[0].Kind != format.Object {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(frame, s.a[0], env)}
 a, err := in.operand(s.a, env, false)
@@ -297,7 +303,8 @@ lnrfm := map[string]Prep{
 	"exp": unary(all(math.Exp)),}; return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic},
 	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm},
 	{Name: "zycle", Kernel: map[string]Prep{"recur": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // recur — в Interp.recur
-	{Name: "trans", Kernel: map[string]Prep{"trans": func(a, b *format.Value) (format.Value, bool) {return none, false}}}} } // trans — ядро задаёт среда (словари)
+	{Name: "trans", Kernel: map[string]Prep{"trans": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // trans — ядро задаёт среда (словари)
+	{Name: "nexus", Kernel: map[string]Prep{"nexus": func(a, b *format.Value) (format.Value, bool) {return none, false}}}} } // nexus — Interp.Raw (среда)
 func upperFirst(s string) string {
 r := []rune(s)
 if len(r) > 0 {r[0] = unicode.ToUpper(r[0])}; return string(r) }

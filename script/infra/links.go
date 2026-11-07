@@ -61,3 +61,25 @@ for _, t := range d {
 func directOnly(l string) string {
 vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 if err != nil || len(vs) < 2 {return l}; return lineKey(l) + " : " + format.Format(vs[:1]) }
+// linkOrder: связи в локальном контексте — порядок осей как в ПИ (префикс,
+// [атрибут], суффикс, [препозиция]), затем дополнительные: корень, таксон.
+var linkOrder = []string{"Prfix", "Sufix", "Radix", "Taxon"}
+// nexus: локальный контекст концепта (9.17) — «nexus Цвет» → { Alias : … Taxon : [ прямой ] [ обратный ] … };
+// концепт ищется в теме и в лексиконе (prfix, sufix, radix).
+func (q *Script) nexus(arg format.Value) (format.Value, bool) {
+if arg.Kind != format.Term || q.theme == "" {return format.Value{}, false}
+name := arg.Text
+paths := []string{q.conceptFile(name)}
+for _, c := range []string{"prfix", "sufix", "radix"} {paths = append(paths, letterPath(filepath.Join(q.dir, "lexic", c), name))}
+found := false
+var parts []string
+for _, p := range paths {if exists(p) {found = true}}
+if !found {return format.Value{}, false}
+if d, _ := readLink(paths[0], "Alias"); len(d) > 0 {parts = append(parts, "Alias : [ "+strings.Join(d, " ")+" ]")}
+for _, l := range linkOrder {
+	var d, i []string
+	for _, p := range paths {pd, pi := readLink(p, l); d, i = append(d, pd...), append(i, pi...)}
+	if len(d)+len(i) == 0 {continue}
+	parts = append(parts, l+" : [ "+strings.Join(d, " ")+" ] [ "+strings.Join(i, " ")+" ]")}
+vs, err := format.Parse("{ " + strings.Join(parts, " ") + " }")
+if err != nil || len(vs) != 1 {return format.Value{}, false}; return vs[0], true }

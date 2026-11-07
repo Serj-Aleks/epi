@@ -14,6 +14,8 @@ type Interp struct {
 	OnAlias func(name, target string)
 	// OnFrame: «Фрейм : [ … ]» — тело фрейма записано (импликации концепта)
 	OnFrame func(name string, body []format.Value)
+	// Raw: препозиции ядра, получающие операнд без вычисления (nexus Цвет — имя концепта)
+	Raw map[string]func(arg format.Value) (format.Value, bool)
 	Limit   int // лимит шагов (0.16)
 	Ask     func(q string) bool
 	Unknown []string // база нераспознанных предикаций (канонический текст)
