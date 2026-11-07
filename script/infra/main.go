@@ -142,6 +142,7 @@ var body struct {
 	Name   string `json:"name"`}
 if req.Method != http.MethodGet {if err := json.NewDecoder(req.Body).Decode(&body); err != nil {http.Error(w, err.Error(), http.StatusBadRequest); return}}
 fail := func(code int, msg string) { http.Error(w, msg, code) }
+if req.URL.Path == "/api/nexus" {json.NewEncoder(w).Encode(q.nexusGraph(req.URL.Query().Get("name"))); return} // граф локального контекста (9.17)
 if q.pending != nil && req.URL.Path != "/api/answer" && req.URL.Path != "/api/state" {fail(http.StatusConflict, "ждёт ответа на вопрос"); return}
 switch req.URL.Path {
 case "/api/state":

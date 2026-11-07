@@ -37,6 +37,13 @@
   .ans .f, .q .f { margin-left: auto; color: var(--dim); font-size: 13px; }
   .q { padding-left: 2ch; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .q button { height: 22px; line-height: 20px; }
+  /* граф локального контекста (nexus, 9.17): цвета осей — как в ПИ */
+  .nx { padding: 4px 0 4px 2ch; overflow-x: auto; }
+  .nx svg { display: block; }
+  .nx text { font: 13px "DejaVu Sans Mono", monospace; fill: var(--fg); }
+  .nx .node { cursor: pointer; } .nx .node:hover rect { fill: var(--btn); }
+  .nx .center rect { stroke-width: 2px; stroke: var(--acc); }
+  .nx .legend { font-size: 12px; color: var(--dim); }
   form { display: flex; border-top: 1px solid var(--barline); background: var(--bar); }
   form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
   input { flex: 1; background: none; border: 0; color: var(--fg); font: inherit; padding: 12px 16px 12px 1ch; outline: none; }
@@ -67,11 +74,55 @@ let conceptDone = null; // ввод имени концепта для trans
 function el(cls, text) { const d = document.createElement("div"); d.className = cls; if (text !== undefined) d.textContent = text; return d; }
 function scroll() { log.scrollTop = log.scrollHeight; }
 function addPred(text) { const t = el("turn"); t.append(el("pred", text)); log.append(t); scroll(); return t; }
+// граф локального контекста (nexus, 9.17): оси как в ПИ — слева обратные списки
+// (северо-запад, запад, юго-запад), справа прямые; сверху и снизу — север и юг.
+// Узел — концепт; щелчок — «nexus Имя» в строку ввода.
+const NX = { nw: "180,80,100", wt: "80,160,100", sw: "224,150,90", nr: "70,130,180" };
+async function drawNexus(t, name) {
+  let d;
+  try { d = await api("/api/nexus?name=" + encodeURIComponent(name)); } catch (e) { return; }
+  if (!d.found) return;
+  const W = 120, H = 28, G = 8, X = 70, P = 12, ns = "http://www.w3.org/2000/svg";
+  const col = s => NX[{ ne: "nw", et: "wt", se: "sw", st: "nr" }[s] || s];
+  const left = ["nw", "wt", "sw"].flatMap(s => (d[s] || []).map(n => [n, s]));
+  const right = ["ne", "et", "se"].flatMap(s => (d[s] || []).map(n => [n, s]));
+  const top = (d.nr || []).map(n => [n, "nr"]), bot = (d.st || []).map(n => [n, "st"]);
+  const colH = k => k ? k * H + (k - 1) * G : 0;
+  const rowW = k => k ? k * W + (k - 1) * G : 0;
+  const midH = Math.max(colH(left.length), colH(right.length), H);
+  const topH = top.length ? H + X / 2 : 0, botH = bot.length ? H + X / 2 : 0;
+  const xC = Math.max(P + (left.length ? W + X : 0), P + rowW(Math.max(top.length, bot.length)) / 2 - W / 2);
+  const w = Math.max(xC + W + (right.length ? X + W : 0) + P, xC + W / 2 + rowW(Math.max(top.length, bot.length)) / 2 + P);
+  const yA = P + topH + midH / 2, h = P * 2 + topH + midH + botH;
+  const svg = document.createElementNS(ns, "svg"); svg.setAttribute("width", w); svg.setAttribute("height", h);
+  svg.innerHTML = '<defs><marker id="nxa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#7d8aa0"/></marker></defs>';
+  const line = (x1, y1, x2, y2, s) => { const l = document.createElementNS(ns, "line");
+    Object.entries({ x1, y1, x2, y2, stroke: "rgb(" + col(s) + ")", "stroke-width": 1.5, "marker-end": "url(#nxa)" }).forEach(([k, v]) => l.setAttribute(k, v)); svg.append(l); };
+  const node = (n, x, y, s) => { const g = document.createElementNS(ns, "g"), r = document.createElementNS(ns, "rect"), tx = document.createElementNS(ns, "text");
+    g.setAttribute("class", s ? "node" : "center"); g.setAttribute("transform", `translate(${x},${y})`);
+    Object.entries({ width: W, height: H, rx: 3, fill: s ? "rgba(" + col(s) + ",0.08)" : "var(--g1)", stroke: s ? "rgb(" + col(s) + ")" : "" }).forEach(([k, v]) => v !== "" && r.setAttribute(k, v));
+    tx.setAttribute("x", 8); tx.setAttribute("y", H / 2 + 5); tx.textContent = n.length > 13 ? n.slice(0, 12) + "…" : n;
+    const tt = document.createElementNS(ns, "title"); tt.textContent = n + (s ? " · " + (d.types[{ ne: "nw", et: "wt", se: "sw", st: "nr" }[s] || s] || "") : ""); g.append(r, tx, tt);
+    if (s) g.onclick = () => { inp.value = "nexus " + n; document.getElementById("f").requestSubmit(); };
+    svg.append(g); };
+  const stack = (list, x, side) => list.forEach(([n, s], i) => { const y = yA - colH(list.length) / 2 + i * (H + G);
+    node(n, x, y, s); side === "in" ? line(x + W, y + H / 2, xC, yA, s) : line(xC + W, yA, x, y + H / 2, s); });
+  const row = (list, y, up) => list.forEach(([n, s], i) => { const x = xC + W / 2 - rowW(list.length) / 2 + i * (W + G);
+    node(n, x, y, s); up ? line(xC + W / 2, yA - H / 2, x + W / 2, y + H, s) : line(x + W / 2, y, xC + W / 2, yA + H / 2, s); });
+  stack(left, P, "in"); stack(right, xC + W + X, "out");
+  row(top, P, true); row(bot, h - P - H, false);   // север — обобщения (прямой Taxon), юг — члены (обратный)
+  node(name, xC, yA - H / 2, "");
+  const box = el("nx"); box.append(svg);
+  const pair = { nw: "ne", wt: "et", sw: "se", nr: "st" };
+  const lg = el("legend", Object.keys(pair).filter(s => (d[s] || []).length + (d[pair[s]] || []).length).map(s => d.types[s]).join(" · ")); box.append(lg);
+  t.append(box); scroll();
+}
 function addAnswer(t, turn) {
   const a = el("ans" + (turn.error ? " err" : ""));
   a.append(el("v", turn.answer));
   const f = el("f", (turn.frames || []).join(" ")); f.title = "interpres"; a.append(f);
   t.append(a); scroll();
+  if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) drawNexus(t, turn.pred.slice(6)); // граф контекста
 }
 
 async function api(path, body) {
