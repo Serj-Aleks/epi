@@ -98,3 +98,14 @@ return map[string]any{"center": name, "found": found, "alias": alias,
 	"nw": side("Prfix", 1), "ne": side("Prfix", 0), "wt": side("Radix", 1), "et": side("Radix", 0),
 	"sw": side("Sufix", 1), "se": side("Sufix", 0), "nr": side("Taxon", 0), "st": side("Taxon", 1),
 	"types": map[string]string{"nw": "Prfix", "wt": "Radix", "sw": "Sufix", "nr": "Taxon"}} }
+// iconFile: картинка концепта — спутник (0.22), как в ПИ: <папка концепта>/<имя>.svg
+// или <папка концепта>/img/<имя>.png|jpg|jpeg|webp|gif|ico; концепт — в теме или в лексиконе.
+func (q *Script) iconFile(name string) string {
+if name == "" || strings.ContainsAny(name, "/\\") {return ""}
+roots := []string{q.themaDir()}
+for _, c := range []string{"prfix", "sufix", "radix", "preposit", "atrbt", "constans"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
+base := strings.ToLower(name)
+for _, r := range roots {
+	dir := filepath.Dir(letterPath(r, name))
+	if p := filepath.Join(dir, base+".svg"); exists(p) {return p}
+	for _, ext := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if p := filepath.Join(dir, "img", base+"."+ext); exists(p) {return p}}}; return "" }

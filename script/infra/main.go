@@ -143,6 +143,10 @@ var body struct {
 if req.Method != http.MethodGet {if err := json.NewDecoder(req.Body).Decode(&body); err != nil {http.Error(w, err.Error(), http.StatusBadRequest); return}}
 fail := func(code int, msg string) { http.Error(w, msg, code) }
 if req.URL.Path == "/api/nexus" {json.NewEncoder(w).Encode(q.nexusGraph(req.URL.Query().Get("name"))); return} // граф локального контекста (9.17)
+if req.URL.Path == "/api/icon" { // картинка узла графа (спутник концепта)
+	p := q.iconFile(req.URL.Query().Get("name"))
+	if p == "" {http.NotFound(w, req); return}
+	w.Header().Del("Content-Type"); http.ServeFile(w, req, p); return}
 if q.pending != nil && req.URL.Path != "/api/answer" && req.URL.Path != "/api/state" {fail(http.StatusConflict, "ждёт ответа на вопрос"); return}
 switch req.URL.Path {
 case "/api/state":

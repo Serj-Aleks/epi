@@ -34,15 +34,17 @@
   .ans { display: flex; gap: 12px; align-items: baseline; padding-left: 2ch; white-space: pre-wrap; word-break: break-word; }
   .ans .v { color: var(--acc); }
   .ans.err .v { color: var(--err); }
-  .ans .f, .q .f { margin-left: auto; color: var(--dim); font-size: 13px; }
+  .ans .f, .q .f { margin-left: auto; color: var(--dim); font-size: 13px; white-space: nowrap; }
   .q { padding-left: 2ch; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .q button { height: 22px; line-height: 20px; }
   /* граф локального контекста (nexus, 9.17): цвета осей — как в ПИ */
   .nx { padding: 4px 0 4px 2ch; overflow-x: auto; }
   .nx svg { display: block; }
-  .nx text { font: 13px "DejaVu Sans Mono", monospace; fill: var(--fg); }
-  .nx .node { cursor: pointer; } .nx .node:hover rect { fill: var(--btn); }
-  .nx .center rect { stroke-width: 2px; stroke: var(--acc); }
+  .nx .node, .nx .trig { cursor: pointer; } .nx .node:hover rect { fill: var(--btn); }
+  .nx .center > rect { stroke-width: 2px; stroke: var(--acc); }
+  .nx .trig path { fill: var(--dim); } .nx .trig:hover path { fill: var(--acc); }
+  .nxtip { position: fixed; z-index: 10; background: var(--fg); color: var(--g1); padding: 6px 10px; border-radius: 4px; font-size: 13px; max-width: 230px; }
+  .nxtip a { display: block; color: inherit; font-weight: bold; text-decoration: none; border-bottom: 1px solid var(--dim); margin-bottom: 4px; }
   .nx .legend { font-size: 12px; color: var(--dim); }
   form { display: flex; border-top: 1px solid var(--barline); background: var(--bar); }
   form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
@@ -76,19 +78,32 @@ function scroll() { log.scrollTop = log.scrollHeight; }
 function addPred(text) { const t = el("turn"); t.append(el("pred", text)); log.append(t); scroll(); return t; }
 // граф локального контекста (nexus, 9.17): оси как в ПИ — слева обратные списки
 // (северо-запад, запад, юго-запад), справа прямые; сверху и снизу — север и юг.
-// Узел — концепт; щелчок — «nexus Имя» в строку ввода.
+// Узлы без подписей, одного размера (умещается на экране телефона): место для
+// картинки концепта (спутник: <имя>.svg или img/<имя>.png) и треугольник —
+// подсказка: имя (щелчок — nexus), связь; у центра — синонимы. Щелчок по узлу — nexus Имя.
 const NX = { nw: "180,80,100", wt: "80,160,100", sw: "224,150,90", nr: "70,130,180" };
+const NXP = { ne: "nw", et: "wt", se: "sw", st: "nr" };
+const NXD = { nw: "←", wt: "←", sw: "←", nr: "↑", ne: "→", et: "→", se: "→", st: "↓" };
+function nxGo(name) { document.querySelectorAll(".nxtip").forEach(e => e.remove()); inp.value = "nexus " + name; document.getElementById("f").requestSubmit(); }
+function nxTip(e, name, lines) {
+  e.stopPropagation(); document.querySelectorAll(".nxtip").forEach(x => x.remove());
+  const tip = el("nxtip"), h = document.createElement("a"); h.textContent = name; h.href = "#";
+  h.onclick = ev => { ev.preventDefault(); nxGo(name); }; tip.append(h);
+  lines.forEach(l => tip.append(el("", l)));
+  tip.style.left = Math.min(e.clientX + 8, innerWidth - 240) + "px"; tip.style.top = e.clientY + 8 + "px";
+  document.body.append(tip);
+}
+document.addEventListener("click", () => document.querySelectorAll(".nxtip").forEach(x => x.remove()));
 async function drawNexus(t, name) {
   let d;
   try { d = await api("/api/nexus?name=" + encodeURIComponent(name)); } catch (e) { return; }
   if (!d.found) return;
-  const W = 120, H = 28, G = 8, X = 70, P = 12, ns = "http://www.w3.org/2000/svg";
-  const col = s => NX[{ ne: "nw", et: "wt", se: "sw", st: "nr" }[s] || s];
+  const W = 48, H = 32, G = 6, X = 40, P = 8, ns = "http://www.w3.org/2000/svg";
+  const col = s => NX[NXP[s] || s];
   const left = ["nw", "wt", "sw"].flatMap(s => (d[s] || []).map(n => [n, s]));
   const right = ["ne", "et", "se"].flatMap(s => (d[s] || []).map(n => [n, s]));
   const top = (d.nr || []).map(n => [n, "nr"]), bot = (d.st || []).map(n => [n, "st"]);
-  const colH = k => k ? k * H + (k - 1) * G : 0;
-  const rowW = k => k ? k * W + (k - 1) * G : 0;
+  const colH = k => k ? k * H + (k - 1) * G : 0, rowW = k => k ? k * W + (k - 1) * G : 0;
   const midH = Math.max(colH(left.length), colH(right.length), H);
   const topH = top.length ? H + X / 2 : 0, botH = bot.length ? H + X / 2 : 0;
   const xC = Math.max(P + (left.length ? W + X : 0), P + rowW(Math.max(top.length, bot.length)) / 2 - W / 2);
@@ -96,14 +111,18 @@ async function drawNexus(t, name) {
   const yA = P + topH + midH / 2, h = P * 2 + topH + midH + botH;
   const svg = document.createElementNS(ns, "svg"); svg.setAttribute("width", w); svg.setAttribute("height", h);
   svg.innerHTML = '<defs><marker id="nxa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#7d8aa0"/></marker></defs>';
-  const line = (x1, y1, x2, y2, s) => { const l = document.createElementNS(ns, "line");
-    Object.entries({ x1, y1, x2, y2, stroke: "rgb(" + col(s) + ")", "stroke-width": 1.5, "marker-end": "url(#nxa)" }).forEach(([k, v]) => l.setAttribute(k, v)); svg.append(l); };
-  const node = (n, x, y, s) => { const g = document.createElementNS(ns, "g"), r = document.createElementNS(ns, "rect"), tx = document.createElementNS(ns, "text");
-    g.setAttribute("class", s ? "node" : "center"); g.setAttribute("transform", `translate(${x},${y})`);
-    Object.entries({ width: W, height: H, rx: 3, fill: s ? "rgba(" + col(s) + ",0.08)" : "var(--g1)", stroke: s ? "rgb(" + col(s) + ")" : "" }).forEach(([k, v]) => v !== "" && r.setAttribute(k, v));
-    tx.setAttribute("x", 8); tx.setAttribute("y", H / 2 + 5); tx.textContent = n.length > 13 ? n.slice(0, 12) + "…" : n;
-    const tt = document.createElementNS(ns, "title"); tt.textContent = n + (s ? " · " + (d.types[{ ne: "nw", et: "wt", se: "sw", st: "nr" }[s] || s] || "") : ""); g.append(r, tx, tt);
-    if (s) g.onclick = () => { inp.value = "nexus " + n; document.getElementById("f").requestSubmit(); };
+  const mk = (tag, attrs) => { const e = document.createElementNS(ns, tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v)); return e; };
+  const line = (x1, y1, x2, y2, s) => svg.append(mk("line", { x1, y1, x2, y2, stroke: "rgb(" + col(s) + ")", "stroke-width": 1.5, "marker-end": "url(#nxa)" }));
+  const node = (n, x, y, s) => {
+    const g = mk("g", { class: s ? "node" : "center", transform: `translate(${x},${y})` });
+    g.append(mk("rect", s ? { width: W, height: H, rx: 3, fill: "rgba(" + col(s) + ",0.08)", stroke: "rgb(" + col(s) + ")" } : { width: W, height: H, rx: 3, fill: "var(--g1)" }));
+    const img = mk("image", { x: 3, y: 3, width: H - 6, height: H - 6, href: "/api/icon?name=" + encodeURIComponent(n) });
+    img.addEventListener("error", () => img.remove()); g.append(img);
+    const tg = mk("g", { class: "trig" });   // треугольник — подсказка
+    tg.append(mk("rect", { x: W - 16, y: 0, width: 16, height: H, fill: "transparent" }), mk("path", { d: `M${W - 11} ${H / 2 - 4}L${W - 5} ${H / 2}L${W - 11} ${H / 2 + 4}z` }));
+    const info = s ? [(d.types[NXP[s] || s] || "") + " " + NXD[s]] : (d.alias && d.alias.length ? ["Alias: " + d.alias.join(" ")] : []);
+    tg.addEventListener("click", e => nxTip(e, n, info)); g.append(tg);
+    if (s) g.addEventListener("click", e => { if (!e.target.closest(".trig")) nxGo(n); });
     svg.append(g); };
   const stack = (list, x, side) => list.forEach(([n, s], i) => { const y = yA - colH(list.length) / 2 + i * (H + G);
     node(n, x, y, s); side === "in" ? line(x + W, y + H / 2, xC, yA, s) : line(xC + W, yA, x, y + H / 2, s); });
@@ -114,7 +133,7 @@ async function drawNexus(t, name) {
   node(name, xC, yA - H / 2, "");
   const box = el("nx"); box.append(svg);
   const pair = { nw: "ne", wt: "et", sw: "se", nr: "st" };
-  const lg = el("legend", Object.keys(pair).filter(s => (d[s] || []).length + (d[pair[s]] || []).length).map(s => d.types[s]).join(" · ")); box.append(lg);
+  box.append(el("legend", Object.keys(pair).filter(s => (d[s] || []).length + (d[pair[s]] || []).length).map(s => d.types[s]).join(" · ")));
   t.append(box); scroll();
 }
 function addAnswer(t, turn) {
