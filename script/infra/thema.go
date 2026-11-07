@@ -81,7 +81,8 @@ k, _, _ := strings.Cut(line, " "); return k }
 // writeConcept: параметр фрейма автора — строка «Параметр : предикация» в
 // файле концепта; повторное определение заменяет свою строку.
 func (q *Script) writeConcept(frame, param string, pred []format.Value) error {
-if q.theme == "" {return nil}; return writeParam(q.conceptFile(frame), param, pred) }
+if q.theme == "" {return nil}
+if root, ok := q.linkRoot(param); ok {return q.writeLink(frame, param, pred, root)}; return writeParam(q.conceptFile(frame), param, pred) }
 // writeParam: строка «Параметр : предикация» в файле концепта path.
 func writeParam(path, param string, pred []format.Value) error {
 var lines []string
@@ -137,6 +138,7 @@ func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root
 	var body []string
 	for _, l := range lines {
 		if !isParam(l) {body = append(body, l); continue}
+		if _, ok := q.linkRoot(lineKey(l)); ok {l = directOnly(l)} // связь: в контекст — только прямой список
 		if _, err := q.in.Run(name+"."+l, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}
 	if len(body) > 0 {if _, err := q.in.Run(name+" : [ "+strings.Join(body, " . ")+" ]", q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
 // conceptName: имя концепта — из имени файла с прописной первой буквой (9.9):
