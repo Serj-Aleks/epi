@@ -444,7 +444,8 @@ document.getElementById("f").onsubmit = async (e) => {
     else act("/api/thema/rename", { name: last.theme, to: name });
     return;
   }
-  const text = inp.value.trim(); if (!text || !writable) return;
+  const text = inp.value.trim(); if (!text) return;
+  if (!writable) { note.textContent = "сеанс закрыт — откройте сеанс ＋"; return; } // не молча
   hist.push(text); hpos = hist.length; inp.value = ""; inp.disabled = true;
   const t = addPred(text);
   try { handle(t, await api("/api/eval", { text })); }

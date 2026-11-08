@@ -1,6 +1,6 @@
 // epi/script/infra/kater.go
 package main
-import ("fmt"; "io"; "os"; "path/filepath"; "strings"; "epi/script/format")
+import ("fmt"; "io"; "os"; "path/filepath"; "regexp"; "strings"; "epi/script/format")
 // Перенос данных ПИ (папка kater) в темы EPI (ason-spec 9.18): тема ПИ → thema/<тема>,
 // концепт — по тому же пути из букв, файл — строки «Параметр : значение» (0.23).
 // Связи ПИ — с обоими списками: alias → Alias, tags → Taxon, prefix → Prfix,
@@ -34,7 +34,7 @@ for _, k := range katerOrder {
 		d, i := katerLists(v)
 		if len(d)+len(i) == 0 {continue}
 		lines = append(lines, katerLinks[k]+" : "+blk(d)+" "+blk(i))
-	default: lines = append(lines, katerShow[k]+" : "+katerValue(v))}}; return lines }
+	default: lines = append(lines, piNames(katerShow[k]+" : "+katerValue(v)))}}; return lines }
 func copyFile(src, dst string) error {
 if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {return err}
 in, err := os.Open(src)
@@ -68,3 +68,11 @@ for _, e := range es {
 	report = append(report, fmt.Sprintf("%s: концептов %d, спутников %d", name, nc, ns))}; return report, nil }
 // blk: список имён — блок в каноническом виде: [ a b ] или [].
 func blk(ns []string) string {if len(ns) == 0 {return "[]"}; return "[ " + strings.Join(ns, " ") + " ]" }
+// piNames: значение настройки осей и списка (N-west, West, S-west, Nord, List) —
+// имена слотов ПИ заменяются именами связей EPI (tags → Taxon, prefix → Prfix …; 08.11.2026).
+var piLinkNames = map[string]string{"tags": "Taxon", "links": "Links", "attrib": "Attrib", "preposit": "Preposit", "prefix": "Prfix", "suffix": "Sufix"}
+var rePiName = regexp.MustCompile(`\b(tags|links|attrib|preposit|prefix|suffix)\b`)
+func piNames(line string) string {
+k := lineKey(line)
+if !isParam(line) || !has([]string{"N-west", "West", "S-west", "Nord", "List"}, k) {return line}
+i := strings.Index(line, ":"); return line[:i] + rePiName.ReplaceAllStringFunc(line[i:], func(s string) string {return piLinkNames[s]}) }

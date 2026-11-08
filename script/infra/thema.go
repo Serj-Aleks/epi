@@ -146,6 +146,9 @@ func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root
 		if err != nil {return err}
 		for _, m := range models {lines = append(lines, m[0]+" : "+m[1])}
 		if err := writeLines(path, lines); err != nil {return err}} else if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}
+	fixed := false // настройки с именами слотов ПИ — один раз переписываются именами связей EPI
+	for i, l := range lines {if f := piNames(l); f != l {lines[i], fixed = f, true}}
+	if fixed {if err := writeLines(path, lines); err != nil {return err}}
 	var body []string
 	for _, l := range lines {
 		if !isParam(l) {body = append(body, l); continue}

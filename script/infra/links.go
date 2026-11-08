@@ -90,12 +90,14 @@ func (q *Script) nexus(arg format.Value) (format.Value, bool) {
 if arg.Kind != format.Term || q.theme == "" {return format.Value{}, false}
 p := q.conceptPath(arg.Text)
 if p == "" {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: conceptName(p, "")}, true }
-// piSlot: слот связи ПИ → связь EPI; graphTypes — связи графа в порядке ПИ
-// (tags, links, attrib, preposit, prefix, suffix), radix и вычисляемая transcl
-// (трансклюзии контента, 9.19: в списке — всегда, на оси — по настройке концепта); graphCodes — коды списка.
-var piSlot = map[string]string{"tags": "Taxon", "links": "Links", "attrib": "Attrib", "preposit": "Preposit", "prefix": "Prfix", "suffix": "Sufix", "radix": "Radix", "transcl": "Transcl"}
-var graphTypes = []string{"tags", "links", "attrib", "preposit", "prefix", "suffix", "radix", "transcl"}
-var graphCodes = map[string]string{"alias": "AL", "attrib": "AT", "preposit": "PP", "prefix": "PF", "suffix": "SF", "tags": "TX", "links": "LK", "themes": "TM", "radix": "RX", "transcl": "TC"}
+// graphTypes — связи графа (имена связей EPI) в порядке ПИ (tags, links, attrib,
+// preposit, prefix, suffix), затем Radix и вычисляемая Transcl (трансклюзии контента,
+// 9.19: в списке — всегда, на оси — по настройке концепта); graphCodes — коды списка.
+// Настройки осей и списка (N-west, West, S-west, Nord, List) пишутся именами связей EPI.
+var graphTypes = []string{"Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix", "Transcl"}
+var graphCodes = map[string]string{"Alias": "AL", "Attrib": "AT", "Preposit": "PP", "Prfix": "PF", "Sufix": "SF", "Taxon": "TX", "Links": "LK", "Radix": "RX", "Transcl": "TC"}
+// graphType: имя связи графа по значению настройки (без учёта регистра); "" — не связь.
+func graphType(v string) string {for _, t := range graphTypes {if strings.EqualFold(t, v) {return t}}; return "" }
 // setting: значение настройки концепта (Nord : links) — текст без кавычек.
 func setting(path, key string) string {
 b, err := os.ReadFile(path)
@@ -117,7 +119,7 @@ type gnode struct {
 	Color     string  `json:"color,omitempty"`
 	Neighbors []gnode `json:"neighbors,omitempty"`}
 // nexusGraph: локальный контекст для графа — как GetGraph в ПИ: оси northwest/west/
-// southwest/north — prefix, attrib, suffix, preposit или по настройкам концепта
+// southwest/north — Prfix, Attrib, Sufix, Preposit или по настройкам концепта
 // N-west, West, S-west, Nord; слева и сверху — обратные списки, справа и снизу —
 // прямые; остальные связи — extra (списком); в узлах — только существующие концепты,
 // соседи узла — его прямой список той же связи; у центра — синонимы.
@@ -134,23 +136,23 @@ resolve := func(ns []string, slot string) []gnode {
 	for _, n := range ns {
 		g, p, ok := mk(n)
 		if !ok {continue}
-		if slot != "" {nd, _ := readLink(p, piSlot[slot]); if slot == "transcl" {nd, _ = q.inclLists(n)}; for _, x := range nd {if xg, _, ok := mk(x); ok {g.Neighbors = append(g.Neighbors, gnode{Name: xg.Name})}}}
+		if slot != "" {nd, _ := readLink(p, slot); if slot == "Transcl" {nd, _ = q.inclLists(n)}; for _, x := range nd {if xg, _, ok := mk(x); ok {g.Neighbors = append(g.Neighbors, gnode{Name: xg.Name})}}}
 		out = append(out, g)}; return out}
 alias, links, _ := q.nexusData(name)
 if d, i := q.inclLists(name); len(d)+len(i) > 0 {links["Transcl"] = [2][]string{d, i}} // вычисляемая связь
 center, _, _ := mk(name)
 center.Neighbors = resolve(alias, "") // синонимы — только существующие концепты, как в ПИ
-spec := map[string]string{"nw": "prefix", "wt": "attrib", "sw": "suffix", "nr": "preposit"}
-for a, k := range map[string]string{"nw": "N-west", "wt": "West", "sw": "S-west", "nr": "Nord"} {if v := strings.ToLower(setting(path, k)); piSlot[v] != "" {spec[a] = v}}
+spec := map[string]string{"nw": "Prfix", "wt": "Attrib", "sw": "Sufix", "nr": "Preposit"}
+for a, k := range map[string]string{"nw": "N-west", "wt": "West", "sw": "S-west", "nr": "Nord"} {if t := graphType(setting(path, k)); t != "" {spec[a] = t}}
 out := map[string]any{"found": true, "center": center, "codes": graphCodes, "graph": setting(path, "Graph"), "list": setting(path, "List"),
 	"nwType": spec["nw"], "wtType": spec["wt"], "swType": spec["sw"], "nrType": spec["nr"]}
 pair := map[string]string{"nw": "ne", "wt": "et", "sw": "se", "nr": "st"}
 used := map[string]bool{}
-for a, t := range spec {s := links[piSlot[t]]; out[a], out[pair[a]] = resolve(s[1], t), resolve(s[0], t); used[t] = true}
+for a, t := range spec {s := links[t]; out[a], out[pair[a]] = resolve(s[1], t), resolve(s[0], t); used[t] = true}
 var extra []map[string]any
 for _, t := range graphTypes {
 	if used[t] {continue}
-	s := links[piSlot[t]]
+	s := links[t]
 	d, i := resolve(s[0], t), resolve(s[1], t)
 	if len(d)+len(i) > 0 {extra = append(extra, map[string]any{"type": t, "direct": d, "inverse": i})}}
 out["extra"] = extra; return out }
