@@ -30,6 +30,7 @@ p := q.satFile(name, ext)
 if p == "" {return os.ErrNotExist}
 if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {return err}
 if err := os.WriteFile(p, []byte(text), 0644); err != nil {return err}
+if k := strings.ToLower(name); q.cidx[k] != "" {if ns := transcl(q.cidx[k]); len(ns) > 0 {q.tidx[k] = ns} else {delete(q.tidx, k)}}
 if ext != "md" || !strings.HasPrefix(q.conceptPath(name), q.themaDir()) {return nil}
 seen := map[string]bool{}
 var ns []string
@@ -41,3 +42,22 @@ old, _ := readLink(q.conceptFile(name), "Links")
 if len(old) == len(ns) {same := true; for _, n := range ns {if !has(old, n) {same = false}}; if same {return nil}}
 var pred []format.Value
 for _, n := range ns {pred = append(pred, format.Value{Kind: format.Term, Text: n})}; return q.writeLink(conceptName(q.conceptFile(name), ""), "Links", pred, q.themaDir(), true) }
+// reIncl: трансклюзия {{Имя}} в контенте (вне блоков кода).
+var reIncl = regexp.MustCompile(`\{\{([^{}]+)\}\}`)
+// transcl: трансклюзии концепта по файлу p — из спутников md, html, json (в стилях и svg их нет).
+func transcl(p string) []string {
+var ns []string
+for _, t := range []string{"md", "html", "json"} {
+	b, err := os.ReadFile(strings.TrimSuffix(p, ".uic") + "." + t)
+	if err != nil {continue}
+	for _, m := range reIncl.FindAllStringSubmatch(reFence.ReplaceAllString(string(b), ""), -1) {if n := strings.TrimSpace(m[1]); n != "" && !has(ns, n) {ns = append(ns, n)}}}; return ns }
+// indexTranscl: указатель трансклюзий темы — вычисляемая связь (9.19): в файлы не пишется.
+func (q *Script) indexTranscl() {
+q.tidx = map[string][]string{}
+for k, p := range q.cidx {if ns := transcl(p); len(ns) > 0 {q.tidx[k] = ns}} }
+// inclLists: прямой (кого включает) и обратный (кто включает) списки трансклюзий концепта.
+func (q *Script) inclLists(name string) ([]string, []string) {
+k := strings.ToLower(name)
+var inv []string
+for o, ns := range q.tidx {if o != k && has(ns, name) {inv = append(inv, conceptName(q.cidx[o], ""))}}
+sort.Strings(inv); return q.tidx[k], inv }

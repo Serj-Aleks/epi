@@ -83,7 +83,7 @@ q.cidx = map[string]string{}
 filepath.WalkDir(q.themaDir(), func(path string, d os.DirEntry, err error) error {
 	if err != nil {return nil}
 	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
-	if !d.IsDir() && strings.HasSuffix(path, ".uic") {q.cidx[strings.ToLower(strings.TrimSuffix(d.Name(), ".uic"))] = path}; return nil}) }
+	if !d.IsDir() && strings.HasSuffix(path, ".uic") {q.cidx[strings.ToLower(strings.TrimSuffix(d.Name(), ".uic"))] = path}; return nil}); q.indexTranscl() }
 // conceptLines: строки-модели концепта «Параметр : предикация» (0.23).
 func conceptLines(b []byte) ([]string, error) {return disp.Split(string(b)) }
 // lineKey: параметр строки «Параметр : …».

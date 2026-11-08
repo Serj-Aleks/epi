@@ -91,10 +91,11 @@ if arg.Kind != format.Term || q.theme == "" {return format.Value{}, false}
 p := q.conceptPath(arg.Text)
 if p == "" {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: conceptName(p, "")}, true }
 // piSlot: слот связи ПИ → связь EPI; graphTypes — связи графа в порядке ПИ
-// (tags, links, attrib, preposit, prefix, suffix) и radix; graphCodes — коды списка.
-var piSlot = map[string]string{"tags": "Taxon", "links": "Links", "attrib": "Attrib", "preposit": "Preposit", "prefix": "Prfix", "suffix": "Sufix", "radix": "Radix"}
-var graphTypes = []string{"tags", "links", "attrib", "preposit", "prefix", "suffix", "radix"}
-var graphCodes = map[string]string{"alias": "AL", "attrib": "AT", "preposit": "PP", "prefix": "PF", "suffix": "SF", "tags": "TX", "links": "LK", "themes": "TM", "radix": "RX"}
+// (tags, links, attrib, preposit, prefix, suffix), radix и вычисляемая transcl
+// (трансклюзии контента, 9.19: в списке — всегда, на оси — по настройке концепта); graphCodes — коды списка.
+var piSlot = map[string]string{"tags": "Taxon", "links": "Links", "attrib": "Attrib", "preposit": "Preposit", "prefix": "Prfix", "suffix": "Sufix", "radix": "Radix", "transcl": "Transcl"}
+var graphTypes = []string{"tags", "links", "attrib", "preposit", "prefix", "suffix", "radix", "transcl"}
+var graphCodes = map[string]string{"alias": "AL", "attrib": "AT", "preposit": "PP", "prefix": "PF", "suffix": "SF", "tags": "TX", "links": "LK", "themes": "TM", "radix": "RX", "transcl": "TC"}
 // setting: значение настройки концепта (Nord : links) — текст без кавычек.
 func setting(path, key string) string {
 b, err := os.ReadFile(path)
@@ -133,9 +134,10 @@ resolve := func(ns []string, slot string) []gnode {
 	for _, n := range ns {
 		g, p, ok := mk(n)
 		if !ok {continue}
-		if slot != "" {nd, _ := readLink(p, piSlot[slot]); for _, x := range nd {if xg, _, ok := mk(x); ok {g.Neighbors = append(g.Neighbors, gnode{Name: xg.Name})}}}
+		if slot != "" {nd, _ := readLink(p, piSlot[slot]); if slot == "transcl" {nd, _ = q.inclLists(n)}; for _, x := range nd {if xg, _, ok := mk(x); ok {g.Neighbors = append(g.Neighbors, gnode{Name: xg.Name})}}}
 		out = append(out, g)}; return out}
 alias, links, _ := q.nexusData(name)
+if d, i := q.inclLists(name); len(d)+len(i) > 0 {links["Transcl"] = [2][]string{d, i}} // вычисляемая связь
 center, _, _ := mk(name)
 center.Neighbors = resolve(alias, "") // синонимы — только существующие концепты, как в ПИ
 spec := map[string]string{"nw": "prefix", "wt": "attrib", "sw": "suffix", "nr": "preposit"}

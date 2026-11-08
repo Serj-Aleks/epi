@@ -41,6 +41,7 @@ type Script struct {
 	pQuest  string
 	pOpts   []string
 	choose  func(text string, opts []string) string // вопрос с выбором в текущей интерпретации
-	cidx    map[string]string} // концепты темы: имя (строчными) → файл; клоны лежат не по пути своего имени (9.18)
+	cidx    map[string]string // концепты темы: имя (строчными) → файл; клоны лежат не по пути своего имени (9.18)
+	tidx    map[string][]string} // трансклюзии темы: имя (строчными) → включаемые концепты (из спутников md, html, json; 9.19)
 const limit = 10000
 const gaussABC = "oiztyvslanxedbhfmg"

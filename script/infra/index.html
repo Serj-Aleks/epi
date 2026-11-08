@@ -57,7 +57,10 @@
   .cbody a { color: var(--acc); } .cbody a.cref { font-weight: 700; text-decoration: none; }
   .cinc { border-left: 3px solid var(--graph-nr); padding-left: 8px; margin: 6px 0; }
   .cempty { color: var(--dim); } .cedit { width: 100%; min-height: 40vh; font: 13px/1.4 inherit; font-family: inherit; background: var(--g1); border: 1px solid var(--line); margin-top: 6px; }
-  .cslots { margin: 0 14px; white-space: pre-wrap; font-size: 13px; }
+  .crow { display: flex; gap: 6px; align-items: center; padding: 2px 14px; flex-wrap: wrap; } .ckey { width: 9ch; color: var(--dim); font-size: 13px; }
+  input.ckey { width: 9ch; padding: 2px 4px; flex: none; } .cval { flex: 1; min-width: 10ch; font: 13px inherit; font-family: inherit; padding: 2px 4px; background: var(--g1); border: 1px solid var(--line); color: var(--fg); }
+  .crow input.ckey { background: var(--g1); border: 1px solid var(--line); color: var(--fg); font: 13px inherit; font-family: inherit; }
+  .cinv { width: 100%; padding-left: calc(9ch + 6px); color: var(--dim); font-size: 12px; } .cbodyline { padding: 2px 14px; font-size: 13px; color: var(--fg); white-space: pre-wrap; }
   .dag-svg { display: block; margin: 0 auto; flex-shrink: 0; }
   .dag-node { cursor: pointer; transition: opacity 0.15s; } .dag-node:hover { opacity: 0.75; }
   .dag-node-rect { fill: var(--g1); stroke: #c9bfa8; stroke-width: 1.5px; }
@@ -297,6 +300,26 @@ async function lensContent(box, c) {
   box.append(bar, body); await view();
 }
 const satTypes = ["md", "json", "svg", "css", "xml", "html", "txt"];
+// линза ⊞ — строки концепта (9.19): параметр правится, ✓ отправляет предикацию
+// «Концепт.Параметр : значение» в строку ввода — правка идёт в протокол, обратные
+// списки связей script ведёт сам (у связи правится только прямой список); строки
+// тела фрейма — только для чтения; последняя строка — новый параметр.
+const linkKeys = ["Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix"];
+function lensSlots(box, c) {
+  const send = (k, v) => { if (!k.trim() || !v.trim()) return; inp.value = c.name + "." + k.trim() + " : " + v.trim(); document.getElementById("f").requestSubmit(); };
+  const row = (key, val, inv) => { const r = el("crow");
+    const k = document.createElement(key === null ? "input" : "span"); k.className = "ckey"; if (key === null) k.placeholder = "Param"; else k.textContent = key;
+    const v = document.createElement("input"); v.className = "cval"; v.value = val; v.spellcheck = false;
+    const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "record"; ok.onclick = () => send(key === null ? k.value : key, v.value);
+    v.onkeydown = e => { if (e.key === "Enter") ok.click(); };
+    r.append(k, v, ok); if (inv && inv !== "[]") r.append(el("cinv", "← " + inv)); box.append(r); };
+  for (const l of c.lines || []) {
+    const m = l.match(/^(\p{Lu}[^\s.]*) : (.*)$/u);
+    if (!m) { box.append(el("cbodyline", l)); continue; }
+    if (linkKeys.includes(m[1]) && m[2].startsWith("[")) { const j = m[2].indexOf("]"); row(m[1], m[2].slice(0, j + 1), m[2].slice(j + 1).trim()); }
+    else row(m[1], m[2]); }
+  row(null, "");
+}
 async function cardOpen(name) {
   let c;
   try { c = await api("/api/card?name=" + encodeURIComponent(name)); } catch (e) { return; }
@@ -314,7 +337,7 @@ async function cardOpen(name) {
       const sd = Object.assign({}, d); sides.forEach(s => { if (hide.has(s)) sd[s] = []; });
       const box = el("clens"); nxSvg(box, sd); box.append(Object.assign(document.createElement("hr"), { className: "dag-divider" })); nxList(box, d); card.append(box); } }
   if (lens.content) { const box = el("clens"); card.append(box); await lensContent(box, c); }
-  if (lens.slots) { const box = el("clens"), pre = document.createElement("pre"); pre.className = "cslots"; pre.textContent = (c.lines || []).join("\n"); box.append(pre); card.append(box); }
+  if (lens.slots) { const box = el("clens"); lensSlots(box, c); card.append(box); }
 }
 function addAnswer(t, turn) {
   const a = el("ans" + (turn.error ? " err" : ""));
@@ -322,6 +345,7 @@ function addAnswer(t, turn) {
   const f = el("f", (turn.frames || []).join(" ")); f.title = "interpres"; a.append(f);
   t.append(a); scroll();
   if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice(6)); // карточка концепта
+  else if (!turn.error && cardName) cardShow(cardName); // после правки — карточка заново
 }
 
 async function api(path, body) {
