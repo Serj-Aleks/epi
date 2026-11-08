@@ -95,6 +95,7 @@
   <select id="thema" title="thema"></select>
   <button id="tnew" title="new thema">＋</button>
   <button id="tren" title="rename thema">✎</button>
+  <button id="cnew" title="new concept">⊕</button>
   <span class="gap"></span>
   <select id="seans" title="seans"></select>
   <button id="new" title="new seans">＋</button>
@@ -401,6 +402,7 @@ function show(st) {
     const o = document.createElement("option"); o.value = o.textContent = t; o.selected = t === st.theme; tsel.append(o);
   }
   document.getElementById("tren").disabled = !st.theme;
+  document.getElementById("cnew").disabled = !st.theme || !st.current || st.closed;
   document.getElementById("new").disabled = !st.theme;
   if (!st.theme) note.textContent = "создайте тему ＋";
   sel.innerHTML = "";
@@ -473,6 +475,14 @@ function handle(t, rep) {
 document.getElementById("f").onsubmit = async (e) => {
   e.preventDefault();
   if (mode === "concept") { conceptDone(inp.value.trim()); return; }
+  if (mode === "cnew") { // новый концепт (9.19): предикация «Имя : []» — пустой фрейм, затем nexus Имя
+    const name = inp.value.trim(); if (!name) return;
+    if (!/^\p{Lu}[^\s.:\[\]{}()"]*$/u.test(name)) { note.textContent = "имя концепта — с прописной буквы, без пробелов"; return; }
+    mode = null; inp.placeholder = ""; inp.value = ""; note.textContent = "";
+    const c = await api("/api/card?name=" + encodeURIComponent(name)).catch(() => ({}));
+    if (!c.found && !await runPred(name + " : []")) return;
+    nxGo(name); return;
+  }
   if (mode) { // имя темы
     const name = inp.value.trim(); if (!name) return;
     const m = mode; inp.value = "";
@@ -481,12 +491,16 @@ document.getElementById("f").onsubmit = async (e) => {
     return;
   }
   const text = inp.value.trim(); if (!text) return;
-  if (!writable) { note.textContent = "сеанс закрыт — откройте сеанс ＋"; return; } // не молча
-  hist.push(text); hpos = hist.length; inp.value = ""; inp.disabled = true;
-  const t = addPred(text);
-  try { handle(t, await api("/api/eval", { text })); }
-  catch (err) { addAnswer(t, { answer: String(err.message), error: true }); inp.disabled = !writable; inp.focus(); }
+  inp.value = ""; runPred(text);
 };
+// runPred: предикация в протокол — как ввод в строке; true — выполнена.
+async function runPred(text) {
+  if (!writable) { note.textContent = "сеанс закрыт — откройте сеанс ＋"; inp.value = text; return false; } // не молча
+  hist.push(text); hpos = hist.length; inp.disabled = true;
+  const t = addPred(text);
+  try { handle(t, await api("/api/eval", { text })); return true; }
+  catch (err) { addAnswer(t, { answer: String(err.message), error: true }); inp.disabled = !writable; inp.focus(); return false; }
+}
 
 inp.addEventListener("keydown", (e) => {
   if (mode === "concept") { if (e.key === "Escape") conceptDone(""); return; }
@@ -498,11 +512,12 @@ inp.addEventListener("keydown", (e) => {
 function askName(m) {
   mode = m; inp.disabled = false;
   inp.value = m === "rename" ? last.theme : "";
-  inp.placeholder = m === "rename" ? "новое имя темы (Esc — отмена)" : "имя новой темы (Esc — отмена)";
+  inp.placeholder = m === "rename" ? "новое имя темы (Esc — отмена)" : m === "cnew" ? "имя нового концепта (Esc — отмена)" : "имя новой темы (Esc — отмена)";
   inp.focus();
 }
 document.getElementById("tnew").onclick = () => askName("new");
 document.getElementById("tren").onclick = () => askName("rename");
+document.getElementById("cnew").onclick = () => askName("cnew");
 tsel.onchange = () => { if (tsel.value) act("/api/thema/open", { name: tsel.value }); };
 document.getElementById("new").onclick = () => act("/api/new", {});
 document.getElementById("close").onclick = () => act("/api/close", {});
