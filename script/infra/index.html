@@ -40,7 +40,24 @@
   /* граф локального контекста (nexus, 9.17) — стили графа ПИ (web/css/graph.css) */
   :root { --graph-nw: rgb(180, 80, 100); --graph-wt: rgb(80, 160, 100); --graph-sw: rgb(224, 150, 90); --graph-nr: rgb(70, 130, 180);
     --graph-nw-bg: rgba(180, 80, 100, 0.08); --graph-wt-bg: rgba(80, 160, 100, 0.08); --graph-sw-bg: rgba(224, 150, 90, 0.08); --graph-nr-bg: rgba(70, 130, 180, 0.08); }
-  .nx { margin: 4px 0 0 2ch; border: 1px solid var(--line); border-radius: 4px; background: var(--g1); overflow-x: auto; max-width: 100%; padding: 8px 0; }
+  /* карточка концепта (вариант B): панель рядом с лентой, на узком экране — над ней */
+  #work { flex: 1; display: flex; min-height: 0; }
+  #work #log { flex: 1; min-width: 0; }
+  #card { width: 50%; overflow-y: auto; border-left: 1px solid var(--barline); background: var(--g1); font-size: 14px; }
+  #card[hidden] { display: none; }
+  @media (max-width: 800px) { #work { flex-direction: column; } #card { order: -1; width: auto; max-height: 55vh; border-left: 0; border-bottom: 1px solid var(--barline); } }
+  .chead { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--g2); border-bottom: 1px solid var(--line); }
+  .cicon { width: 28px; height: 28px; flex: none; } .cname { font-weight: 700; color: var(--acc); }
+  .ctools { margin-left: auto; display: flex; gap: 4px; } .ctools button.on { background: var(--acc); color: var(--g1); border-color: var(--acc); }
+  .clens { border-bottom: 1px solid var(--line); padding: 8px 0; overflow-x: auto; }
+  .cbar { display: flex; justify-content: flex-end; gap: 4px; padding: 0 10px; } .cbar select { font: inherit; }
+  .cbody { padding: 0 14px; line-height: 1.5; } .cbody h1, .cbody h2, .cbody h3 { margin: 10px 0 6px; font-size: 1.1em; }
+  .cbody p { margin: 4px 0; } .cbody ul, .cbody ol { margin: 4px 0; padding-left: 22px; } .cbody pre { white-space: pre-wrap; background: var(--g2); padding: 6px; }
+  .cbody table { border-collapse: collapse; } .cbody td, .cbody th { border: 1px solid var(--line); padding: 2px 6px; }
+  .cbody a { color: var(--acc); } .cbody a.cref { font-weight: 700; text-decoration: none; }
+  .cinc { border-left: 3px solid var(--graph-nr); padding-left: 8px; margin: 6px 0; }
+  .cempty { color: var(--dim); } .cedit { width: 100%; min-height: 40vh; font: 13px/1.4 inherit; font-family: inherit; background: var(--g1); border: 1px solid var(--line); margin-top: 6px; }
+  .cslots { margin: 0 14px; white-space: pre-wrap; font-size: 13px; }
   .dag-svg { display: block; margin: 0 auto; flex-shrink: 0; }
   .dag-node { cursor: pointer; transition: opacity 0.15s; } .dag-node:hover { opacity: 0.75; }
   .dag-node-rect { fill: var(--g1); stroke: #c9bfa8; stroke-width: 1.5px; }
@@ -77,7 +94,7 @@
   <button id="new" title="new seans">＋</button>
   <button id="close" title="close seans">■</button>
 </header>
-<div id="log" aria-live="polite"></div>
+<div id="work"><div id="log" aria-live="polite"></div><aside id="card" hidden></aside></div>
 <form id="f" autocomplete="off"><input id="i" title="predicatio" spellcheck="false"></form>
 <script>
 const log = document.getElementById("log"), inp = document.getElementById("i");
@@ -215,23 +232,96 @@ function nxList(box, data) {
     root.append(div); });
   box.append(root);
 }
-async function drawNexus(t, name) {
-  let d;
-  try { d = await api("/api/nexus?name=" + encodeURIComponent(name)); } catch (e) { return; }
-  if (!d.found) return;
-  const sides = ["nw", "ne", "wt", "et", "sw", "se", "nr", "st"];
-  const hide = new Set((d.graph || "").trim().toLowerCase().split(/\s+/).filter(s => s.startsWith("-") && sides.includes(s.slice(1))).map(s => s.slice(1)));
-  const sd = Object.assign({}, d); sides.forEach(s => { if (hide.has(s)) sd[s] = []; });
-  const box = el("nx");
-  nxSvg(box, sd); box.append(Object.assign(document.createElement("hr"), { className: "dag-divider" })); nxList(box, d);
-  t.append(box); scroll();
+// карточка концепта (вариант B, 08.11.2026): одна закреплённая панель рядом с лентой
+// (на узком экране — над ней); лента — протокол, панель — состояние концепта. Линзы —
+// как в ПИ (cncpt.html): ✦ граф со списком, ≡ контент (спутник по умолчанию — Content,
+// иначе md; ✎ — редактор спутников), ⊞ строки концепта. В контенте [[Имя]] — ссылка
+// (переход — nexus Имя), {{Имя}} — трансклюзия: контент концепта вставляется (как
+// renderConceptView в ПИ, без повторов по кругу).
+const card = document.getElementById("card"), lens = { graph: true, content: true, slots: false };
+let cardName = null, cardTimer = null;
+function cardShow(name) { cardName = name; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
+function cardHide() { cardName = null; card.hidden = true; card.innerHTML = ""; }
+const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+function mdHtml(md, name) {   // разметка md — по mdToHtml ПИ (заголовки, списки, таблицы, код, ссылки)
+  const code = [];
+  md = md.replace(/```([\s\S]+?)```/g, (_, c) => { code.push("<pre><code>" + esc(c.replace(/^\n/, "").replace(/\n$/, "")) + "</code></pre>"); return `\x00C${code.length - 1}\x00`; });
+  const inl = s => s.replace(/\[\[([^\]]+)\]\]/g, (_, n) => `<a href="#" class="cref" data-n="${esc(n.trim())}">${esc(n.trim())}</a>`)
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => `<img src="${/^(https?:\/)?\//.test(src) ? src : "/api/img?name=" + encodeURIComponent(name) + "&f=" + encodeURIComponent(src)}" alt="${esc(alt)}" style="max-width:100%">`) // картинка: своя — из img концепта
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>").replace(/`(.+?)`/g, "<code>$1</code>");
+  let h = "", list = "", tab = false, head = false;
+  const endList = () => { if (list) { h += `</${list}>`; list = ""; } }, endTab = () => { if (tab) { h += "</table>"; tab = false; } };
+  for (const line of md.split("\n")) {
+    if (/^\|.+\|$/.test(line)) { endList();
+      if (!tab) { h += "<table>"; tab = true; head = true; }
+      if (/^\|[-| :]+\|$/.test(line)) continue;
+      const cells = line.split("|").slice(1, -1).map(c => inl(c.trim()));
+      h += "<tr>" + cells.map(c => head ? `<th>${c}</th>` : `<td>${c}</td>`).join("") + "</tr>"; head = false; continue; }
+    endTab();
+    let m;
+    if ((m = line.match(/^(#{1,3}) (.+)$/))) { endList(); h += `<h${m[1].length}>${inl(m[2])}</h${m[1].length}>`; }
+    else if ((m = line.match(/^[-*] (.+)$/)) || (m = line.match(/^\d+\. (.+)$/))) { const k = /^\d/.test(line) ? "ol" : "ul"; if (list !== k) { endList(); h += `<${k}>`; list = k; } h += "<li>" + inl(m[1]) + "</li>"; }
+    else if (/^---+$/.test(line.trim())) { endList(); h += "<hr>"; }
+    else if (line.trim() === "") endList();
+    else { endList(); h += "<p>" + inl(line) + "</p>"; } }
+  endList(); endTab();
+  return h.replace(/\x00C(\d+)\x00/g, (_, i) => code[i]);
+}
+async function cardRender(name, ext, seen) {   // контент концепта с трансклюзиями
+  const c = await api("/api/card?name=" + encodeURIComponent(name));
+  if (!c.found) return null;
+  ext = ext || c.content;
+  const raw = (await api("/api/sat?name=" + encodeURIComponent(name) + "&ext=" + ext)).text || "";
+  if (!raw.trim()) return "";
+  const inc = [], vis = new Set(seen).add(c.name.toLowerCase());
+  const marked = raw.split(/(```[\s\S]*?```)/).map((p, i) => i % 2 ? p : p.replace(/\{\{([^{}]+)\}\}/g, (_, n) => { inc.push(n.trim()); return `\x00I${inc.length - 1}\x00`; })).join("");
+  const html = ext === "md" ? mdHtml(marked, c.name) : ext === "html" || ext === "svg" ? marked : "<pre>" + esc(marked) + "</pre>";
+  const parts = await Promise.all(inc.map(n => vis.has(n.toLowerCase()) ? null : cardRender(n, "", vis).catch(() => null)));
+  return html.replace(/\x00I(\d+)\x00/g, (_, i) => parts[i] == null ? esc("{{" + inc[i] + "}}") : `<div class="cinc" title="${esc(inc[i])}">${parts[i]}</div>`);
+}
+function cardLinks(box) { box.querySelectorAll("a.cref").forEach(a => a.onclick = e => { e.preventDefault(); nxGo(a.dataset.n); }); }
+async function lensContent(box, c) {
+  const bar = el("cbar"), body = el("cbody");
+  const view = async () => { bar.innerHTML = ""; const b = document.createElement("button"); b.textContent = "✎"; b.title = "redaction"; b.onclick = edit; bar.append(b);
+    const h = await cardRender(c.name, c.content, []).catch(() => null); body.innerHTML = h ? h : '<div class="cempty">—</div>'; cardLinks(body); };
+  const edit = async () => { bar.innerHTML = "";
+    const s = document.createElement("select"); satTypes.forEach(t => { const o = document.createElement("option"); o.value = o.textContent = t + (c.sats.includes(t) ? "" : " ·"); o.value = t; o.selected = t === c.content; s.append(o); });
+    const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "record";
+    const no = document.createElement("button"); no.textContent = "✕"; no.title = "cancel"; no.onclick = view;
+    bar.append(s, ok, no);
+    const ta = document.createElement("textarea"); ta.className = "cedit"; ta.spellcheck = false; body.innerHTML = ""; body.append(ta);
+    const load = async () => { ta.value = (await api("/api/sat?name=" + encodeURIComponent(c.name) + "&ext=" + s.value)).text || ""; };
+    s.onchange = load; await load();
+    ok.onclick = async () => { try { Object.assign(c, await api("/api/sat", { name: c.name, ext: s.value, text: ta.value })); } catch (e) { note.textContent = e.message; return; } cardOpen(c.name); }; };
+  box.append(bar, body); await view();
+}
+const satTypes = ["md", "json", "svg", "css", "xml", "html", "txt"];
+async function cardOpen(name) {
+  let c;
+  try { c = await api("/api/card?name=" + encodeURIComponent(name)); } catch (e) { return; }
+  if (!c.found || name !== cardName) return;
+  card.hidden = false; card.innerHTML = "";
+  const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
+  head.append(ic, el("cname", c.name));
+  const tools = el("ctools");
+  [["graph", "✦"], ["content", "≡"], ["slots", "⊞"]].forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardOpen(c.name); }; tools.append(b); });
+  const x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
+  head.append(tools); card.append(head);
+  if (lens.graph) { const d = await api("/api/nexus?name=" + encodeURIComponent(name)).catch(() => null);
+    if (d && d.found) { const sides = ["nw", "ne", "wt", "et", "sw", "se", "nr", "st"];
+      const hide = new Set((d.graph || "").trim().toLowerCase().split(/\s+/).filter(s => s.startsWith("-") && sides.includes(s.slice(1))).map(s => s.slice(1)));
+      const sd = Object.assign({}, d); sides.forEach(s => { if (hide.has(s)) sd[s] = []; });
+      const box = el("clens"); nxSvg(box, sd); box.append(Object.assign(document.createElement("hr"), { className: "dag-divider" })); nxList(box, d); card.append(box); } }
+  if (lens.content) { const box = el("clens"); card.append(box); await lensContent(box, c); }
+  if (lens.slots) { const box = el("clens"), pre = document.createElement("pre"); pre.className = "cslots"; pre.textContent = (c.lines || []).join("\n"); box.append(pre); card.append(box); }
 }
 function addAnswer(t, turn) {
   const a = el("ans" + (turn.error ? " err" : ""));
   a.append(el("v", turn.answer));
   const f = el("f", (turn.frames || []).join(" ")); f.title = "interpres"; a.append(f);
   t.append(a); scroll();
-  if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) drawNexus(t, turn.pred.slice(6)); // граф контекста
+  if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice(6)); // карточка концепта
 }
 
 async function api(path, body) {
@@ -242,6 +332,7 @@ async function api(path, body) {
 
 // состояние: список сеансов, текущий, его диалог
 function show(st) {
+  if (!last || last.theme !== st.theme || last.current !== st.current) cardHide(); // другая тема или сеанс — карточка заново
   last = st; mode = null; inp.placeholder = "";
   note.textContent = "";
   tsel.innerHTML = "";

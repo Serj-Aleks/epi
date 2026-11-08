@@ -44,8 +44,9 @@ func without(ns []string, n string) []string {
 var out []string
 for _, x := range ns {if !format.SameTerm(x, n) {out = append(out, x)}}; return out }
 // writeLink: прямой список связи у frame; у целей — обратный: добавленные
-// получают frame, убранные его теряют.
-func (q *Script) writeLink(frame, param string, pred []format.Value, root string) error {
+// получают frame, убранные его теряют; strict — только у существующих целей
+// (ссылки контента, как в ПИ: несуществующей цели концепт не заводится).
+func (q *Script) writeLink(frame, param string, pred []format.Value, root string, strict bool) error {
 path := q.conceptFile(frame)
 old, inv := readLink(path, param)
 d := names(pred)
@@ -53,11 +54,13 @@ if err := writeLists(path, param, d, inv); err != nil {return err}
 for _, t := range old {
 	if has(d, t) {continue}
 	tp := q.targetPath(root, t)
+	if strict && !exists(tp) {continue}
 	td, ti := readLink(tp, param)
 	if err := writeLists(tp, param, td, without(ti, frame)); err != nil {return err}}
 for _, t := range d {
 	if has(old, t) {continue}
 	tp := q.targetPath(root, t)
+	if strict && !exists(tp) {continue}
 	td, ti := readLink(tp, param)
 	if !has(ti, frame) {ti = append(ti, frame)}
 	if err := writeLists(tp, param, td, ti); err != nil {return err}}; return nil }

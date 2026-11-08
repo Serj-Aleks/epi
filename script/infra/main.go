@@ -139,10 +139,24 @@ var body struct {
 	To     string `json:"to"`
 	Answer bool   `json:"answer"`
 	Choice string `json:"choice"` // ответ на вопрос с выбором
-	Name   string `json:"name"`}
+	Name   string `json:"name"`
+	Ext    string `json:"ext"`} // тип спутника (md, json …)
 if req.Method != http.MethodGet {if err := json.NewDecoder(req.Body).Decode(&body); err != nil {http.Error(w, err.Error(), http.StatusBadRequest); return}}
 fail := func(code int, msg string) { http.Error(w, msg, code) }
 if req.URL.Path == "/api/nexus" {json.NewEncoder(w).Encode(q.nexusGraph(req.URL.Query().Get("name"))); return} // граф локального контекста (9.17)
+if req.URL.Path == "/api/card" {json.NewEncoder(w).Encode(q.card(req.URL.Query().Get("name"))); return} // карточка концепта (панель, 9.19)
+if req.URL.Path == "/api/sat" { // спутник концепта: прочитать (GET) или записать (POST)
+	if req.Method == http.MethodGet {
+		p := q.satFile(req.URL.Query().Get("name"), req.URL.Query().Get("ext"))
+		b, err := os.ReadFile(p)
+		if p == "" || err != nil && !os.IsNotExist(err) {fail(http.StatusNotFound, "нет спутника"); return}
+		json.NewEncoder(w).Encode(map[string]string{"text": string(b)}); return}
+	if err := q.writeSat(body.Name, body.Ext, body.Text); err != nil {fail(http.StatusBadRequest, err.Error()); return}
+	json.NewEncoder(w).Encode(q.card(body.Name)); return}
+if req.URL.Path == "/api/img" { // картинка контента: <папка концепта>/img/<файл> (как в ПИ)
+	p, f := q.conceptPath(req.URL.Query().Get("name")), req.URL.Query().Get("f")
+	if p == "" || f == "" || f != filepath.Base(f) {http.NotFound(w, req); return}
+	w.Header().Del("Content-Type"); http.ServeFile(w, req, filepath.Join(filepath.Dir(p), "img", f)); return}
 if req.URL.Path == "/api/icon" { // картинка узла графа (спутник концепта)
 	p := q.iconFile(req.URL.Query().Get("name"))
 	if p == "" {http.NotFound(w, req); return}
