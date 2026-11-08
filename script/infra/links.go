@@ -1,16 +1,20 @@
 // epi/script/infra/links.go
 package main
 import ("os"; "path/filepath"; "strings"; "epi/script/format")
-// Связи концептов (ason-spec 9.17): параметры Taxon (обобщение), Prfix, Sufix,
+// Связи концептов (ason-spec 9.17): параметры Taxon (обобщение), Links, Prfix, Sufix,
 // Radix (словообразование). В файле концепта — два списка «[ прямой ] [ обратный ]»:
 // автор пишет прямой (Жёлтый.Taxon : [ Цвет ]), обратный script ведёт сам —
 // у Цвет появляется «Taxon : [ ] [ Жёлтый ]» (самоиндексирование, как в ПИ).
-// linkRoot: где лежат цели связи: Taxon — концепты темы; Prfix, Sufix, Radix —
-// общий лексикон lexic/prfix, lexic/sufix, lexic/radix.
+// linkRoot: где лежат цели связи: Taxon, Links, Attrib, Preposit — концепты темы;
+// Prfix, Sufix, Radix — концепт темы, если он есть (термин — и самостоятельный
+// фрейм), иначе общий лексикон lexic/prfix, lexic/sufix, lexic/radix (9.17, 9.18).
 func (q *Script) linkRoot(param string) (string, bool) {
 switch format.Key(param) {
-case "Taxon": return q.themaDir(), true
+case "Taxon", "Links", "Attrib", "Preposit": return q.themaDir(), true
 case "Prfix", "Sufix", "Radix": return filepath.Join(q.dir, "lexic", strings.ToLower(param)), true}; return "", false }
+// targetPath: файл цели t связи: концепт темы, если он есть, иначе — в root.
+func (q *Script) targetPath(root, t string) string {
+if p := q.conceptFile(t); exists(p) {return p}; return letterPath(root, t) }
 // names: имена из предикации — блок [ A B ] или термы.
 func names(vs []format.Value) []string {
 var ns []string
@@ -48,12 +52,12 @@ d := names(pred)
 if err := writeLists(path, param, d, inv); err != nil {return err}
 for _, t := range old {
 	if has(d, t) {continue}
-	tp := letterPath(root, t)
+	tp := q.targetPath(root, t)
 	td, ti := readLink(tp, param)
 	if err := writeLists(tp, param, td, without(ti, frame)); err != nil {return err}}
 for _, t := range d {
 	if has(old, t) {continue}
-	tp := letterPath(root, t)
+	tp := q.targetPath(root, t)
 	td, ti := readLink(tp, param)
 	if !has(ti, frame) {ti = append(ti, frame)}
 	if err := writeLists(tp, param, td, ti); err != nil {return err}}; return nil }
@@ -63,7 +67,7 @@ vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 if err != nil || len(vs) < 2 {return l}; return lineKey(l) + " : " + format.Format(vs[:1]) }
 // linkOrder: связи в локальном контексте — порядок осей как в ПИ (префикс,
 // [атрибут], суффикс, [препозиция]), затем дополнительные: корень, таксон.
-var linkOrder = []string{"Prfix", "Sufix", "Radix", "Taxon"}
+var linkOrder = []string{"Prfix", "Attrib", "Sufix", "Preposit", "Radix", "Taxon", "Links"}
 // nexusData: связи концепта name — по файлам темы и лексикона (prfix, sufix,
 // radix): синонимы и для каждой связи прямой и обратный списки; найден ли концепт.
 func (q *Script) nexusData(name string) ([]string, map[string][2][]string, bool) {
@@ -87,17 +91,45 @@ if len(alias) > 0 {parts = append(parts, "Alias : [ "+strings.Join(alias, " ")+"
 for _, l := range linkOrder {if s, ok := links[l]; ok {parts = append(parts, l+" : [ "+strings.Join(s[0], " ")+" ] [ "+strings.Join(s[1], " ")+" ]")}}
 vs, err := format.Parse("{ " + strings.Join(parts, " ") + " }")
 if err != nil || len(vs) != 1 {return format.Value{}, false}; return vs[0], true }
+// piLink: имя слота связи ПИ в настройках осей (Nord, West, N-west, S-west) → связь EPI.
+var piLink = map[string]string{"prefix": "Prfix", "attrib": "Attrib", "suffix": "Sufix", "preposit": "Preposit", "tags": "Taxon", "links": "Links", "radix": "Radix"}
+// setting: значение настройки концепта (Nord : links) — текст без кавычек.
+func setting(path, key string) string {
+b, err := os.ReadFile(path)
+if err != nil {return ""}
+lines, _ := conceptLines(b)
+for _, l := range lines {
+	if !isParam(l) || !format.SameTerm(lineKey(l), key) {continue}
+	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
+	if err == nil && len(vs) == 1 {return vs[0].Text}}; return "" }
 // nexusGraph: локальный контекст для графа — оси как в ПИ: северо-запад/северо-восток —
-// Prfix (обратный/прямой), запад/восток — Radix (на месте атрибутов, пока атрибуты —
-// не связи), юго-запад/юго-восток — Sufix; север/юг — Taxon: обобщения (прямой
-// список) сверху, члены (обратный) снизу.
+// prefix, запад/восток — attrib, юго-запад/юго-восток — suffix, север/юг — preposit;
+// концепт переназначает оси настройками N-west, West, S-west, Nord (значения — имена
+// слотов ПИ). Пустая ось занимается первой незанятой связью с данными (Taxon, Links,
+// Radix). Слева и сверху — обратные списки, справа и снизу — прямые; у Taxon наоборот
+// по вертикали: обобщения (прямой) — сверху.
 func (q *Script) nexusGraph(name string) map[string]any {
 alias, links, found := q.nexusData(name)
-side := func(l string, k int) []string {return links[l][k]}
-return map[string]any{"center": name, "found": found, "alias": alias,
-	"nw": side("Prfix", 1), "ne": side("Prfix", 0), "wt": side("Radix", 1), "et": side("Radix", 0),
-	"sw": side("Sufix", 1), "se": side("Sufix", 0), "nr": side("Taxon", 0), "st": side("Taxon", 1),
-	"types": map[string]string{"nw": "Prfix", "wt": "Radix", "sw": "Sufix", "nr": "Taxon"}} }
+axes := []string{"nw", "wt", "sw", "nr"}
+set := map[string]string{"nw": "N-west", "wt": "West", "sw": "S-west", "nr": "Nord"}
+def := map[string]string{"nw": "Prfix", "wt": "Attrib", "sw": "Sufix", "nr": "Preposit"}
+on := map[string]string{}
+used := map[string]bool{}
+for _, a := range axes {
+	l := def[a]
+	if v := piLink[strings.ToLower(setting(q.conceptFile(name), set[a]))]; v != "" {l = v}
+	on[a], used[l] = l, true}
+for _, a := range axes {
+	if _, ok := links[on[a]]; ok {continue}
+	for _, x := range []string{"Taxon", "Links", "Radix", "Prfix", "Sufix", "Attrib", "Preposit"} {
+		if _, ok := links[x]; ok && !used[x] {used[on[a]], used[x], on[a] = false, true, x; break}}}
+out := map[string]any{"center": name, "found": found, "alias": alias, "types": on}
+pair := map[string]string{"nw": "ne", "wt": "et", "sw": "se", "nr": "st"}
+for _, a := range axes {
+	s := links[on[a]]
+	in, dir := s[1], s[0]
+	if a == "nr" && on[a] == "Taxon" {in, dir = s[0], s[1]}
+	out[a], out[pair[a]] = in, dir}; return out }
 // iconFile: картинка концепта — спутник (0.22), как в ПИ: <папка концепта>/<имя>.svg
 // или <папка концепта>/img/<имя>.png|jpg|jpeg|webp|gif|ico; концепт — в теме или в лексиконе.
 func (q *Script) iconFile(name string) string {

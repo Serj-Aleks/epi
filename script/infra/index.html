@@ -127,7 +127,10 @@ async function drawNexus(t, name) {
   const stack = (list, x, side) => list.forEach(([n, s], i) => { const y = yA - colH(list.length) / 2 + i * (H + G);
     node(n, x, y, s); side === "in" ? line(x + W, y + H / 2, xC, yA, s) : line(xC + W, yA, x, y + H / 2, s); });
   const row = (list, y, up) => list.forEach(([n, s], i) => { const x = xC + W / 2 - rowW(list.length) / 2 + i * (W + G);
-    node(n, x, y, s); up ? line(xC + W / 2, yA - H / 2, x + W / 2, y + H, s) : line(x + W / 2, y, xC + W / 2, yA + H / 2, s); });
+    const tx = d.types.nr === "Taxon", cx = xC + W / 2;   // у Taxon сверху — обобщения (стрелка вверх), снизу — члены; иначе как в ПИ: сверху входящие, снизу исходящие
+    node(n, x, y, s);
+    if (up) { tx ? line(cx, yA - H / 2, x + W / 2, y + H, s) : line(x + W / 2, y + H, cx, yA - H / 2, s); }
+    else { tx ? line(x + W / 2, y, cx, yA + H / 2, s) : line(cx, yA + H / 2, x + W / 2, y, s); } });
   stack(left, P, "in"); stack(right, xC + W + X, "out");
   row(top, P, true); row(bot, h - P - H, false);   // север — обобщения (прямой Taxon), юг — члены (обратный)
   node(name, xC, yA - H / 2, "");
