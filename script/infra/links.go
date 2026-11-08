@@ -81,18 +81,17 @@ for _, l := range linkOrder {
 	var d, i []string
 	for _, p := range paths {pd, pi := readLink(p, l); d, i = append(d, pd...), append(i, pi...)}
 	if len(d)+len(i) > 0 {links[l] = [2][]string{d, i}}}; return alias, links, found }
-// nexus: локальный контекст концепта (9.17) — «nexus Цвет» → { Alias : … Taxon : [ прямой ] [ обратный ] … }.
+// nexus: локальный контекст концепта (9.17) — «nexus Цвет»; ответ — имя концепта, сам
+// контекст — граф и список под ответом (как в ПИ), текстом его не дублировать.
 func (q *Script) nexus(arg format.Value) (format.Value, bool) {
 if arg.Kind != format.Term || q.theme == "" {return format.Value{}, false}
-alias, links, found := q.nexusData(arg.Text)
-if !found {return format.Value{}, false}
-var parts []string
-if len(alias) > 0 {parts = append(parts, "Alias : [ "+strings.Join(alias, " ")+" ]")}
-for _, l := range linkOrder {if s, ok := links[l]; ok {parts = append(parts, l+" : [ "+strings.Join(s[0], " ")+" ] [ "+strings.Join(s[1], " ")+" ]")}}
-vs, err := format.Parse("{ " + strings.Join(parts, " ") + " }")
-if err != nil || len(vs) != 1 {return format.Value{}, false}; return vs[0], true }
-// piLink: имя слота связи ПИ в настройках осей (Nord, West, N-west, S-west) → связь EPI.
-var piLink = map[string]string{"prefix": "Prfix", "attrib": "Attrib", "suffix": "Sufix", "preposit": "Preposit", "tags": "Taxon", "links": "Links", "radix": "Radix"}
+p := q.conceptPath(arg.Text)
+if p == "" {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: conceptName(p, "")}, true }
+// piSlot: слот связи ПИ → связь EPI; graphTypes — связи графа в порядке ПИ
+// (tags, links, attrib, preposit, prefix, suffix) и radix; graphCodes — коды списка.
+var piSlot = map[string]string{"tags": "Taxon", "links": "Links", "attrib": "Attrib", "preposit": "Preposit", "prefix": "Prfix", "suffix": "Sufix", "radix": "Radix"}
+var graphTypes = []string{"tags", "links", "attrib", "preposit", "prefix", "suffix", "radix"}
+var graphCodes = map[string]string{"alias": "AL", "attrib": "AT", "preposit": "PP", "prefix": "PF", "suffix": "SF", "tags": "TG", "links": "LK", "themes": "TM", "radix": "RX"}
 // setting: значение настройки концепта (Nord : links) — текст без кавычек.
 func setting(path, key string) string {
 b, err := os.ReadFile(path)
@@ -102,34 +101,54 @@ for _, l := range lines {
 	if !isParam(l) || !format.SameTerm(lineKey(l), key) {continue}
 	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 	if err == nil && len(vs) == 1 {return vs[0].Text}}; return "" }
-// nexusGraph: локальный контекст для графа — оси как в ПИ: северо-запад/северо-восток —
-// prefix, запад/восток — attrib, юго-запад/юго-восток — suffix, север/юг — preposit;
-// концепт переназначает оси настройками N-west, West, S-west, Nord (значения — имена
-// слотов ПИ). Пустая ось занимается первой незанятой связью с данными (Taxon, Links,
-// Radix). Слева и сверху — обратные списки, справа и снизу — прямые; у Taxon наоборот
-// по вертикали: обобщения (прямой) — сверху.
+// conceptPath: файл существующего концепта — в теме (указатель или путь из букв)
+// или в лексиконе (prfix, sufix, radix); "" — концепта нет.
+func (q *Script) conceptPath(name string) string {
+if p := q.conceptFile(name); exists(p) {return p}
+for _, c := range []string{"prfix", "sufix", "radix"} {if p := letterPath(filepath.Join(q.dir, "lexic", c), name); exists(p) {return p}}; return "" }
+// gnode — узел графа, как в ПИ: имя, картинка, цвет, соседи (следующий уровень — в подсказке).
+type gnode struct {
+	Name      string  `json:"name"`
+	Icon      string  `json:"icon,omitempty"`
+	Color     string  `json:"color,omitempty"`
+	Neighbors []gnode `json:"neighbors,omitempty"`}
+// nexusGraph: локальный контекст для графа — как GetGraph в ПИ: оси northwest/west/
+// southwest/north — prefix, attrib, suffix, preposit или по настройкам концепта
+// N-west, West, S-west, Nord; слева и сверху — обратные списки, справа и снизу —
+// прямые; остальные связи — extra (списком); в узлах — только существующие концепты,
+// соседи узла — его прямой список той же связи; у центра — синонимы.
 func (q *Script) nexusGraph(name string) map[string]any {
-alias, links, found := q.nexusData(name)
-axes := []string{"nw", "wt", "sw", "nr"}
-set := map[string]string{"nw": "N-west", "wt": "West", "sw": "S-west", "nr": "Nord"}
-def := map[string]string{"nw": "Prfix", "wt": "Attrib", "sw": "Sufix", "nr": "Preposit"}
-on := map[string]string{}
-used := map[string]bool{}
-for _, a := range axes {
-	l := def[a]
-	if v := piLink[strings.ToLower(setting(q.conceptFile(name), set[a]))]; v != "" {l = v}
-	on[a], used[l] = l, true}
-for _, a := range axes {
-	if _, ok := links[on[a]]; ok {continue}
-	for _, x := range []string{"Taxon", "Links", "Radix", "Prfix", "Sufix", "Attrib", "Preposit"} {
-		if _, ok := links[x]; ok && !used[x] {used[on[a]], used[x], on[a] = false, true, x; break}}}
-out := map[string]any{"center": name, "found": found, "alias": alias, "types": on}
+path := q.conceptPath(name)
+if path == "" {return map[string]any{"found": false}}
+mk := func(n string) (gnode, string, bool) {
+	p := q.conceptPath(n)
+	if p == "" {return gnode{}, "", false}
+	g := gnode{Name: conceptName(p, ""), Color: setting(p, "Color")}
+	if q.iconFile(n) != "" {g.Icon = "/api/icon?name=" + n}; return g, p, true}
+resolve := func(ns []string, slot string) []gnode {
+	out := []gnode{}
+	for _, n := range ns {
+		g, p, ok := mk(n)
+		if !ok {continue}
+		if slot != "" {nd, _ := readLink(p, piSlot[slot]); for _, x := range nd {if xg, _, ok := mk(x); ok {g.Neighbors = append(g.Neighbors, gnode{Name: xg.Name})}}}
+		out = append(out, g)}; return out}
+alias, links, _ := q.nexusData(name)
+center, _, _ := mk(name)
+center.Neighbors = resolve(alias, "") // синонимы — только существующие концепты, как в ПИ
+spec := map[string]string{"nw": "prefix", "wt": "attrib", "sw": "suffix", "nr": "preposit"}
+for a, k := range map[string]string{"nw": "N-west", "wt": "West", "sw": "S-west", "nr": "Nord"} {if v := strings.ToLower(setting(path, k)); piSlot[v] != "" {spec[a] = v}}
+out := map[string]any{"found": true, "center": center, "codes": graphCodes, "graph": setting(path, "Graph"), "list": setting(path, "List"),
+	"nwType": spec["nw"], "wtType": spec["wt"], "swType": spec["sw"], "nrType": spec["nr"]}
 pair := map[string]string{"nw": "ne", "wt": "et", "sw": "se", "nr": "st"}
-for _, a := range axes {
-	s := links[on[a]]
-	in, dir := s[1], s[0]
-	if a == "nr" && on[a] == "Taxon" {in, dir = s[0], s[1]}
-	out[a], out[pair[a]] = in, dir}; return out }
+used := map[string]bool{}
+for a, t := range spec {s := links[piSlot[t]]; out[a], out[pair[a]] = resolve(s[1], t), resolve(s[0], t); used[t] = true}
+var extra []map[string]any
+for _, t := range graphTypes {
+	if used[t] {continue}
+	s := links[piSlot[t]]
+	d, i := resolve(s[0], t), resolve(s[1], t)
+	if len(d)+len(i) > 0 {extra = append(extra, map[string]any{"type": t, "direct": d, "inverse": i})}}
+out["extra"] = extra; return out }
 // iconFile: картинка концепта — спутник (0.22), как в ПИ: <папка концепта>/<имя>.svg
 // или <папка концепта>/img/<имя>.png|jpg|jpeg|webp|gif|ico; концепт — в теме или в лексиконе.
 func (q *Script) iconFile(name string) string {
@@ -139,5 +158,6 @@ for _, c := range []string{"prfix", "sufix", "radix", "preposit", "atrbt", "cons
 base := strings.ToLower(name)
 for _, r := range roots {
 	dir := filepath.Dir(letterPath(r, name))
+	if r == q.themaDir() {dir = filepath.Dir(q.conceptFile(name))}
 	if p := filepath.Join(dir, base+".svg"); exists(p) {return p}
 	for _, ext := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if p := filepath.Join(dir, "img", base+"."+ext); exists(p) {return p}}}; return "" }

@@ -52,6 +52,7 @@ if q.theme == cur {q.theme = name}; return nil }
 // и концепты темы; база нераспознанных — темы; сеанс — последний открытый.
 func (q *Script) switchTheme(name string) error {
 q.theme, q.cur, q.closed, q.turns = name, "", false, nil
+q.indexConcepts()
 q.in.Unknown = nil
 if err := q.loadIgnor(); err != nil {return err}
 q.env = disp.NewEnv(nil)
@@ -72,7 +73,17 @@ for _, t := range ts {
 	if err != nil {return err}
 	for _, s := range ss {if !s.Closed && s.Name > last {best, last = t, s.Name}}}; return q.switchTheme(best) }
 // conceptFile: <тема>/<буквы имени>/<имя>.uic.
-func (q *Script) conceptFile(name string) string { return letterPath(q.themaDir(), name) }
+// conceptFile: файл концепта темы — по указателю (клон ПИ лежит по пути другого
+// концепта: numerazia.uic — в N/U/M), иначе по пути из букв имени (новый концепт).
+func (q *Script) conceptFile(name string) string {
+if p, ok := q.cidx[strings.ToLower(name)]; ok {return p}; return letterPath(q.themaDir(), name) }
+// indexConcepts: указатель концептов темы.
+func (q *Script) indexConcepts() {
+q.cidx = map[string]string{}
+filepath.WalkDir(q.themaDir(), func(path string, d os.DirEntry, err error) error {
+	if err != nil {return nil}
+	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
+	if !d.IsDir() && strings.HasSuffix(path, ".uic") {q.cidx[strings.ToLower(strings.TrimSuffix(d.Name(), ".uic"))] = path}; return nil}) }
 // conceptLines: строки-модели концепта «Параметр : предикация» (0.23).
 func conceptLines(b []byte) ([]string, error) {return disp.Split(string(b)) }
 // lineKey: параметр строки «Параметр : …».

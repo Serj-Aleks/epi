@@ -37,15 +37,29 @@
   .ans .f, .q .f { margin-left: auto; color: var(--dim); font-size: 13px; white-space: nowrap; }
   .q { padding-left: 2ch; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .q button { height: 22px; line-height: 20px; }
-  /* граф локального контекста (nexus, 9.17): цвета осей — как в ПИ */
-  .nx { padding: 4px 0 4px 2ch; overflow-x: auto; }
-  .nx svg { display: block; }
-  .nx .node, .nx .trig { cursor: pointer; } .nx .node:hover rect { fill: var(--btn); }
-  .nx .center > rect { stroke-width: 2px; stroke: var(--acc); }
-  .nx .trig path { fill: var(--dim); } .nx .trig:hover path { fill: var(--acc); }
-  .nxtip { position: fixed; z-index: 10; background: var(--fg); color: var(--g1); padding: 6px 10px; border-radius: 4px; font-size: 13px; max-width: 230px; }
-  .nxtip a { display: block; color: inherit; font-weight: bold; text-decoration: none; border-bottom: 1px solid var(--dim); margin-bottom: 4px; }
-  .nx .legend { font-size: 12px; color: var(--dim); }
+  /* граф локального контекста (nexus, 9.17) — стили графа ПИ (web/css/graph.css) */
+  :root { --graph-nw: rgb(180, 80, 100); --graph-wt: rgb(80, 160, 100); --graph-sw: rgb(224, 150, 90); --graph-nr: rgb(70, 130, 180);
+    --graph-nw-bg: rgba(180, 80, 100, 0.08); --graph-wt-bg: rgba(80, 160, 100, 0.08); --graph-sw-bg: rgba(224, 150, 90, 0.08); --graph-nr-bg: rgba(70, 130, 180, 0.08); }
+  .nx { margin: 4px 0 0 2ch; border: 1px solid var(--line); border-radius: 4px; background: var(--g1); overflow-x: auto; max-width: 100%; padding: 8px 0; }
+  .dag-svg { display: block; margin: 0 auto; flex-shrink: 0; }
+  .dag-node { cursor: pointer; transition: opacity 0.15s; } .dag-node:hover { opacity: 0.75; }
+  .dag-node-rect { fill: var(--g1); stroke: #c9bfa8; stroke-width: 1.5px; }
+  .dag-node-center { cursor: default; } .dag-node-center:hover { opacity: 1; }
+  .dag-node-center .dag-node-rect { fill: var(--g2); stroke: var(--fg); stroke-width: 2px; }
+  .dag-trigger { cursor: pointer; } .dag-trigger-arrow { fill: #d4cfc7; } .dag-trigger-arrow.active { fill: var(--dim); }
+  .dag-node:hover .dag-trigger-arrow.active { fill: var(--fg); }
+  .dag-divider { margin: 8px 0; border: none; border-top: 1px solid var(--line); }
+  .dag-list { padding: 0 8px; display: flex; flex-direction: column; gap: 4px; }
+  .dag-section { font-size: 12px; line-height: 1.6; color: var(--fg); }
+  .dag-section-label { color: var(--dim); font-weight: 700; letter-spacing: 0.08em; }
+  .dag-section-nw .dag-section-label { color: var(--graph-nw); } .dag-section-wt .dag-section-label { color: var(--graph-wt); }
+  .dag-section-sw .dag-section-label { color: var(--graph-sw); } .dag-section-nr .dag-section-label { color: var(--graph-nr); }
+  .dag-link { color: var(--acc); text-decoration: none; font-weight: 500; } .dag-link:hover { color: var(--fg); }
+  .dag-link-secondary { color: var(--dim); font-weight: 400; } .dag-link-sep { color: var(--dim); user-select: none; }
+  .dag-tooltip { position: fixed; background: var(--fg); color: var(--g1); padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,0.25); max-width: 220px; }
+  .dag-tooltip-title { display: block; color: inherit; text-decoration: none; font-weight: 500; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+  .dag-tooltip-list { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-direction: column; gap: 2px; }
+  .dag-tooltip-list a { color: rgba(245, 242, 236, 0.7); text-decoration: none; display: block; } .dag-tooltip-list a:hover { color: var(--g1); text-decoration: underline; }
   form { display: flex; border-top: 1px solid var(--barline); background: var(--bar); }
   form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
   input { flex: 1; background: none; border: 0; color: var(--fg); font: inherit; padding: 12px 16px 12px 1ch; outline: none; }
@@ -76,67 +90,140 @@ let conceptDone = null; // ввод имени концепта для trans
 function el(cls, text) { const d = document.createElement("div"); d.className = cls; if (text !== undefined) d.textContent = text; return d; }
 function scroll() { log.scrollTop = log.scrollHeight; }
 function addPred(text) { const t = el("turn"); t.append(el("pred", text)); log.append(t); scroll(); return t; }
-// граф локального контекста (nexus, 9.17): оси как в ПИ — слева обратные списки
-// (северо-запад, запад, юго-запад), справа прямые; сверху и снизу — север и юг.
-// Узлы без подписей, одного размера (умещается на экране телефона): место для
-// картинки концепта (спутник: <имя>.svg или img/<имя>.png) и треугольник —
-// подсказка: имя (щелчок — nexus), связь; у центра — синонимы. Щелчок по узлу — nexus Имя.
-const NX = { nw: "180,80,100", wt: "80,160,100", sw: "224,150,90", nr: "70,130,180" };
-const NXP = { ne: "nw", et: "wt", se: "sw", st: "nr" };
-const NXD = { nw: "←", wt: "←", sw: "←", nr: "↑", ne: "→", et: "→", se: "→", st: "↓" };
-function nxGo(name) { document.querySelectorAll(".nxtip").forEach(e => e.remove()); inp.value = "nexus " + name; document.getElementById("f").requestSubmit(); }
-function nxTip(e, name, lines) {
-  e.stopPropagation(); document.querySelectorAll(".nxtip").forEach(x => x.remove());
-  const tip = el("nxtip"), h = document.createElement("a"); h.textContent = name; h.href = "#";
-  h.onclick = ev => { ev.preventDefault(); nxGo(name); }; tip.append(h);
-  lines.forEach(l => tip.append(el("", l)));
-  tip.style.left = Math.min(e.clientX + 8, innerWidth - 240) + "px"; tip.style.top = e.clientY + 8 + "px";
+// граф локального контекста (nexus, 9.17) — представление ПИ (pi/web/js: graph.js,
+// gmetr.js, dgsvg.js, lists.js): концепт в центре; слева сборщик входящих (обратные
+// списки северо-запада, запада, юго-запада и севера), справа исходящие (прямые);
+// узлы без подписей — картинка концепта и треугольник: подсказка — имя и следующий
+// уровень (соседи узла); под графом — список всех связей (оси и extra). Настройки
+// концепта: Graph (-nw … -st — скрыть сторону), List (-tags … — скрыть связь).
+const NXG = { padding: 24, nodeW: 80, nodeH: 40, vSpacing: 10, hSpacing: 32, groupGap: 24, collectorGap: 24 };
+const SVGNS = "http://www.w3.org/2000/svg";
+function nxGo(name) { document.querySelectorAll(".dag-tooltip").forEach(e => e.remove()); inp.value = "nexus " + name; document.getElementById("f").requestSubmit(); }
+function nxIcon(div, url) {
+  if (!url) return;
+  fetch(url).then(r => r.ok ? (/svg/.test(r.headers.get("Content-Type") || "") ? r.text().then(t => { div.innerHTML = t; const s = div.querySelector("svg"); if (s) s.setAttribute("style", "width:100%;height:100%;"); }) : (div.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:contain">`)) : 0).catch(() => {});
+}
+const nxColH = n => n > 0 ? n * NXG.nodeH + (n - 1) * NXG.vSpacing : 0;
+const nxGroup = (list, y0) => list.map((n, i) => ({ n, y: y0 + i * (NXG.nodeH + NXG.vSpacing) }));
+function nxColumn(upper, middle, lower, yAxis) {
+  const act = [["upper", nxColH(upper.length)], ["middle", nxColH(middle.length)], ["lower", nxColH(lower.length)]].filter(a => a[1] > 0);
+  const r = { upperY: 0, middleY: 0, lowerY: 0 };
+  if (act.length === 1) r[act[0][0] + "Y"] = yAxis - act[0][1] / 2;
+  if (act.length === 2) { r[act[0][0] + "Y"] = yAxis - NXG.groupGap / 2 - act[0][1]; r[act[1][0] + "Y"] = yAxis + NXG.groupGap / 2; }
+  if (act.length === 3) { const hM = nxColH(middle.length), midY = yAxis - hM / 2; r.upperY = midY - NXG.groupGap - nxColH(upper.length); r.middleY = midY; r.lowerY = midY + hM + NXG.groupGap; }
+  return r;
+}
+function nxNeeds(u, m, l) {
+  const L = nxColumn(new Array(u), new Array(m), new Array(l), 0);
+  const top = u ? L.upperY : m ? L.middleY : l ? L.lowerY : 0;
+  const bot = l ? L.lowerY + nxColH(l) : m ? L.middleY + nxColH(m) : u ? L.upperY + nxColH(u) : 0;
+  return { above: Math.max(0, -top), below: Math.max(0, bot) };
+}
+function nxVisible(n, center) {   // соседи узла для подсказки — как в ПИ
+  const nb = n.neighbors || [];
+  if (n.name === center) return nb;
+  return nb.some(x => x.name === center) ? nb.filter(x => x.name !== center) : [];
+}
+function nxTip(evt, n, center) {
+  evt.stopPropagation(); document.querySelectorAll(".dag-tooltip").forEach(e => e.remove());
+  const tip = el("dag-tooltip"), h = document.createElement("a"); h.href = "#"; h.textContent = n.name; h.className = "dag-tooltip-title";
+  h.onclick = e => { e.preventDefault(); nxGo(n.name); }; tip.append(h);
+  const clean = nxVisible(n, center);
+  if (clean.length) { const ul = document.createElement("ul"); ul.className = "dag-tooltip-list";
+    clean.forEach(x => { const li = document.createElement("li"), a = document.createElement("a"); a.href = "#"; a.textContent = x.name; a.onclick = e => { e.preventDefault(); nxGo(x.name); }; li.append(a); ul.append(li); });
+    tip.append(ul); }
+  tip.style.left = Math.min(evt.clientX + 12, innerWidth - 230) + "px"; tip.style.top = evt.clientY + "px";
   document.body.append(tip);
 }
-document.addEventListener("click", () => document.querySelectorAll(".nxtip").forEach(x => x.remove()));
+document.addEventListener("click", () => document.querySelectorAll(".dag-tooltip").forEach(e => e.remove()));
+function nxSvg(box, data) {
+  const g = NXG, center = data.center.name;
+  const [nw, sw, wt, ne, se, et, nr, st] = ["nw", "sw", "wt", "ne", "se", "et", "nr", "st"].map(s => data[s] || []);
+  const ln = nxNeeds(nw.length, wt.length, sw.length), rn = nxNeeds(ne.length, et.length, se.length);
+  const nrH = nxColH(nr.length), stH = nxColH(st.length);
+  const topH = nr.length ? nrH + g.vSpacing * 2 : 0, botH = st.length ? stH + g.vSpacing * 2 : 0;
+  const above = Math.max(ln.above, rn.above, topH + g.nodeH / 2), below = Math.max(ln.below, rn.below, botH + g.nodeH / 2);
+  const yAxis = above + g.padding, H = above + below + g.padding * 2;
+  const hasL = !!(nw.length || sw.length || wt.length), hasR = !!(ne.length || se.length || et.length), hasIn = hasL || nr.length > 0;
+  let x = g.padding;
+  const xL = hasL ? x : null; if (hasL) x += g.nodeW + g.hSpacing;
+  const xLC = hasL ? x : null, xM = (xLC || g.padding) + (nr.length ? g.collectorGap : 0);
+  x = Math.max(x, xM) + g.hSpacing;
+  const xC = x; x += g.nodeW + g.hSpacing;
+  const xBC = x; if (hasR) x += g.collectorGap;
+  const xRC = hasR ? x : null; if (hasR) x += g.hSpacing;
+  const xR = hasR ? x : null; if (hasR) x += g.nodeW;
+  const W = (st.length && !hasR ? xBC : x) + g.padding;
+  const svg = document.createElementNS(SVGNS, "svg"); svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("class", "dag-svg");
+  svg.innerHTML = '<defs><marker id="dag-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#a8a49e"/></marker></defs>';
+  box.append(svg);
+  const poly = (pts, arrow, cv) => { const e = document.createElementNS(SVGNS, "polyline"); e.setAttribute("points", pts.map(p => p.x + "," + p.y).join(" "));
+    e.setAttribute("stroke", cv ? `var(${cv})` : "#c9bfa8"); e.setAttribute("stroke-width", "1.5"); e.setAttribute("fill", "none"); if (arrow) e.setAttribute("marker-end", "url(#dag-arrow)"); svg.append(e); };
+  const node = (n, x, y, isC, cv) => {
+    const grp = document.createElementNS(SVGNS, "g"); grp.setAttribute("transform", `translate(${x},${y})`); grp.setAttribute("class", isC ? "dag-node dag-node-center" : "dag-node");
+    const rect = document.createElementNS(SVGNS, "rect"); rect.setAttribute("width", g.nodeW); rect.setAttribute("height", g.nodeH); rect.setAttribute("rx", 3); rect.setAttribute("class", "dag-node-rect");
+    if (n.color) { rect.style.stroke = n.color; rect.style.fill = "transparent"; } else if (cv) { rect.style.stroke = `var(${cv})`; rect.style.fill = `var(${cv}-bg, transparent)`; }
+    grp.append(rect);
+    const fo = document.createElementNS(SVGNS, "foreignObject"), sz = g.nodeH - 6; fo.setAttribute("x", 2); fo.setAttribute("y", 2); fo.setAttribute("width", sz); fo.setAttribute("height", sz); fo.style.pointerEvents = "none";
+    const div = document.createElement("div"); div.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:flex-start;"; nxIcon(div, n.icon); fo.append(div); grp.append(fo);
+    const tx = g.nodeW - 10, ty = g.nodeH / 2, tg = document.createElementNS(SVGNS, "g"); tg.setAttribute("class", "dag-trigger");
+    const hit = document.createElementNS(SVGNS, "rect"); hit.setAttribute("x", g.nodeW - 18); hit.setAttribute("width", 18); hit.setAttribute("height", g.nodeH); hit.setAttribute("fill", "transparent");
+    const arr = document.createElementNS(SVGNS, "path"); arr.setAttribute("d", `M ${tx - 4} ${ty - 4} L ${tx + 2} ${ty} L ${tx - 4} ${ty + 4} z`);
+    arr.setAttribute("class", isC || (n.neighbors && n.neighbors.length) ? "dag-trigger-arrow active" : "dag-trigger-arrow");
+    tg.append(hit, arr); tg.addEventListener("click", e => nxTip(e, n, center));
+    if (!isC) grp.addEventListener("click", e => { if (!e.target.closest(".dag-trigger")) nxGo(n.name); });
+    grp.append(tg); svg.append(grp); };
+  const incoming = (list, xN, y0, xCol, mX, cv) => { if (!list.length) return;
+    const it = nxGroup(list, y0), dX = xCol < xN ? xN : xN + g.nodeW;
+    it.forEach(({ n, y }) => { node(n, xN, y, false, cv); poly([{ x: dX, y: y + g.nodeH / 2 }, { x: xCol, y: y + g.nodeH / 2 }], false, cv); });
+    const y1 = it[0].y + g.nodeH / 2, y2 = it[it.length - 1].y + g.nodeH / 2;
+    if (y2 > y1) poly([{ x: xCol, y: y1 }, { x: xCol, y: y2 }], false, cv);
+    const ne = Math.abs(y1 - yAxis) < Math.abs(y2 - yAxis) ? y1 : y2;
+    poly([{ x: xCol, y: ne }, { x: xCol, y: yAxis }, { x: mX, y: yAxis }], false, cv); };
+  const outgoing = (list, xN, y0, xCol, cX, cv) => { if (!list.length) return;
+    const it = nxGroup(list, y0), y1 = it[0].y + g.nodeH / 2, y2 = it[it.length - 1].y + g.nodeH / 2;
+    const ne = Math.abs(y1 - yAxis) < Math.abs(y2 - yAxis) ? y1 : y2;
+    poly([{ x: cX, y: yAxis }, { x: xCol, y: yAxis }, { x: xCol, y: ne }], false, cv);
+    if (y2 > y1) poly([{ x: xCol, y: y1 }, { x: xCol, y: y2 }], false, cv);
+    const aX = xCol < xN ? xN : xN + g.nodeW;
+    it.forEach(({ n, y }) => { poly([{ x: xCol, y: y + g.nodeH / 2 }, { x: aX, y: y + g.nodeH / 2 }], true, cv); node(n, xN, y, false, cv); }); };
+  const yCT = yAxis - g.nodeH / 2;
+  if (hasL) { const L = nxColumn(nw, wt, sw, yAxis);
+    incoming(nw, xL, L.upperY, xLC, xM, "--graph-nw"); incoming(wt, xL, L.middleY, xLC, xM, "--graph-wt"); incoming(sw, xL, L.lowerY, xLC, xM, "--graph-sw"); }
+  if (nr.length) incoming(nr, xC, yCT - (nrH + g.vSpacing * 2), xM, xM, "--graph-nr");
+  if (hasIn) poly([{ x: xM, y: yAxis }, { x: xC, y: yAxis }], true);
+  node(data.center, xC, yCT, true);
+  if (hasR) { const R = nxColumn(ne, et, se, yAxis);
+    outgoing(ne, xR, R.upperY, xRC, xC + g.nodeW, "--graph-nw"); outgoing(et, xR, R.middleY, xRC, xC + g.nodeW, "--graph-wt"); outgoing(se, xR, R.lowerY, xRC, xC + g.nodeW, "--graph-sw"); }
+  if (st.length) outgoing(st, xC, yCT + g.nodeH + g.vSpacing * 2, xBC, xC + g.nodeW, "--graph-nr");
+}
+function nxList(box, data) {
+  const skip = new Set((data.list || "").trim().toLowerCase().split(/\s+/).filter(s => s.startsWith("-")).map(s => s.slice(1)));
+  const code = t => (data.codes || {})[t] || t, center = data.center.name;
+  const secs = [["NW", "nw", "nwType", "nw"], ["NE", "ne", "nwType", "nw"], ["WT", "wt", "wtType", "wt"], ["ET", "et", "wtType", "wt"],
+    ["SW", "sw", "swType", "sw"], ["SE", "se", "swType", "sw"], ["NR", "nr", "nrType", "nr"], ["ST", "st", "nrType", "nr"]]
+    .map(([l, s, t, c]) => ({ label: l + "-" + code(data[t]), nodes: data[s], cls: "dag-section-" + c, key: data[t] }))
+    .concat((data.extra || []).flatMap(x => [{ label: "DX-" + code(x.type), nodes: x.direct, cls: "dag-section-extra", key: x.type }, { label: "IX-" + code(x.type), nodes: x.inverse, cls: "dag-section-extra", key: x.type }]))
+    .filter(s => !skip.has((s.key || "").toLowerCase()));
+  const root = el("dag-list");
+  const link = (n, sec) => { const a = document.createElement("a"); a.href = "#"; a.textContent = n.name; a.className = sec ? "dag-link dag-link-secondary" : "dag-link"; a.onclick = e => { e.preventDefault(); nxGo(n.name); }; return a; };
+  secs.forEach(sec => { if (!sec.nodes || !sec.nodes.length) return;
+    const div = el("dag-section " + sec.cls), lab = document.createElement("span"); lab.className = "dag-section-label"; lab.textContent = sec.label + ": "; div.append(lab);
+    sec.nodes.forEach((n, i) => { if (i) div.append(" "); div.append(link(n));
+      const clean = nxVisible(n, center);
+      if (clean.length) { div.append(" [ "); clean.forEach((nb, k) => { if (k) { const s = document.createElement("span"); s.className = "dag-link-sep"; s.textContent = " · "; div.append(s); } div.append(link(nb, true)); }); div.append(" ]"); } });
+    root.append(div); });
+  box.append(root);
+}
 async function drawNexus(t, name) {
   let d;
   try { d = await api("/api/nexus?name=" + encodeURIComponent(name)); } catch (e) { return; }
   if (!d.found) return;
-  const W = 48, H = 32, G = 6, X = 40, P = 8, ns = "http://www.w3.org/2000/svg";
-  const col = s => NX[NXP[s] || s];
-  const left = ["nw", "wt", "sw"].flatMap(s => (d[s] || []).map(n => [n, s]));
-  const right = ["ne", "et", "se"].flatMap(s => (d[s] || []).map(n => [n, s]));
-  const top = (d.nr || []).map(n => [n, "nr"]), bot = (d.st || []).map(n => [n, "st"]);
-  const colH = k => k ? k * H + (k - 1) * G : 0, rowW = k => k ? k * W + (k - 1) * G : 0;
-  const midH = Math.max(colH(left.length), colH(right.length), H);
-  const topH = top.length ? H + X / 2 : 0, botH = bot.length ? H + X / 2 : 0;
-  const xC = Math.max(P + (left.length ? W + X : 0), P + rowW(Math.max(top.length, bot.length)) / 2 - W / 2);
-  const w = Math.max(xC + W + (right.length ? X + W : 0) + P, xC + W / 2 + rowW(Math.max(top.length, bot.length)) / 2 + P);
-  const yA = P + topH + midH / 2, h = P * 2 + topH + midH + botH;
-  const svg = document.createElementNS(ns, "svg"); svg.setAttribute("width", w); svg.setAttribute("height", h);
-  svg.innerHTML = '<defs><marker id="nxa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#7d8aa0"/></marker></defs>';
-  const mk = (tag, attrs) => { const e = document.createElementNS(ns, tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v)); return e; };
-  const line = (x1, y1, x2, y2, s) => svg.append(mk("line", { x1, y1, x2, y2, stroke: "rgb(" + col(s) + ")", "stroke-width": 1.5, "marker-end": "url(#nxa)" }));
-  const node = (n, x, y, s) => {
-    const g = mk("g", { class: s ? "node" : "center", transform: `translate(${x},${y})` });
-    g.append(mk("rect", s ? { width: W, height: H, rx: 3, fill: "rgba(" + col(s) + ",0.08)", stroke: "rgb(" + col(s) + ")" } : { width: W, height: H, rx: 3, fill: "var(--g1)" }));
-    const img = mk("image", { x: 3, y: 3, width: H - 6, height: H - 6, href: "/api/icon?name=" + encodeURIComponent(n) });
-    img.addEventListener("error", () => img.remove()); g.append(img);
-    const tg = mk("g", { class: "trig" });   // треугольник — подсказка
-    tg.append(mk("rect", { x: W - 16, y: 0, width: 16, height: H, fill: "transparent" }), mk("path", { d: `M${W - 11} ${H / 2 - 4}L${W - 5} ${H / 2}L${W - 11} ${H / 2 + 4}z` }));
-    const info = s ? [(d.types[NXP[s] || s] || "") + " " + NXD[s]] : (d.alias && d.alias.length ? ["Alias: " + d.alias.join(" ")] : []);
-    tg.addEventListener("click", e => nxTip(e, n, info)); g.append(tg);
-    if (s) g.addEventListener("click", e => { if (!e.target.closest(".trig")) nxGo(n); });
-    svg.append(g); };
-  const stack = (list, x, side) => list.forEach(([n, s], i) => { const y = yA - colH(list.length) / 2 + i * (H + G);
-    node(n, x, y, s); side === "in" ? line(x + W, y + H / 2, xC, yA, s) : line(xC + W, yA, x, y + H / 2, s); });
-  const row = (list, y, up) => list.forEach(([n, s], i) => { const x = xC + W / 2 - rowW(list.length) / 2 + i * (W + G);
-    const tx = d.types.nr === "Taxon", cx = xC + W / 2;   // у Taxon сверху — обобщения (стрелка вверх), снизу — члены; иначе как в ПИ: сверху входящие, снизу исходящие
-    node(n, x, y, s);
-    if (up) { tx ? line(cx, yA - H / 2, x + W / 2, y + H, s) : line(x + W / 2, y + H, cx, yA - H / 2, s); }
-    else { tx ? line(x + W / 2, y, cx, yA + H / 2, s) : line(cx, yA + H / 2, x + W / 2, y, s); } });
-  stack(left, P, "in"); stack(right, xC + W + X, "out");
-  row(top, P, true); row(bot, h - P - H, false);   // север — обобщения (прямой Taxon), юг — члены (обратный)
-  node(name, xC, yA - H / 2, "");
-  const box = el("nx"); box.append(svg);
-  const pair = { nw: "ne", wt: "et", sw: "se", nr: "st" };
-  box.append(el("legend", Object.keys(pair).filter(s => (d[s] || []).length + (d[pair[s]] || []).length).map(s => d.types[s]).join(" · ")));
+  const sides = ["nw", "ne", "wt", "et", "sw", "se", "nr", "st"];
+  const hide = new Set((d.graph || "").trim().toLowerCase().split(/\s+/).filter(s => s.startsWith("-") && sides.includes(s.slice(1))).map(s => s.slice(1)));
+  const sd = Object.assign({}, d); sides.forEach(s => { if (hide.has(s)) sd[s] = []; });
+  const box = el("nx");
+  nxSvg(box, sd); box.append(Object.assign(document.createElement("hr"), { className: "dag-divider" })); nxList(box, d);
   t.append(box); scroll();
 }
 function addAnswer(t, turn) {

@@ -40,6 +40,7 @@ type Script struct {
 	pPred   string // предикация, по которой ждёт ответа вопрос
 	pQuest  string
 	pOpts   []string
-	choose  func(text string, opts []string) string} // вопрос с выбором в текущей интерпретации
+	choose  func(text string, opts []string) string // вопрос с выбором в текущей интерпретации
+	cidx    map[string]string} // концепты темы: имя (строчными) → файл; клоны лежат не по пути своего имени (9.18)
 const limit = 10000
 const gaussABC = "oiztyvslanxedbhfmg"
