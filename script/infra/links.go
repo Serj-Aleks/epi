@@ -91,7 +91,7 @@ if p == "" {return format.Value{}, false}; return format.Value{Kind: format.Term
 // (tags, links, attrib, preposit, prefix, suffix) и radix; graphCodes — коды списка.
 var piSlot = map[string]string{"tags": "Taxon", "links": "Links", "attrib": "Attrib", "preposit": "Preposit", "prefix": "Prfix", "suffix": "Sufix", "radix": "Radix"}
 var graphTypes = []string{"tags", "links", "attrib", "preposit", "prefix", "suffix", "radix"}
-var graphCodes = map[string]string{"alias": "AL", "attrib": "AT", "preposit": "PP", "prefix": "PF", "suffix": "SF", "tags": "TG", "links": "LK", "themes": "TM", "radix": "RX"}
+var graphCodes = map[string]string{"alias": "AL", "attrib": "AT", "preposit": "PP", "prefix": "PF", "suffix": "SF", "tags": "TX", "links": "LK", "themes": "TM", "radix": "RX"}
 // setting: значение настройки концепта (Nord : links) — текст без кавычек.
 func setting(path, key string) string {
 b, err := os.ReadFile(path)
