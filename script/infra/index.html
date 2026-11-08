@@ -246,7 +246,7 @@ function nxList(box, data) {
 // (переход — nexus Имя), {{Имя}} — трансклюзия: контент концепта вставляется (как
 // renderConceptView в ПИ, без повторов по кругу).
 const card = document.getElementById("card"), lens = { graph: true, content: true, slots: false };
-let cardName = null, cardTimer = null;
+let cardName = null, cardTimer = null, cloneSrc = "";
 // история панели: ← возвращает к прежнему виду (карточка или список qwest с его
 // фильтром) без записи в протокол — это просмотр, а не действие.
 let pstack = [];
@@ -365,6 +365,7 @@ async function cardOpen(name) {
   head.append(pBackBtn(), ic, el("cname", c.name));
   const tools = el("ctools");
   [["graph", "✦"], ["content", "≡"], ["slots", "⊞"]].forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardOpen(c.name); }; tools.append(b); });
+  const cl = document.createElement("button"); cl.textContent = "⧉"; cl.title = "clone"; cl.onclick = () => { cloneSrc = c.name; askName("clone"); }; tools.prepend(cl); // клон — как в ПИ
   const x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
   head.append(tools); card.append(head);
   if (lens.graph) { const d = await api("/api/nexus?name=" + encodeURIComponent(name)).catch(() => null);
@@ -381,6 +382,7 @@ function addAnswer(t, turn) {
   const f = el("f", (turn.frames || []).join(" ")); f.title = "interpres"; a.append(f);
   t.append(a); scroll();
   if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice(6)); // карточка концепта
+  else if (!turn.error && /^clone\s/.test(turn.pred || "")) cardShow(turn.answer); // клон — его карточка
   else if (!turn.error && /^qwest\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1")); // поиск — список в панели
   else if (!turn.error && cardName) cardShow(cardName); // после правки — карточка заново
 }
@@ -475,6 +477,12 @@ function handle(t, rep) {
 document.getElementById("f").onsubmit = async (e) => {
   e.preventDefault();
   if (mode === "concept") { conceptDone(inp.value.trim()); return; }
+  if (mode === "clone") { // клон концепта (9.19): предикация «clone [ Исходный Новый ]»
+    const name = inp.value.trim(); if (!name) return;
+    if (!/^\p{Lu}[^\s.:\[\]{}()"]*$/u.test(name)) { note.textContent = "имя концепта — с прописной буквы, без пробелов"; return; }
+    mode = null; inp.placeholder = ""; inp.value = ""; note.textContent = "";
+    runPred("clone [ " + cloneSrc + " " + name + " ]"); return;
+  }
   if (mode === "cnew") { // новый концепт (9.19): предикация «Имя : []» — пустой фрейм, затем nexus Имя
     const name = inp.value.trim(); if (!name) return;
     if (!/^\p{Lu}[^\s.:\[\]{}()"]*$/u.test(name)) { note.textContent = "имя концепта — с прописной буквы, без пробелов"; return; }
@@ -512,7 +520,7 @@ inp.addEventListener("keydown", (e) => {
 function askName(m) {
   mode = m; inp.disabled = false;
   inp.value = m === "rename" ? last.theme : "";
-  inp.placeholder = m === "rename" ? "новое имя темы (Esc — отмена)" : m === "cnew" ? "имя нового концепта (Esc — отмена)" : "имя новой темы (Esc — отмена)";
+  inp.placeholder = m === "rename" ? "новое имя темы (Esc — отмена)" : m === "clone" ? "имя клона " + cloneSrc + " (Esc — отмена)" : m === "cnew" ? "имя нового концепта (Esc — отмена)" : "имя новой темы (Esc — отмена)";
   inp.focus();
 }
 document.getElementById("tnew").onclick = () => askName("new");

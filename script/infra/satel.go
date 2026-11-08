@@ -61,3 +61,36 @@ k := strings.ToLower(name)
 var inv []string
 for o, ns := range q.tidx {if o != k && has(ns, name) {inv = append(inv, conceptName(q.cidx[o], ""))}}
 sort.Strings(inv); return q.tidx[k], inv }
+// clone: препозиция «clone [ Исходный Новый ]» (имя — пользователь, 08.11.2026; как
+// CloneConcept в ПИ): файл концепта, спутники и картинки img/<имя>.* копируются под
+// новым именем в папку исходного; прямые списки связей — те же, у их целей клон
+// добавляется в обратные; обратные списки клона пусты (на него ещё никто не ссылается).
+// Ответ — имя клона.
+func (q *Script) clone(arg format.Value) (format.Value, bool) {
+if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
+src, name := q.cidx[strings.ToLower(arg.Items[0].Text)], capital(arg.Items[1].Text)
+if src == "" || q.conceptPath(name) != "" || checkName(name) != nil {return format.Value{}, false}
+dst := filepath.Join(filepath.Dir(src), strings.ToLower(name)+".uic")
+sb, db := strings.TrimSuffix(src, ".uic"), strings.TrimSuffix(dst, ".uic")
+files := [][2]string{{src, dst}}
+for _, t := range satTypes {if exists(sb + "." + t) {files = append(files, [2]string{sb + "." + t, db + "." + t})}}
+sn, dn := filepath.Join(filepath.Dir(src), "img", filepath.Base(sb)), filepath.Join(filepath.Dir(src), "img", filepath.Base(db))
+for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if exists(sn + "." + e) {files = append(files, [2]string{sn + "." + e, dn + "." + e})}}
+for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
+for _, f := range files {if err := copyFile(f[0], f[1]); err != nil {return format.Value{}, false}}
+q.cidx[strings.ToLower(name)] = dst
+b, _ := os.ReadFile(dst)
+lines, _ := conceptLines(b)
+for _, l := range lines {
+	root, ok := q.linkRoot(lineKey(l))
+	if !ok {continue}
+	d, _ := readLink(dst, lineKey(l))
+	writeLists(dst, lineKey(l), nil, nil)
+	var pred []format.Value
+	for _, n := range d {pred = append(pred, format.Value{Kind: format.Term, Text: n})}
+	q.writeLink(name, lineKey(l), pred, root, true)}
+if ns := transcl(dst); len(ns) > 0 {q.tidx[strings.ToLower(name)] = ns}
+on, of := q.in.OnParam, q.in.OnFrame
+q.in.OnParam, q.in.OnFrame = nil, nil
+q.loadConceptsIn(dst)
+q.in.OnParam, q.in.OnFrame = on, of; return format.Value{Kind: format.Term, Text: name}, true }
