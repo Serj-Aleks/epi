@@ -57,6 +57,9 @@
   .cbody a { color: var(--acc); } .cbody a.cref { font-weight: 700; text-decoration: none; }
   .cinc { border-left: 3px solid var(--graph-nr); padding-left: 8px; margin: 6px 0; }
   .cempty { color: var(--dim); } .cedit { width: 100%; min-height: 40vh; font: 13px/1.4 inherit; font-family: inherit; background: var(--g1); border: 1px solid var(--line); margin-top: 6px; }
+  .qlist { padding: 4px 0; } .qrow { padding: 6px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 8px; }
+  .qname { color: var(--acc); font-weight: 700; text-decoration: none; } .qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
+  .qex { color: var(--fg); font-size: 13px; margin: 2px 0 0 36px; } mark { background: #f3d77a; color: inherit; } .chead .cval { flex: 1; max-width: 20ch; }
   .crow { display: flex; gap: 6px; align-items: center; padding: 2px 14px; flex-wrap: wrap; } .ckey { width: 9ch; color: var(--dim); font-size: 13px; }
   input.ckey { width: 9ch; padding: 2px 4px; flex: none; } .cval { flex: 1; min-width: 10ch; font: 13px inherit; font-family: inherit; padding: 2px 4px; background: var(--g1); border: 1px solid var(--line); color: var(--fg); }
   .crow input.ckey { background: var(--g1); border: 1px solid var(--line); color: var(--fg); font: 13px inherit; font-family: inherit; }
@@ -243,7 +246,7 @@ function nxList(box, data) {
 // renderConceptView в ПИ, без повторов по кругу).
 const card = document.getElementById("card"), lens = { graph: true, content: true, slots: false };
 let cardName = null, cardTimer = null;
-function cardShow(name) { cardName = name; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
+function cardShow(name) { cardName = name; qwestKey = null; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
 function cardHide() { cardName = null; card.hidden = true; card.innerHTML = ""; }
 const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 function mdHtml(md, name) {   // разметка md — по mdToHtml ПИ (заголовки, списки, таблицы, код, ссылки)
@@ -299,6 +302,32 @@ async function lensContent(box, c) {
     ok.onclick = async () => { try { Object.assign(c, await api("/api/sat", { name: c.name, ext: s.value, text: ta.value })); } catch (e) { note.textContent = e.message; return; } cardOpen(c.name); }; };
   box.append(bar, body); await view();
 }
+// линза темы — поиск qwest (9.20): список найденных концептов в панели; поле —
+// фильтр списка по имени («&» — «и»), как в ПИ; щелчок по имени — nexus Имя.
+let qwestKey = null;
+function qwestShow(qs) { cardName = null; qwestKey = qs; clearTimeout(cardTimer); cardTimer = setTimeout(() => qwestOpen(qs), 0); }
+const mark = (s, ts) => { let r = esc(s); ts.forEach(t => { r = r.replace(new RegExp(esc(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`); }); return r; };
+async function qwestOpen(qs) {
+  let rs;
+  try { rs = await api("/api/qwest?q=" + encodeURIComponent(qs)); } catch (e) { return; }
+  if (qs !== qwestKey) return;
+  rs = rs || []; card.hidden = false; card.innerHTML = "";
+  const ts = qs.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
+  const head = el("chead"); head.append(el("cname", "qwest " + (qs ? "«" + qs + "»" : "—") + " · " + rs.length));
+  const flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
+  const tools = el("ctools"), x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
+  head.append(flt, tools); card.append(head);
+  const list = el("clens qlist"); card.append(list);
+  const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
+    const shown = rs.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
+    if (!shown.length) { list.append(el("cempty", "—")); return; }
+    shown.forEach(r => { const row = el("qrow"), ic = el("cicon"); nxIcon(ic, r.icon);
+      const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.innerHTML = mark(r.name, ts.concat(fs)); a.onclick = e => { e.preventDefault(); nxGo(r.name); };
+      const top = el("qtop"); top.append(ic, a); if (r.type) top.append(el("qtype", r.type)); row.append(top);
+      if (r.excerpt) { const ex = el("qex"); ex.innerHTML = mark(r.excerpt, ts); row.append(ex); }
+      list.append(row); }); };
+  flt.oninput = draw; draw();
+}
 const satTypes = ["md", "json", "svg", "css", "xml", "html", "txt"];
 // линза ⊞ — строки концепта (9.19): параметр правится, ✓ отправляет предикацию
 // «Концепт.Параметр : значение» в строку ввода — правка идёт в протокол, обратные
@@ -345,6 +374,7 @@ function addAnswer(t, turn) {
   const f = el("f", (turn.frames || []).join(" ")); f.title = "interpres"; a.append(f);
   t.append(a); scroll();
   if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice(6)); // карточка концепта
+  else if (!turn.error && /^qwest\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1")); // поиск — список в панели
   else if (!turn.error && cardName) cardShow(cardName); // после правки — карточка заново
 }
 

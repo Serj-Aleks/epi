@@ -22,7 +22,7 @@ q.in = disp.New(limit, func(string) bool { return false })
 // фреймы-интерпретаторы: lexic/preposit (9.13) — только системная часть
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 q.in.Frame("trans").Kernel["trans"] = q.trans // транслятор (9.16): ядро — словари среды
-q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus} // локальный контекст (9.17)
+q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus, "qwest": q.qwest} // локальный контекст (9.17), поиск (9.20)
 // фреймы автора сохраняются в активной теме (9.14)
 q.in.OnParam = func(frame, param string, pred []format.Value) {if err := q.writeConcept(frame, param, pred); err != nil {log.Print(err)}}
 q.in.OnFrame = func(name string, body []format.Value) {if err := q.writeBody(name, body); err != nil {log.Print(err)}}
@@ -145,6 +145,7 @@ if req.Method != http.MethodGet {if err := json.NewDecoder(req.Body).Decode(&bod
 fail := func(code int, msg string) { http.Error(w, msg, code) }
 if req.URL.Path == "/api/nexus" {json.NewEncoder(w).Encode(q.nexusGraph(req.URL.Query().Get("name"))); return} // граф локального контекста (9.17)
 if req.URL.Path == "/api/card" {json.NewEncoder(w).Encode(q.card(req.URL.Query().Get("name"))); return} // карточка концепта (панель, 9.19)
+if req.URL.Path == "/api/qwest" {json.NewEncoder(w).Encode(q.qwestFind(req.URL.Query().Get("q"))); return} // поиск: список для панели (9.20)
 if req.URL.Path == "/api/sat" { // спутник концепта: прочитать (GET) или записать (POST)
 	if req.Method == http.MethodGet {
 		p := q.satFile(req.URL.Query().Get("name"), req.URL.Query().Get("ext"))
