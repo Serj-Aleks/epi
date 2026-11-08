@@ -246,8 +246,14 @@ function nxList(box, data) {
 // renderConceptView в ПИ, без повторов по кругу).
 const card = document.getElementById("card"), lens = { graph: true, content: true, slots: false };
 let cardName = null, cardTimer = null;
-function cardShow(name) { cardName = name; qwestKey = null; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
-function cardHide() { cardName = null; card.hidden = true; card.innerHTML = ""; }
+// история панели: ← возвращает к прежнему виду (карточка или список qwest с его
+// фильтром) без записи в протокол — это просмотр, а не действие.
+let pstack = [];
+function pPush(s) { const t = pstack[pstack.length - 1]; if (!t || t.k !== s.k || t.a !== s.a) { pstack.push(s); if (pstack.length > 50) pstack.shift(); } }
+function pBack() { if (pstack.length < 2) return; pstack.pop(); const s = pstack[pstack.length - 1]; s.k === "c" ? cardShow(s.a, true) : qwestShow(s.a, true); }
+function pBackBtn() { const b = document.createElement("button"); b.textContent = "←"; b.title = "back"; b.disabled = pstack.length < 2; b.onclick = pBack; return b; }
+function cardShow(name, back) { if (!back) pPush({ k: "c", a: name }); cardName = name; qwestKey = null; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
+function cardHide() { cardName = null; qwestKey = null; pstack = []; card.hidden = true; card.innerHTML = ""; }
 const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 function mdHtml(md, name) {   // разметка md — по mdToHtml ПИ (заголовки, списки, таблицы, код, ссылки)
   const code = [];
@@ -305,7 +311,7 @@ async function lensContent(box, c) {
 // линза темы — поиск qwest (9.20): список найденных концептов в панели; поле —
 // фильтр списка по имени («&» — «и»), как в ПИ; щелчок по имени — nexus Имя.
 let qwestKey = null;
-function qwestShow(qs) { cardName = null; qwestKey = qs; clearTimeout(cardTimer); cardTimer = setTimeout(() => qwestOpen(qs), 0); }
+function qwestShow(qs, back) { if (!back) pPush({ k: "q", a: qs, f: "" }); cardName = null; qwestKey = qs; clearTimeout(cardTimer); cardTimer = setTimeout(() => qwestOpen(qs), 0); }
 const mark = (s, ts) => { let r = esc(s); ts.forEach(t => { r = r.replace(new RegExp(esc(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`); }); return r; };
 async function qwestOpen(qs) {
   let rs;
@@ -313,7 +319,7 @@ async function qwestOpen(qs) {
   if (qs !== qwestKey) return;
   rs = rs || []; card.hidden = false; card.innerHTML = "";
   const ts = qs.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
-  const head = el("chead"); head.append(el("cname", "qwest " + (qs ? "«" + qs + "»" : "—") + " · " + rs.length));
+  const head = el("chead"), st = pstack[pstack.length - 1] || {}; head.append(pBackBtn(), el("cname", "qwest " + (qs ? "«" + qs + "»" : "—") + " · " + rs.length));
   const flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
   const tools = el("ctools"), x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
   head.append(flt, tools); card.append(head);
@@ -326,7 +332,7 @@ async function qwestOpen(qs) {
       const top = el("qtop"); top.append(ic, a); if (r.type) top.append(el("qtype", r.type)); row.append(top);
       if (r.excerpt) { const ex = el("qex"); ex.innerHTML = mark(r.excerpt, ts); row.append(ex); }
       list.append(row); }); };
-  flt.oninput = draw; draw();
+  flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw();
 }
 const satTypes = ["md", "json", "svg", "css", "xml", "html", "txt"];
 // линза ⊞ — строки концепта (9.19): параметр правится, ✓ отправляет предикацию
@@ -355,7 +361,7 @@ async function cardOpen(name) {
   if (!c.found || name !== cardName) return;
   card.hidden = false; card.innerHTML = "";
   const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
-  head.append(ic, el("cname", c.name));
+  head.append(pBackBtn(), ic, el("cname", c.name));
   const tools = el("ctools");
   [["graph", "✦"], ["content", "≡"], ["slots", "⊞"]].forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardOpen(c.name); }; tools.append(b); });
   const x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
