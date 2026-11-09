@@ -174,11 +174,11 @@ for _, cp := range paths {
 	if json.Unmarshal(b, &sat) != nil {continue}
 	keys := make([]string, 0, len(sat))
 	for k := range sat {keys = append(keys, k)}
-	sort.Slice(keys, func(i, j int) bool {a, ea := strconv.Atoi(keys[i]); b, eb := strconv.Atoi(keys[j]); if ea == nil && eb == nil {return a < b}; return keys[i] < keys[j]})
+	sort.Slice(keys, func(i, j int) bool {a, ea := sitNum(keys[i]); b, eb := sitNum(keys[j]); if ea && eb {return a < b}; return keys[i] < keys[j]})
 	for _, k := range keys {
 		s, _ := sat[k].(string)
 		if f := strings.Fields(s); len(f) == 3 {out = append(out, map[string]any{"key": k, "a": cell(f[0]), "p": cell(f[1]), "b": cell(f[2])})}}}
-sort.SliceStable(out, func(i, j int) bool {a, ea := strconv.Atoi(out[i]["key"].(string)); b, eb := strconv.Atoi(out[j]["key"].(string)); return ea == nil && (eb != nil || a < b)}); return out } // по номеру ситуации
+sort.SliceStable(out, func(i, j int) bool {a, ea := sitNum(out[i]["key"].(string)); b, eb := sitNum(out[j]["key"].(string)); return ea && (!eb || a < b)}); return out } // по номеру ситуации
 // aOrder: место литеры в алфавите темы; пробел, «-», «,» — раньше всех (BuildCharOrder ПИ).
 var aOrder = func() map[rune]int {
 m := map[rune]int{' ': -1, '-': -1, ',': -1}
@@ -383,23 +383,9 @@ for i, v := range vs {
 // reGauss: гаусс-индекс ситуации — число в системе счисления Гаусса (пользователь, ТЕМП):
 // 18-ричная, цифры gaussDigits (o — 0 … g — 17).
 var reGauss = regexp.MustCompile(`^[` + gaussDigits + `]{2,}$`)
-// gaussKeys: ключи-гаусс-индексы json-спутника — числами (oooz → 2); один раз, при открытии темы.
-func gaussKeys(path string) {
-b, err := os.ReadFile(path)
-if err != nil {return}
-var m map[string]any
-if json.Unmarshal(b, &m) != nil {return}
-changed := false
-for k, v := range m {
-	if s, ok := v.(string); !ok || !reGauss.MatchString(k) || len(strings.Fields(s)) != 3 {continue} // только ситуации: значение из трёх слов
-	n := 0
-	for _, c := range k {n = n*18 + strings.IndexRune(gaussDigits, c)}
-	nk := strconv.Itoa(n)
-	if _, taken := m[nk]; taken {continue}
-	delete(m, k); m[nk] = v; changed = true}
-if changed {out, _ := json.MarshalIndent(m, "", "  "); os.WriteFile(path, out, 0644)} }
 // situation: новая ситуация «a p b» концепта name — в его json с номером на единицу
-// больше наибольшего номера ситуаций в теме (индекс ситуаций, 09.11.2026).
+// больше наибольшего номера ситуаций в теме (индекс ситуаций, 09.11.2026); существующие
+// ключи не переписываются — номер считается и по гаусс-индексам (ooot — 3).
 func (q *Script) situation(name, a, p, b string) error {
 cp := q.cidx[strings.ToLower(name)]
 if cp == "" {return fmt.Errorf("концепта %s в теме нет", name)}
@@ -410,45 +396,15 @@ for _, x := range q.cidx {
 	if err != nil {continue}
 	var m map[string]any
 	if json.Unmarshal(jb, &m) != nil {continue}
-	for k, v := range m {if s, ok := v.(string); ok && len(strings.Fields(s)) == 3 {if n, err := strconv.Atoi(k); err == nil && n >= next {next = n + 1}}}}
+	for k, v := range m {if s, ok := v.(string); ok && len(strings.Fields(s)) == 3 {if n, ok := sitNum(k); ok && n >= next {next = n + 1}}}}
 jp := strings.TrimSuffix(cp, ".uic") + ".json"
 m := map[string]any{}
 if jb, err := os.ReadFile(jp); err == nil {if json.Unmarshal(jb, &m) != nil {return fmt.Errorf("%s: json не читается", jp)}}
 m[strconv.Itoa(next)] = a + " " + p + " " + b
 out, _ := json.MarshalIndent(m, "", "  "); return os.WriteFile(jp, out, 0644) }
-// reSitKey: ключ ситуации в json — номер или гаусс-индекс; прочие ключи
-// (словари: «термин : определение») — не ситуации и не трогаются.
-var reSitKey = regexp.MustCompile(`^([0-9]+|[` + gaussDigits + `]{2,})$`)
-// renumber: индекс ситуаций темы однозначен (пользователь, 09.11.2026): если номера
-// повторяются или ключ не число — все ситуации темы нумеруются заново подряд с 0:
-// концепты — в алфавите темы, ситуации концепта — по прежнему номеру (не число — в конце).
-func (q *Script) renumber() {
-type sit struct{k, v string}
-paths := make([]string, 0, len(q.cidx))
-for _, p := range q.cidx {paths = append(paths, p)}
-sort.Slice(paths, func(i, j int) bool {return aLess(conceptName(paths[i], ""), conceptName(paths[j], ""))})
-all, seen, bad := map[string][]sit{}, map[int]bool{}, false
-for _, p := range paths {
-	jp := strings.TrimSuffix(p, ".uic") + ".json"
-	b, err := os.ReadFile(jp)
-	if err != nil {continue}
-	var m map[string]any
-	if json.Unmarshal(b, &m) != nil {continue}
-	var ss []sit
-	for k, v := range m {if s, ok := v.(string); ok && reSitKey.MatchString(k) && len(strings.Fields(s)) == 3 {ss = append(ss, sit{k, s})}}
-	sort.Slice(ss, func(i, j int) bool {a, ea := strconv.Atoi(ss[i].k); c, ec := strconv.Atoi(ss[j].k); if ea == nil && ec == nil {return a < c}; return ea == nil})
-	for _, s := range ss {n, err := strconv.Atoi(s.k); if err != nil || seen[n] {bad = true}; seen[n] = true}
-	if len(ss) > 0 {all[jp] = ss}}
-if !bad {return}
+// sitNum: номер ситуации по ключу — число или гаусс-индекс (18-ричная система Гаусса).
+func sitNum(k string) (int, bool) {
+if n, err := strconv.Atoi(k); err == nil {return n, true}
+if !reGauss.MatchString(k) {return 0, false}
 n := 0
-for _, p := range paths {
-	jp := strings.TrimSuffix(p, ".uic") + ".json"
-	ss := all[jp]
-	if len(ss) == 0 {continue}
-	b, _ := os.ReadFile(jp)
-	var m map[string]any
-	json.Unmarshal(b, &m)
-	for _, s := range ss {delete(m, s.k)}
-	for _, s := range ss {m[strconv.Itoa(n)] = s.v; n++}
-	out, _ := json.MarshalIndent(m, "", "  ")
-	os.WriteFile(jp, out, 0644)} }
+for _, c := range k {n = n*18 + strings.IndexRune(gaussDigits, c)}; return n, true }

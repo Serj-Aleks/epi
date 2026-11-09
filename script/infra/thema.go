@@ -58,7 +58,6 @@ if err := q.loadIgnor(); err != nil {return err}
 q.env = disp.NewEnv(nil)
 if err := q.loadAliases(); err != nil {return err}
 if err := q.loadConcepts(); err != nil {return err}
-q.renumber() // индекс ситуаций — однозначен в теме
 ss, err := q.list()
 if err != nil {return err}
 for _, s := range ss {if !s.Closed {return q.switchTo(s.Name)}}; q.saveState(); return nil }
@@ -173,7 +172,6 @@ func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root
 	fixed := false // настройки с именами слотов ПИ — один раз переписываются именами связей EPI
 	for i, l := range lines {if f := piNames(l); f != l {lines[i], fixed = f, true}}
 	if fixed {if err := writeLines(path, lines); err != nil {return err}}
-	gaussKeys(strings.TrimSuffix(path, ".uic") + ".json") // гаусс-индексы ситуаций — числами (один раз)
 	var body []string
 	for _, l := range lines {
 		if !isParam(l) {body = append(body, l); continue}
