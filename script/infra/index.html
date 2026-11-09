@@ -57,6 +57,7 @@
   .cbody a { color: var(--acc); } .cbody a.cref { font-weight: 700; text-decoration: none; }
   .cinc { border-left: 3px solid var(--graph-nr); padding-left: 8px; margin: 6px 0; }
   .cempty { color: var(--dim); } .cedit { width: 100%; min-height: 40vh; font: 13px/1.4 inherit; font-family: inherit; background: var(--g1); border: 1px solid var(--line); margin-top: 6px; }
+  .clens.tlens { overflow: visible; position: relative; z-index: 3; }
   .tpills { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 6px; } .tpill { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 12px; padding: 1px 8px 1px 2px; position: relative; font-size: 13px; }
   .tpill a { color: var(--acc); text-decoration: none; font-weight: 700; } .tpic { width: 20px; height: 20px; } .tpx { cursor: pointer; color: var(--dim); padding: 0 2px; } .tpx:hover { color: var(--fg); }
   .tplist { position: absolute; top: 100%; left: 0; z-index: 5; background: var(--g1); border: 1px solid var(--line); padding: 4px 8px; display: flex; flex-direction: column; min-width: 12ch; } .tplist a { color: var(--acc); text-decoration: none; font-size: 13px; }
@@ -430,7 +431,7 @@ async function cardOpen(name) {
       const hide = new Set((d.graph || []).map(s => s.toLowerCase())); // Graph : [ nr … ] — погашенные стороны
       const sd = Object.assign({}, d); sides.forEach(s => { if (hide.has(s)) sd[s] = []; });
       const box = el("clens"); nxSvg(box, sd); box.append(Object.assign(document.createElement("hr"), { className: "dag-divider" })); nxList(box, d); root.append(box); } }
-  if (lens.tags) { const box = el("clens"); root.append(box); await lensTags(box, c); }
+  if (lens.tags) { const box = el("clens tlens"); root.append(box); await lensTags(box, c); } // выпадающие списки — поверх, не внутри линзы
   if (lens.content) { const box = el("clens"); root.append(box); await lensContent(box, c); }
   if (lens.slots) { const box = el("clens"); lensSlots(box, c); root.append(box); }
   if (gen !== cardGen) return;
