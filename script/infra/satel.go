@@ -13,11 +13,11 @@ if p == "" || !has(satTypes, ext) {return ""}; return strings.TrimSuffix(p, ".ui
 func (q *Script) card(name string) map[string]any {
 p := q.conceptPath(name)
 if p == "" {return map[string]any{"found": false}}
-var sats []string
+sats := []string{} // нет спутников — пустой список, не null
 for _, t := range satTypes {if exists(strings.TrimSuffix(p, ".uic") + "." + t) {sats = append(sats, t)}}
 ct := strings.ToLower(setting(p, "Content"))
 if ct == "" {ct = "md"}
-var lines []string
+lines := []string{}
 if b, err := os.ReadFile(p); err == nil {lines, _ = conceptLines(b)}
 c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines}
 if q.iconFile(name) != "" {c["icon"] = "/api/icon?name=" + name}; return c }
