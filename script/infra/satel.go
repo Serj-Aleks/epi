@@ -1,6 +1,6 @@
 // epi/script/infra/satel.go
 package main
-import ("fmt"; "os"; "path/filepath"; "regexp"; "sort"; "strings"; "epi/script/disp"; "epi/script/format")
+import ("encoding/json"; "fmt"; "os"; "path/filepath"; "regexp"; "sort"; "strconv"; "strings"; "epi/script/disp"; "epi/script/format")
 // Спутники концепта (0.22, 9.18): файлы рядом с концептом — то же имя, другое
 // расширение (md, json, svg, css, xml, html, txt); Content — тип спутника, открываемого
 // по умолчанию (md). Карточка концепта — панель с линзами (вариант B, 08.11.2026).
@@ -172,3 +172,31 @@ if p == "" {return []map[string]any{}}
 _, inv := readLink(p, "Taxon")
 out := []map[string]any{}
 for _, n := range inv {if c := q.conceptPath(n); c != "" {out = append(out, map[string]any{"name": conceptName(c, ""), "tag": setting(c, "Rank") != ""})}}; return out }
+// process: ситуации процесса концепта (как GetConceptProcess ПИ) — тройки «объект
+// препозиция объект» из значений json-спутника концепта и концептов I-process; строка —
+// номер, три имени, есть ли концепт, его синонимы-концепты.
+func (q *Script) process(name string) []map[string]any {
+p := q.cidx[strings.ToLower(name)]
+out := []map[string]any{}
+if p == "" || setting(p, "Process") == "" && len(settingList(p, "Process")) == 0 {return out}
+paths := []string{p}
+for _, n := range settingList(p, "I-process") {if x := q.cidx[strings.ToLower(n)]; x != "" {paths = append(paths, x)}}
+cell := func(n string) map[string]any {
+	c := map[string]any{"name": n, "exists": false}
+	if x := q.conceptPath(n); x != "" {
+		c["name"], c["exists"] = conceptName(x, ""), true
+		as, _ := readLink(x, "Alias")
+		var ok []string
+		for _, a := range as {if y := q.conceptPath(a); y != "" {ok = append(ok, conceptName(y, ""))}}
+		c["alias"] = ok}; return c}
+for _, cp := range paths {
+	b, err := os.ReadFile(strings.TrimSuffix(cp, ".uic") + ".json")
+	if err != nil {continue}
+	var sat map[string]any
+	if json.Unmarshal(b, &sat) != nil {continue}
+	keys := make([]string, 0, len(sat))
+	for k := range sat {keys = append(keys, k)}
+	sort.Slice(keys, func(i, j int) bool {a, ea := strconv.Atoi(keys[i]); b, eb := strconv.Atoi(keys[j]); if ea == nil && eb == nil {return a < b}; return keys[i] < keys[j]})
+	for _, k := range keys {
+		s, _ := sat[k].(string)
+		if f := strings.Fields(s); len(f) == 3 {out = append(out, map[string]any{"key": len(out) + 1, "a": cell(f[0]), "p": cell(f[1]), "b": cell(f[2])})}}}; return out }
