@@ -57,7 +57,8 @@ st, err := os.Stat(q.seans(name))
 if err != nil {return err}
 b, err := os.ReadFile(q.seans(name))
 if err != nil {return err}
-vs, err := format.Parse(string(b))
+text, errLines := bangs(string(b)) // ошибка — «-> !» (09.11.2026)
+vs, err := format.Parse(text)
 if err != nil {return fmt.Errorf("%s: %w", name, err)}
 if len(vs) > 0 && !hasArrow(vs) { // сеанс прежнего вида — только предикации
 	if vs, err = q.migrateSeans(name, vs, st.Mode().Perm()); err != nil {return err}}
@@ -69,6 +70,7 @@ for i := 0; i+2 < len(vs); i += 3 {
 	t := Turn{Pred: vs[i].Text, Answer: vs[i+2].String()}
 	if vs[i].Kind == format.Array {t.Pred = format.Format(vs[i].Items)}
 	if vs[i+2].Kind == format.String {t.Answer = vs[i+2].Text} // интерпретация — строка (в том числе сообщение об ошибке)
+	t.Error = errLines[vs[i+2].Line]
 	turns = append(turns, t)}
 q.cur, q.closed, q.turns = name, st.Mode().Perm()&0200 == 0, turns; return nil }
 // newSeans: открыть сеанс seans-<сегодня>.uic. Новый сеанс — на следующий
@@ -82,7 +84,15 @@ func record(t Turn) string {
 pred := "[ " + t.Pred + " ]"
 if _, err := format.Parse(t.Pred); err != nil {pred = format.Value{Kind: format.String, Text: t.Pred}.String()}
 ans := t.Answer
-if vs, err := format.Parse(ans); t.Error || err != nil || len(vs) != 1 {ans = format.Value{Kind: format.String, Text: t.Answer}.String()}; return pred + " -> " + ans + "\n" }
+if vs, err := format.Parse(ans); t.Error || err != nil || len(vs) != 1 {ans = format.Value{Kind: format.String, Text: t.Answer}.String()}
+if t.Error {ans = "! " + ans} // ошибка — знак «!» перед ответом (09.11.2026)
+return pred + " -> " + ans + "\n" }
+// bangs: строки сеанса с ошибкой «-> !» — номера строк; знак убирается перед разбором
+// (в ASON «!» не токен, это отметка записи сеанса).
+func bangs(s string) (string, map[int]bool) {
+m := map[int]bool{}
+ls := strings.Split(s, "\n")
+for i, l := range ls {if j := strings.LastIndex(l, "-> ! "); j >= 0 {ls[i], m[i+1] = l[:j+3]+l[j+5:], true}}; return strings.Join(ls, "\n"), m }
 func appendFile(path, text string) error {
 f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 if err != nil {return err}
