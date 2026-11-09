@@ -111,7 +111,7 @@ k, _, _ := strings.Cut(line, " "); return k }
 func (q *Script) writeConcept(frame, param string, pred []format.Value) error {
 if q.theme == "" {return nil}
 if root, ok := q.linkRoot(param); ok {return q.writeLink(frame, param, pred, root, false)}
-if !format.SameTerm(param, "Alias") {return writeParam(q.conceptFile(frame), param, pred)}
+if !format.SameTerm(param, "Alias") {q.known(q.conceptFile(frame)); return writeParam(q.conceptFile(frame), param, pred)}
 path := q.conceptFile(frame) // синонимы — группа (9.21)
 old, _ := readLink(path, "Alias")
 if err := writeParam(path, "Alias", pred); err != nil {return err}
@@ -143,7 +143,8 @@ if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err
 var out []string
 for _, l := range lines {if isParam(l) {out = append(out, l)}}
 preds, err := disp.Split(format.Format(body))
-if err != nil {return err}; return writeLines(path, append(out, preds...)) }
+if err != nil {return err}
+q.known(path); return writeLines(path, append(out, preds...)) }
 // loadConcepts: системные концепты (lexic/constans — фрейм констант Const) и
 // концепты темы — параметры фреймов в контекст темы; концепт темы с тем же
 // именем дополняет и переопределяет системный в этой теме (Const.Pi : 3).
@@ -225,3 +226,7 @@ for _, t := range ts {
 	r := map[string]any{"name": t, "concepts": nc, "sats": ns, "seans": nm, "last": strings.TrimSuffix(strings.TrimPrefix(last, "seans-"), ".uic")}
 	if q.themeIcon(t) != "" {r["icon"] = "/api/themeicon?name=" + t}
 	out = append(out, r)}; return out }
+// known: файл концепта темы — в указатель концептов (новый концепт виден сразу: qwest,
+// карточка темы); файлы вне темы (лексикон) — нет.
+func (q *Script) known(path string) {
+if q.theme != "" && strings.HasPrefix(path, q.themaDir()+string(filepath.Separator)) {q.cidx[strings.ToLower(strings.TrimSuffix(filepath.Base(path), ".uic"))] = path} }

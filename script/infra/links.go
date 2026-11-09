@@ -55,12 +55,14 @@ for _, t := range old {
 	if has(d, t) {continue}
 	tp := q.targetPath(root, t)
 	if strict && !exists(tp) {continue}
+	q.known(tp)
 	td, ti := readLink(tp, param)
 	if err := writeLists(tp, param, td, without(ti, frame)); err != nil {return err}}
 for _, t := range d {
 	if has(old, t) {continue}
 	tp := q.targetPath(root, t)
 	if strict && !exists(tp) {continue}
+	q.known(tp)
 	td, ti := readLink(tp, param)
 	if !has(ti, frame) {ti = append(ti, frame)}
 	if err := writeLists(tp, param, td, ti); err != nil {return err}}; return nil }
