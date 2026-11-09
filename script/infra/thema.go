@@ -15,7 +15,7 @@ if os.IsNotExist(err) {return nil, nil}
 if err != nil {return nil, err}
 var ts []string
 for _, e := range es {if e.IsDir() {ts = append(ts, e.Name())}}
-sort.Strings(ts); return ts, nil }
+sort.Slice(ts, func(i, j int) bool {return aLess(ts[i], ts[j])}); return ts, nil }
 // checkName: имя темы — как имя объекта: с прописной буквы (9.9), любой
 // алфавит, без пробелов и разделителей пути.
 func checkName(name string) error {

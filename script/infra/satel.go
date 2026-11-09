@@ -163,7 +163,7 @@ for _, p := range q.cidx {
 	t := map[string]string{"name": n, "color": setting(p, "Color")}
 	if q.iconFile(n) != "" {t["icon"] = "/api/icon?name=" + n}
 	out = append(out, t)}
-sort.Slice(out, func(i, j int) bool {return strings.ToLower(out[i]["name"]) < strings.ToLower(out[j]["name"])}); return out }
+sort.Slice(out, func(i, j int) bool {return aLess(out[i]["name"], out[j]["name"])}); return out }
 // children: дочерние концепта — обратный список Taxon, только существующие (GetChildren ПИ);
 // tag — дочерний сам тег (задан Rank).
 func (q *Script) children(name string) []map[string]any {
@@ -171,7 +171,8 @@ p := q.conceptPath(name)
 if p == "" {return []map[string]any{}}
 _, inv := readLink(p, "Taxon")
 out := []map[string]any{}
-for _, n := range inv {if c := q.conceptPath(n); c != "" {out = append(out, map[string]any{"name": conceptName(c, ""), "tag": setting(c, "Rank") != ""})}}; return out }
+for _, n := range inv {if c := q.conceptPath(n); c != "" {out = append(out, map[string]any{"name": conceptName(c, ""), "tag": setting(c, "Rank") != ""})}}
+sort.SliceStable(out, func(i, j int) bool {return aLess(out[i]["name"].(string), out[j]["name"].(string))}); return out }
 // process: ситуации процесса концепта (как GetConceptProcess ПИ) — тройки «объект
 // препозиция объект» из значений json-спутника концепта и концептов I-process; строка —
 // номер, три имени, есть ли концепт, его синонимы-концепты.
@@ -200,3 +201,17 @@ for _, cp := range paths {
 	for _, k := range keys {
 		s, _ := sat[k].(string)
 		if f := strings.Fields(s); len(f) == 3 {out = append(out, map[string]any{"key": len(out) + 1, "a": cell(f[0]), "p": cell(f[1]), "b": cell(f[2])})}}}; return out }
+// aOrder: место литеры в алфавите темы; пробел, «-», «,» — раньше всех (BuildCharOrder ПИ).
+var aOrder = func() map[rune]int {
+m := map[rune]int{' ': -1, '-': -1, ',': -1}
+pos := 0
+for _, c := range aSort {if c != ' ' {m[c] = pos; pos++}}; return m}()
+// aLess: a раньше b в алфавите темы (CompareByASort ПИ); литеры вне алфавита — в конце.
+func aLess(a, b string) bool {
+ra, rb := []rune(strings.ToLower(a)), []rune(strings.ToLower(b))
+for i := 0; i < len(ra) && i < len(rb); i++ {
+	oa, ok := aOrder[ra[i]]
+	if !ok {oa = limit}
+	ob, ok := aOrder[rb[i]]
+	if !ok {ob = limit}
+	if oa != ob {return oa < ob}}; return len(ra) < len(rb) }

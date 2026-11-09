@@ -45,7 +45,7 @@ for k, p := range q.cidx {
 	r := map[string]string{"name": name, "key": k, "excerpt": hit, "type": typ}
 	if q.iconFile(name) != "" {r["icon"] = "/api/icon?name=" + name}
 	out = append(out, r)}
-sort.Slice(out, func(i, j int) bool {return out[i]["key"] < out[j]["key"]}); return out }
+sort.Slice(out, func(i, j int) bool {return aLess(out[i]["name"], out[j]["name"])}); return out }
 // qwest: препозиция поиска — операнд не вычисляется (слово, строка, число); ответ — число найденных.
 func (q *Script) qwest(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Term && arg.Kind != format.String && arg.Kind != format.Integer && arg.Kind != format.Decimal {return format.Value{}, false}

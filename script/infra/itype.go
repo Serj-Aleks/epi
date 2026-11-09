@@ -45,3 +45,5 @@ type Script struct {
 	tidx    map[string][]string} // трансклюзии темы: имя (строчными) → включаемые концепты (из спутников md, html, json; 9.19)
 const limit = 10000
 const gaussABC = "oiztyvslanxedbhfmg"
+// aSort: алфавит темы — порядок списков концептов и тем (ASORT ПИ, 9.21).
+const aSort = "nmlrhgkcsztdbpfvwuoaeiyjqx нмлркхгжщчшсзцтдбпфвюуоёэеиыйяаьъ"
