@@ -60,7 +60,8 @@
   .clens.tlens { overflow: visible; position: relative; z-index: 3; }
   .tpills { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 6px; } .tpill { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 12px; padding: 1px 8px 1px 2px; position: relative; font-size: 13px; }
   .tpill a { color: var(--acc); text-decoration: none; font-weight: 700; } .tpic { width: 20px; height: 20px; } .tpx { cursor: pointer; color: var(--dim); padding: 0 2px; } .tpx:hover { color: var(--fg); }
-  .tplist { position: absolute; top: 100%; left: 0; z-index: 5; background: var(--g1); border: 1px solid var(--line); padding: 4px 8px; display: flex; flex-direction: column; min-width: 12ch; } .tplist a { color: var(--acc); text-decoration: none; font-size: 13px; }
+  .tplist { position: absolute; top: calc(100% + 4px); left: 0; z-index: 5; background: var(--g1); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,.1); padding: 4px 0; display: flex; flex-direction: column; min-width: 180px; }
+  .tplist a { display: flex; align-items: center; gap: 6px; padding: 4px 12px; white-space: nowrap; color: var(--acc); text-decoration: none; font-size: 13px; } .tplist a:hover { background: var(--g2); } .tpmark { color: var(--dim); font-size: 11px; flex: none; }
   .twrap { position: relative; padding: 0 14px; display: flex; } .tdrop { position: absolute; top: 100%; left: 14px; z-index: 5; background: var(--g1); border: 1px solid var(--line); max-height: 40vh; overflow-y: auto; }
   .tdrop:empty { display: none; } .titem { padding: 2px 10px; cursor: pointer; font-size: 13px; } .titem:hover { background: var(--g2); } .tnew { color: var(--acc); font-style: italic; }
   .qlist { padding: 4px 0; } .qrow { padding: 6px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 8px; }
@@ -374,7 +375,7 @@ async function lensTags(box, c) {
     ex.onclick = async () => { const old = p.querySelector(".tplist"); if (old) { old.remove(); return; }
       const ch = await api("/api/children?name=" + encodeURIComponent(t ? t.name : n)).catch(() => []), ls = el("tplist");
       if (!ch.length) ls.append(el("cempty", "—"));
-      ch.forEach(x => { const i = document.createElement("a"); i.href = "#"; i.textContent = "▪ " + x; i.onclick = e => { e.preventDefault(); nxGo(x); }; ls.append(i); });
+      ch.forEach(x => { const i = document.createElement("a"); i.href = "#"; i.append(el("tpmark", x.tag ? "⬡" : "▪"), x.name); i.title = x.tag ? "tag" : "concept"; i.onclick = e => { e.preventDefault(); nxGo(x.name); }; ls.append(i); }); // ⬡ — тег, ▪ — концепт
       p.append(ls); };
     p.append(ic, a, ex, rm); pills.append(p); });
   const inpT = document.createElement("input"); inpT.className = "cval"; inpT.placeholder = "add tag..."; inpT.spellcheck = false;

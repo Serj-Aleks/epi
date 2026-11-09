@@ -164,10 +164,11 @@ for _, p := range q.cidx {
 	if q.iconFile(n) != "" {t["icon"] = "/api/icon?name=" + n}
 	out = append(out, t)}
 sort.Slice(out, func(i, j int) bool {return strings.ToLower(out[i]["name"]) < strings.ToLower(out[j]["name"])}); return out }
-// children: дочерние концепта — обратный список Taxon, только существующие (GetChildren ПИ).
-func (q *Script) children(name string) []string {
+// children: дочерние концепта — обратный список Taxon, только существующие (GetChildren ПИ);
+// tag — дочерний сам тег (задан Rank).
+func (q *Script) children(name string) []map[string]any {
 p := q.conceptPath(name)
-if p == "" {return []string{}}
+if p == "" {return []map[string]any{}}
 _, inv := readLink(p, "Taxon")
-out := []string{}
-for _, n := range inv {if c := q.conceptPath(n); c != "" {out = append(out, conceptName(c, ""))}}; return out }
+out := []map[string]any{}
+for _, n := range inv {if c := q.conceptPath(n); c != "" {out = append(out, map[string]any{"name": conceptName(c, ""), "tag": setting(c, "Rank") != ""})}}; return out }
