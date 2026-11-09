@@ -64,6 +64,9 @@
   .tplist a { display: flex; align-items: center; gap: 6px; padding: 4px 12px; white-space: nowrap; color: var(--acc); text-decoration: none; font-size: 13px; } .tplist a:hover { background: var(--g2); } .tpmark { color: var(--dim); font-size: 11px; flex: none; }
   .twrap { position: relative; padding: 0 14px; display: flex; } .tdrop { position: absolute; top: 100%; left: 14px; z-index: 5; background: var(--g1); border: 1px solid var(--line); max-height: 40vh; overflow-y: auto; }
   .tdrop:empty { display: none; } .titem { padding: 2px 10px; cursor: pointer; font-size: 13px; } .titem:hover { background: var(--g2); } .tnew { color: var(--acc); font-style: italic; }
+  .rtree { padding: 4px 14px; } .rrow { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 3px; white-space: nowrap; } .rrow:hover { background: var(--g2); }
+  .rarrow { width: 12px; flex: none; font-size: 10px; color: var(--dim); user-select: none; } .rarrow.on { cursor: pointer; } .rarrow.on:hover { color: var(--fg); }
+  .rlink { color: var(--acc); text-decoration: none; font-size: 13px; } .rlink:hover { text-decoration: underline dotted; } .rkids { padding-left: 20px; border-left: 1px solid var(--line); margin-left: 8px; }
   .qlist { padding: 4px 0; } .qrow { padding: 6px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 8px; }
   .qname { color: var(--acc); font-weight: 700; text-decoration: none; } .qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
   .qex { color: var(--fg); font-size: 13px; margin: 2px 0 0 36px; } mark { background: #f3d77a; color: inherit; } .chead .cval { flex: 1; max-width: 20ch; }
@@ -252,7 +255,7 @@ function nxList(box, data) {
 // иначе md; ✎ — редактор спутников), ⊞ строки концепта. В контенте [[Имя]] — ссылка
 // (переход — nexus Имя), {{Имя}} — трансклюзия: контент концепта вставляется (как
 // renderConceptView в ПИ, без повторов по кругу).
-const card = document.getElementById("card"), lens = { graph: true, tags: false, content: true, slots: false };
+const card = document.getElementById("card"), lens = { graph: true, tags: false, rank: false, content: true, slots: false };
 let cardName = null, cardTimer = null, cloneSrc = "", cardGen = 0;
 // история панели: ← возвращает к прежнему виду (карточка или список qwest с его
 // фильтром) без записи в протокол — это просмотр, а не действие.
@@ -353,10 +356,23 @@ async function qwestOpen(qs) {
   flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw();
 }
 const satTypes = ["md", "json", "svg", "css", "xml", "html", "txt"];
-// линза ⊞ — строки концепта (9.19): параметр правится, ✓ отправляет предикацию
-// «Концепт.Параметр : значение» в строку ввода — правка идёт в протокол, обратные
-// списки связей script ведёт сам (у связи правится только прямой список); строки
-// тела фрейма — только для чтения; последняя строка — новый параметр.
+// линза ранга ◈ (как lrank.js ПИ): дерево дочерних концепта (обратный Taxon) на глубину
+// Rank; ▶ — раскрыть уровень, ⬡ — дочерний сам тег, ▪ — концепт; кнопка — только при Rank > 0.
+const cardRank = c => { for (const l of c.lines || []) { const m = l.match(/^Rank : (\d+)/); if (m) return +m[1]; } return 0; };
+async function lensRank(box, c) {
+  const max = cardRank(c), tree = el("rtree");
+  const node = (x, depth) => { const n = el("rnode"), row = el("rrow"), ar = el("rarrow", depth < max ? "▶" : " ");
+    const a = document.createElement("a"); a.href = "#"; a.className = "rlink"; a.textContent = x.name; a.onclick = e => { e.preventDefault(); nxGo(x.name); };
+    row.append(ar, el("tpmark", x.tag ? "⬡" : "▪"), a); n.append(row);
+    if (depth < max) { const kids = el("rkids"); kids.hidden = true; n.append(kids); ar.classList.add("on");
+      ar.onclick = async () => { if (kids.hidden && !kids.dataset.loaded) { kids.dataset.loaded = "1"; const ch = await api("/api/children?name=" + encodeURIComponent(x.name)).catch(() => []);
+          if (!ch.length) kids.append(el("cempty", "—")); ch.forEach(y => kids.append(node(y, depth + 1))); }
+        kids.hidden = !kids.hidden; ar.textContent = kids.hidden ? "▶" : "▼"; }; }
+    return n; };
+  const ch = await api("/api/children?name=" + encodeURIComponent(c.name)).catch(() => []);
+  if (!ch.length) tree.append(el("cempty", "нет дочерних")); ch.forEach(x => tree.append(node(x, 1)));
+  box.append(tree);
+}
 // линза тегов ⬡ (как ltags.js ПИ): теги концепта — его Taxon; тег — концепт темы с Rank.
 // Плашка: картинка, имя (переход), ▾ — дочерние тега, × — убрать; поле — подбор тега;
 // концепт без Rank — «сделать тегом» (Rank : 0), нет такого — «создать тег». Каждая
@@ -394,6 +410,10 @@ async function lensTags(box, c) {
   const wrap = el("twrap"); wrap.append(inpT, drop);
   box.append(pills, wrap);
 }
+// линза ⊞ — строки концепта (9.19): параметр правится, ✓ отправляет предикацию
+// «Концепт.Параметр : значение» в строку ввода — правка идёт в протокол, обратные
+// списки связей script ведёт сам (у связи правится только прямой список); строки
+// тела фрейма — только для чтения; последняя строка — новый параметр.
 const linkKeys = ["Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix"];
 function lensSlots(box, c) {
   const send = (k, v) => { if (!k.trim() || !v.trim()) return; inp.value = c.name + "." + k.trim() + " : " + v.trim(); document.getElementById("f").requestSubmit(); };
@@ -422,7 +442,7 @@ async function cardOpen(name) {
   const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
   head.append(pBackBtn(), ic, el("cname", c.name));
   const tools = el("ctools");
-  [["graph", "✦"], ["tags", "⬡"], ["content", "≡"], ["slots", "⊞"]].forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardOpen(c.name); }; tools.append(b); });
+  [["graph", "✦"], ["tags", "⬡"], ["content", "≡"], ["rank", "◈"], ["slots", "⊞"]].filter(([k]) => k !== "rank" || cardRank(c) > 0).forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardOpen(c.name); }; tools.append(b); });
   const cl = document.createElement("button"); cl.textContent = "⧉"; cl.title = "clone"; cl.onclick = () => { cloneSrc = c.name; askName("clone"); }; tools.prepend(cl); // клон — как в ПИ
   const x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
   head.append(tools); root.append(head);
@@ -434,6 +454,7 @@ async function cardOpen(name) {
       const box = el("clens"); nxSvg(box, sd); box.append(Object.assign(document.createElement("hr"), { className: "dag-divider" })); nxList(box, d); root.append(box); } }
   if (lens.tags) { const box = el("clens tlens"); root.append(box); await lensTags(box, c); } // выпадающие списки — поверх, не внутри линзы
   if (lens.content) { const box = el("clens"); root.append(box); await lensContent(box, c); }
+  if (lens.rank && cardRank(c) > 0) { const box = el("clens"); root.append(box); await lensRank(box, c); }
   if (lens.slots) { const box = el("clens"); lensSlots(box, c); root.append(box); }
   if (gen !== cardGen) return;
   cardCss(css); card.hidden = false; card.replaceChildren(...root.childNodes); card.scrollTop = keep;
