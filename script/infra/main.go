@@ -164,6 +164,11 @@ if req.URL.Path == "/api/themes" {json.NewEncoder(w).Encode(q.themesInfo()); ret
 if req.URL.Path == "/api/themeicon" {n := req.URL.Query().Get("name"); if _, ok := q.themeExists(n); !ok || q.themeIcon(n) == "" {http.NotFound(w, req); return}; w.Header().Del("Content-Type"); http.ServeFile(w, req, q.themeIcon(n)); return}
 if req.URL.Path == "/api/process" {json.NewEncoder(w).Encode(q.process(req.URL.Query().Get("name"))); return} // ситуации процесса (линза процесса, 9.21)
 if req.URL.Path == "/api/children" {json.NewEncoder(w).Encode(q.children(req.URL.Query().Get("name"))); return} // дочерние (обратный Taxon)
+if req.URL.Path == "/api/situation" { // новая ситуация процесса (линза ⊛): Text — «объект препозиция объект»
+	f := strings.Fields(body.Text)
+	if len(f) != 3 {fail(http.StatusBadRequest, "ситуация — три слова: объект, препозиция, объект"); return}
+	if err := q.situation(body.Name, f[0], f[1], f[2]); err != nil {fail(http.StatusBadRequest, err.Error()); return}
+	json.NewEncoder(w).Encode(q.process(body.Name)); return}
 if req.URL.Path == "/api/sat" { // спутник концепта: прочитать (GET) или записать (POST)
 	if req.Method == http.MethodGet {
 		p := q.satFile(req.URL.Query().Get("name"), req.URL.Query().Get("ext"))

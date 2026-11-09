@@ -481,7 +481,7 @@ async function lensTabs(box, c) {
 // I-process; имя концепта — переход, ▶ — его синонимы; кнопка — только при Process.
 async function lensProcess(box, c) {
   const rows = await api("/api/process?name=" + encodeURIComponent(c.name)).catch(() => []);
-  if (!rows.length) { box.append(el("cempty", "нет ситуаций")); return; }
+  if (!rows.length) box.append(el("cempty", "нет ситуаций"));
   const t = document.createElement("table"); t.className = "ptab";
   t.innerHTML = "<tr><th>№</th><th>объект</th><th>препозиция</th><th>объект</th></tr>";
   const cell = x => { const td = document.createElement("td");
@@ -489,6 +489,10 @@ async function lensProcess(box, c) {
     if (x.alias && x.alias.length) { const tr = document.createElement("span"); tr.className = "ptrig"; tr.textContent = "▶"; tr.onclick = e => nxTip(e, { name: x.name, neighbors: x.alias.map(n => ({ name: n })) }, x.name); td.append(" ", tr); }
     return td; };
   rows.forEach(r => { const tr = document.createElement("tr"), n = document.createElement("td"); n.className = "pnum"; n.textContent = r.key; tr.append(n, cell(r.a), cell(r.p), cell(r.b)); t.append(tr); });
+  const add = document.createElement("tr"), ins = [0, 1, 2].map(i => { const td = document.createElement("td"), v = document.createElement("input"); v.className = "cval"; v.placeholder = ["объект", "препозиция", "объект"][i]; v.spellcheck = false; td.append(v); add.append(td); return v; }); // новая ситуация — со следующим номером в теме
+  const okd = document.createElement("td"), ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "добавить ситуацию"; okd.append(ok); add.prepend(okd);
+  ok.onclick = async () => { const s = ins.map(v => v.value.trim()); if (s.some(x => !x)) return; try { await api("/api/situation", { name: c.name, text: s.join(" ") }); } catch (e) { note.textContent = e.message; return; } cardOpen(c.name); };
+  ins.forEach(v => v.onkeydown = e => { if (e.key === "Enter") ok.click(); }); t.append(add);
   const w = el("pwrap"); w.append(t); box.append(w);
 }
 // линза ранга ◈ (как lrank.js ПИ): дерево дочерних концепта (обратный Taxon) на глубину

@@ -177,7 +177,8 @@ for _, cp := range paths {
 	sort.Slice(keys, func(i, j int) bool {a, ea := strconv.Atoi(keys[i]); b, eb := strconv.Atoi(keys[j]); if ea == nil && eb == nil {return a < b}; return keys[i] < keys[j]})
 	for _, k := range keys {
 		s, _ := sat[k].(string)
-		if f := strings.Fields(s); len(f) == 3 {out = append(out, map[string]any{"key": len(out) + 1, "a": cell(f[0]), "p": cell(f[1]), "b": cell(f[2])})}}}; return out }
+		if f := strings.Fields(s); len(f) == 3 {out = append(out, map[string]any{"key": k, "a": cell(f[0]), "p": cell(f[1]), "b": cell(f[2])})}}}
+sort.SliceStable(out, func(i, j int) bool {a, ea := strconv.Atoi(out[i]["key"].(string)); b, eb := strconv.Atoi(out[j]["key"].(string)); return ea == nil && (eb != nil || a < b)}); return out } // по номеру ситуации
 // aOrder: место литеры в алфавите темы; пробел, «-», «,» — раньше всех (BuildCharOrder ПИ).
 var aOrder = func() map[rune]int {
 m := map[rune]int{' ': -1, '-': -1, ',': -1}
@@ -379,3 +380,39 @@ for i, v := range vs {
 		for _, y := range items {if x.Kind == format.Term && y.Kind == format.Term && format.SameTerm(x.Text, y.Text) {dup = true}}
 		if !dup {items = append(items, x)}}
 	vs[i].Items = items}; return lineKey(l) + " : " + format.Format(vs) }
+// reGauss: гаусс-индекс ситуации (ТЕМП, ПИ): литеры o — 0, i — 1, z — 2, троичная запись
+// номера (oooi — 1, oooz — 2; пользователь, 09.11.2026).
+var reGauss = regexp.MustCompile(`^[oiz]{2,}$`)
+// gaussKeys: ключи-гаусс-индексы json-спутника — числами (oooz → 2); один раз, при открытии темы.
+func gaussKeys(path string) {
+b, err := os.ReadFile(path)
+if err != nil {return}
+var m map[string]any
+if json.Unmarshal(b, &m) != nil {return}
+changed := false
+for k, v := range m {
+	if !reGauss.MatchString(k) {continue}
+	n := 0
+	for _, c := range k {n = n*3 + strings.IndexRune("oiz", c)}
+	nk := strconv.Itoa(n)
+	if _, taken := m[nk]; taken {continue}
+	delete(m, k); m[nk] = v; changed = true}
+if changed {out, _ := json.MarshalIndent(m, "", "  "); os.WriteFile(path, out, 0644)} }
+// situation: новая ситуация «a p b» концепта name — в его json с номером на единицу
+// больше наибольшего номера ситуаций в теме (индекс ситуаций, 09.11.2026).
+func (q *Script) situation(name, a, p, b string) error {
+cp := q.cidx[strings.ToLower(name)]
+if cp == "" {return fmt.Errorf("концепта %s в теме нет", name)}
+if a == "" || p == "" || b == "" || strings.ContainsAny(a+p+b, " \t") {return fmt.Errorf("ситуация — три слова: объект, препозиция, объект")}
+next := 1
+for _, x := range q.cidx {
+	jb, err := os.ReadFile(strings.TrimSuffix(x, ".uic") + ".json")
+	if err != nil {continue}
+	var m map[string]any
+	if json.Unmarshal(jb, &m) != nil {continue}
+	for k, v := range m {if s, ok := v.(string); ok && len(strings.Fields(s)) == 3 {if n, err := strconv.Atoi(k); err == nil && n >= next {next = n + 1}}}}
+jp := strings.TrimSuffix(cp, ".uic") + ".json"
+m := map[string]any{}
+if jb, err := os.ReadFile(jp); err == nil {if json.Unmarshal(jb, &m) != nil {return fmt.Errorf("%s: json не читается", jp)}}
+m[strconv.Itoa(next)] = a + " " + p + " " + b
+out, _ := json.MarshalIndent(m, "", "  "); return os.WriteFile(jp, out, 0644) }
