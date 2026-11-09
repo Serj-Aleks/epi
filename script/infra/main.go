@@ -158,6 +158,7 @@ if req.URL.Path == "/api/card" {json.NewEncoder(w).Encode(q.card(req.URL.Query()
 if req.URL.Path == "/api/qwest" {json.NewEncoder(w).Encode(q.qwestFind(req.URL.Query().Get("q"))); return} // поиск: список для панели (9.20)
 if req.URL.Path == "/api/qwizt" {json.NewEncoder(w).Encode(q.qwizFind(req.URL.Query().Get("q"))); return} // поиск во всех темах
 if req.URL.Path == "/api/tags" {json.NewEncoder(w).Encode(q.tags()); return} // теги темы (линза тегов, 9.21)
+if req.URL.Path == "/api/dict" {json.NewEncoder(w).Encode(q.dict(req.URL.Query().Get("name"))); return} // словари концепта (Defs)
 if req.URL.Path == "/api/themes" {json.NewEncoder(w).Encode(q.themesInfo()); return} // темы со счётчиками (карточка темы)
 if req.URL.Path == "/api/themeicon" {n := req.URL.Query().Get("name"); if _, ok := q.themeExists(n); !ok || q.themeIcon(n) == "" {http.NotFound(w, req); return}; w.Header().Del("Content-Type"); http.ServeFile(w, req, q.themeIcon(n)); return}
 if req.URL.Path == "/api/process" {json.NewEncoder(w).Encode(q.process(req.URL.Query().Get("name"))); return} // ситуации процесса (линза процесса, 9.21)

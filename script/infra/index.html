@@ -75,6 +75,7 @@
   #ticon { width: 34px; height: 30px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; } #ticon svg, #ticon img { width: 24px; height: 24px; }
   .thlist { padding: 4px 0; } .throw { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-bottom: 1px dotted var(--line); flex-wrap: wrap; } .throw.on { background: var(--g2); }
   .thmeta { color: var(--dim); font-size: 12px; margin-left: auto; } .thfilter { display: flex; align-items: center; gap: 8px; padding: 8px 14px 0; }
+  .dterm { text-decoration: underline dotted var(--acc); text-underline-offset: 3px; cursor: help; } .dtdef { margin: 4px 0; white-space: pre-wrap; } .dtdict { color: rgba(245, 242, 236, 0.7); text-decoration: none; font-size: 11px; }
   .qlist { padding: 4px 0; } .qrow { padding: 6px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 8px; }
   .qname { color: var(--acc); font-weight: 700; text-decoration: none; } .qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
   .qex { color: var(--fg); font-size: 13px; margin: 2px 0 0 36px; } mark { background: #f3d77a; color: inherit; } .chead .cval { flex: 1; max-width: 20ch; }
@@ -326,7 +327,7 @@ function cardLinks(box) { box.querySelectorAll("a.cref").forEach(a => a.onclick 
 async function lensContent(box, c) {
   const bar = el("cbar"), body = el("cbody");
   const view = async () => { bar.innerHTML = ""; const b = document.createElement("button"); b.textContent = "✎"; b.title = "redaction"; b.onclick = edit; bar.append(b);
-    const h = await cardRender(c.name, c.content, []).catch(() => null); body.innerHTML = h ? h : '<div class="cempty">—</div>'; cardLinks(body); };
+    const h = await cardRender(c.name, c.content, []).catch(() => null); body.innerHTML = h ? h : '<div class="cempty">—</div>'; cardLinks(body); await dictMark(body, c.name); };
   const edit = async () => { bar.innerHTML = "";
     const s = document.createElement("select"); satTypes.forEach(t => { const o = document.createElement("option"); o.value = o.textContent = t + (c.sats.includes(t) ? "" : " ·"); o.value = t; o.selected = t === c.content; s.append(o); });
     const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "record";
@@ -392,6 +393,36 @@ async function themeOpen() {
       const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.innerHTML = mark(r.name, fs); a.onclick = e => { e.preventDefault(); nxGo(r.name); };
       const top = el("qtop"); top.append(ic2, a); row.append(top); list.append(row); }); };
   flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw();
+}
+// словари (9.21): в контенте отмечаются левые части json словарей концепта (Defs) —
+// нечётко, по первым Deep литерам каждого слова (слово короче Deep — точно); при наведении —
+// подсказка: термин, определение (правая часть), словарь (переход).
+const wordsOf = s => s.toLowerCase().split(/[\s\-_]+/).filter(Boolean);
+const wordEq = (a, b, d) => a.length < d || b.length < d ? a === b : a.slice(0, d) === b.slice(0, d);
+async function dictMark(root, name) {
+  const d = await api("/api/dict?name=" + encodeURIComponent(name)).catch(() => null);
+  if (!d || !d.terms.length) return;
+  const terms = d.terms.map(t => ({ ...t, ws: wordsOf(t.term) })).filter(t => t.ws.length);
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement.closest("a, code, pre, .dterm") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  const nodes = []; while (walk.nextNode()) nodes.push(walk.currentNode);
+  for (const n of nodes) {
+    const parts = n.textContent.split(/([\p{L}\p{N}]+)/u); // нечётные — слова
+    const out = []; let changed = false;
+    for (let i = 0; i < parts.length; i++) {
+      if (i % 2 === 0) { out.push(parts[i]); continue; }
+      const hit = terms.find(t => t.ws.every((w, k) => { const j = i + 2 * k; return j < parts.length && wordEq(parts[j].toLowerCase(), w, d.deep) && (k === 0 || /^[\s\-_]+$/.test(parts[j - 1])); }));
+      if (!hit) { out.push(parts[i]); continue; }
+      const span = document.createElement("span"); span.className = "dterm"; span.textContent = parts.slice(i, i + 2 * hit.ws.length - 1).join("");
+      span.onmouseenter = e => dictTip(e, hit); span.onmouseleave = () => setTimeout(() => { if (!document.querySelector(".dag-tooltip:hover")) document.querySelectorAll(".dag-tooltip").forEach(x => x.remove()); }, 400); out.push(span); i += 2 * hit.ws.length - 2; changed = true; }
+    if (changed) n.replaceWith(...out);
+  }
+}
+function dictTip(e, t) {
+  document.querySelectorAll(".dag-tooltip").forEach(x => x.remove());
+  const tip = el("dag-tooltip"); tip.append(el("dag-tooltip-title", t.term), el("dtdef", t.def));
+  const a = document.createElement("a"); a.href = "#"; a.className = "dtdict"; a.textContent = "↗ " + t.dict; a.onclick = ev => { ev.preventDefault(); nxGo(t.dict); }; tip.append(a);
+  tip.style.left = Math.min(e.clientX + 12, innerWidth - 300) + "px"; tip.style.top = (e.clientY + 14) + "px"; tip.style.maxWidth = "280px";
+  tip.onmouseleave = () => tip.remove(); document.body.append(tip);
 }
 const satTypes = ["md", "json", "svg", "css", "xml", "html", "txt"];
 // линза вкладок ↕ (как ltabs.js ПИ): дочерние концепта (обратный Taxon) — вкладками,

@@ -215,3 +215,22 @@ for i := 0; i < len(ra) && i < len(rb); i++ {
 	ob, ok := aOrder[rb[i]]
 	if !ok {ob = limit}
 	if oa != ob {return oa < ob}}; return len(ra) < len(rb) }
+// dict: словари концепта (9.21, решено 09.11.2026) — концепты из его Defs; словарь —
+// json-спутник из пар «термин : определение» (левая и правая части); Deep — глубина
+// нечёткого поиска (первые Deep литер слова, по умолчанию 3, как в ПИ).
+func (q *Script) dict(name string) map[string]any {
+p := q.conceptPath(name)
+out := map[string]any{"deep": 3, "terms": []map[string]string{}}
+if p == "" {return out}
+if d, err := strconv.Atoi(setting(p, "Deep")); err == nil && d > 0 {out["deep"] = d}
+var terms []map[string]string
+for _, n := range settingList(p, "Defs") {
+	dp := q.conceptPath(n)
+	if dp == "" {continue}
+	b, err := os.ReadFile(strings.TrimSuffix(dp, ".uic") + ".json")
+	if err != nil {continue}
+	var sat map[string]any
+	if json.Unmarshal(b, &sat) != nil {continue}
+	for k, v := range sat {if s, ok := v.(string); ok && strings.TrimSpace(k) != "" {terms = append(terms, map[string]string{"term": k, "def": s, "dict": conceptName(dp, "")})}}}
+sort.Slice(terms, func(i, j int) bool {return len(terms[i]["term"]) > len(terms[j]["term"])}) // длинные термины — раньше
+if terms != nil {out["terms"] = terms}; return out }
