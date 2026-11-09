@@ -47,3 +47,6 @@ const limit = 10000
 const gaussABC = "oiztyvslanxedbhfmg"
 // aSort: алфавит темы — порядок списков концептов и тем (ASORT ПИ, 9.21).
 const aSort = "nmlrhgkcsztdbpfvwuoaeiyjqx нмлркхгжщчшсзцтдбпфвюуоёэеиыйяаьъ"
+// gaussDigits: цифры системы счисления Гаусса (18-ричная, ТЕМП; пользователь, 09.11.2026):
+// o i z t y v s l a n x e d b h f m g — 0 … 17; гаусс-индекс ситуации — её номер.
+const gaussDigits = "oiztyvslanxedbhfmg"

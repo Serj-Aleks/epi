@@ -279,7 +279,9 @@ function pPush(s) { const t = pstack[pstack.length - 1]; if (!t || t.k !== s.k |
 function pBack() { if (pstack.length < 2) return; pstack.pop(); const s = pstack[pstack.length - 1]; s.k === "c" ? cardShow(s.a, true) : s.k === "t" ? themeShow(true) : qwestShow(s.a, true, s.all); }
 function pBackBtn() { const b = document.createElement("button"); b.textContent = "←"; b.title = "back"; b.disabled = pstack.length < 2; b.onclick = pBack; return b; }
 function cardShow(name, back) { if (!back) pPush({ k: "c", a: name }); cardName = name; qwestKey = null; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
-function cardHide() { cardName = null; qwestKey = null; pstack = []; card.hidden = true; card.innerHTML = ""; cardCss(""); }
+function cardHide() { cardName = null; qwestKey = null; pstack = []; card.hidden = true; card.innerHTML = ""; cardCss(""); favicon(""); }
+// favicon: картинка вкладки браузера — концепта открытой карточки (как в ПИ), без карточки — своя.
+function favicon(url) { let l = document.querySelector("link[rel=icon]"); if (!l) { l = document.createElement("link"); l.rel = "icon"; document.head.append(l); } l.href = url || "data:,"; }
 // стиль концепта — спутник css (как в ПИ: стиль страницы концепта); в EPI страница
 // концепта — карточка: селекторы body, html, :root относятся к карточке, остальные —
 // внутри неё; правила @ — как есть. Стиль снимается при смене карточки.
@@ -580,6 +582,8 @@ async function cardOpen(name) {
   const keep = card.dataset.name === c.name ? card.scrollTop : 0; card.dataset.name = c.name; // новая карточка — с начала, та же после правки — на месте
   const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
   head.append(pBackBtn(), ic, el("cname", c.name));
+  if (c.color) { head.style.borderBottom = "3px solid " + c.color; head.querySelector(".cname").style.color = c.color; } // цвет концепта — и в шапке карточки
+  favicon(c.icon); // картинка концепта — во вкладке браузера
   const tools = el("ctools");
   [["graph", "✦"], ["tags", "⬡"], ["content", "≡"], ["process", "⊛"], ["rank", "◈"], ["tabs", "↕"], ["slots", "⊞"]].filter(([k]) => (k !== "rank" || cardRank(c) > 0) && (k !== "tabs" || cardSet(c, "Tabs")) && (k !== "process" || cardSet(c, "Process"))).forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardOpen(c.name); }; tools.append(b); });
   const cl = document.createElement("button"); cl.textContent = "⧉"; cl.title = "clone"; cl.onclick = () => { cloneSrc = c.name; askName("clone"); }; tools.prepend(cl); // клон — как в ПИ

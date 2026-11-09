@@ -19,7 +19,7 @@ ct := strings.ToLower(setting(p, "Content"))
 if ct == "" {ct = "md"}
 lines := []string{}
 if b, err := os.ReadFile(p); err == nil {lines, _ = conceptLines(b)}
-c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines}
+c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color")}
 if q.iconFile(name) != "" {c["icon"] = "/api/icon?name=" + name}; return c }
 // reLink: ссылка [[Имя]] в контенте (вне блоков кода) — как SyncContentLinks в ПИ.
 var reLink, reFence = regexp.MustCompile(`\[\[([^\]]+)\]\]`), regexp.MustCompile("(?s)```.*?```")
@@ -380,9 +380,9 @@ for i, v := range vs {
 		for _, y := range items {if x.Kind == format.Term && y.Kind == format.Term && format.SameTerm(x.Text, y.Text) {dup = true}}
 		if !dup {items = append(items, x)}}
 	vs[i].Items = items}; return lineKey(l) + " : " + format.Format(vs) }
-// reGauss: гаусс-индекс ситуации (ТЕМП, ПИ): литеры o — 0, i — 1, z — 2, троичная запись
-// номера (oooi — 1, oooz — 2; пользователь, 09.11.2026).
-var reGauss = regexp.MustCompile(`^[oiz]{2,}$`)
+// reGauss: гаусс-индекс ситуации — число в системе счисления Гаусса (пользователь, ТЕМП):
+// 18-ричная, цифры gaussDigits (o — 0 … g — 17).
+var reGauss = regexp.MustCompile(`^[` + gaussDigits + `]{2,}$`)
 // gaussKeys: ключи-гаусс-индексы json-спутника — числами (oooz → 2); один раз, при открытии темы.
 func gaussKeys(path string) {
 b, err := os.ReadFile(path)
@@ -391,9 +391,9 @@ var m map[string]any
 if json.Unmarshal(b, &m) != nil {return}
 changed := false
 for k, v := range m {
-	if !reGauss.MatchString(k) {continue}
+	if s, ok := v.(string); !ok || !reGauss.MatchString(k) || len(strings.Fields(s)) != 3 {continue} // только ситуации: значение из трёх слов
 	n := 0
-	for _, c := range k {n = n*3 + strings.IndexRune("oiz", c)}
+	for _, c := range k {n = n*18 + strings.IndexRune(gaussDigits, c)}
 	nk := strconv.Itoa(n)
 	if _, taken := m[nk]; taken {continue}
 	delete(m, k); m[nk] = v; changed = true}
@@ -416,9 +416,9 @@ m := map[string]any{}
 if jb, err := os.ReadFile(jp); err == nil {if json.Unmarshal(jb, &m) != nil {return fmt.Errorf("%s: json не читается", jp)}}
 m[strconv.Itoa(next)] = a + " " + p + " " + b
 out, _ := json.MarshalIndent(m, "", "  "); return os.WriteFile(jp, out, 0644) }
-// reSitKey: ключ ситуации в json — номер или буквенный индекс (o, i, z, t …); прочие ключи
+// reSitKey: ключ ситуации в json — номер или гаусс-индекс; прочие ключи
 // (словари: «термин : определение») — не ситуации и не трогаются.
-var reSitKey = regexp.MustCompile(`^([0-9]+|[oizt]{2,})$`)
+var reSitKey = regexp.MustCompile(`^([0-9]+|[` + gaussDigits + `]{2,})$`)
 // renumber: индекс ситуаций темы однозначен (пользователь, 09.11.2026): если номера
 // повторяются или ключ не число — все ситуации темы нумеруются заново подряд с 0:
 // концепты — в алфавите темы, ситуации концепта — по прежнему номеру (не число — в конце).
