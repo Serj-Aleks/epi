@@ -58,6 +58,7 @@ if err := q.loadIgnor(); err != nil {return err}
 q.env = disp.NewEnv(nil)
 if err := q.loadAliases(); err != nil {return err}
 if err := q.loadConcepts(); err != nil {return err}
+q.renumber() // индекс ситуаций — однозначен в теме
 ss, err := q.list()
 if err != nil {return err}
 for _, s := range ss {if !s.Closed {return q.switchTo(s.Name)}}; q.saveState(); return nil }

@@ -416,3 +416,39 @@ m := map[string]any{}
 if jb, err := os.ReadFile(jp); err == nil {if json.Unmarshal(jb, &m) != nil {return fmt.Errorf("%s: json не читается", jp)}}
 m[strconv.Itoa(next)] = a + " " + p + " " + b
 out, _ := json.MarshalIndent(m, "", "  "); return os.WriteFile(jp, out, 0644) }
+// reSitKey: ключ ситуации в json — номер или буквенный индекс (o, i, z, t …); прочие ключи
+// (словари: «термин : определение») — не ситуации и не трогаются.
+var reSitKey = regexp.MustCompile(`^([0-9]+|[oizt]{2,})$`)
+// renumber: индекс ситуаций темы однозначен (пользователь, 09.11.2026): если номера
+// повторяются или ключ не число — все ситуации темы нумеруются заново подряд с 0:
+// концепты — в алфавите темы, ситуации концепта — по прежнему номеру (не число — в конце).
+func (q *Script) renumber() {
+type sit struct{k, v string}
+paths := make([]string, 0, len(q.cidx))
+for _, p := range q.cidx {paths = append(paths, p)}
+sort.Slice(paths, func(i, j int) bool {return aLess(conceptName(paths[i], ""), conceptName(paths[j], ""))})
+all, seen, bad := map[string][]sit{}, map[int]bool{}, false
+for _, p := range paths {
+	jp := strings.TrimSuffix(p, ".uic") + ".json"
+	b, err := os.ReadFile(jp)
+	if err != nil {continue}
+	var m map[string]any
+	if json.Unmarshal(b, &m) != nil {continue}
+	var ss []sit
+	for k, v := range m {if s, ok := v.(string); ok && reSitKey.MatchString(k) && len(strings.Fields(s)) == 3 {ss = append(ss, sit{k, s})}}
+	sort.Slice(ss, func(i, j int) bool {a, ea := strconv.Atoi(ss[i].k); c, ec := strconv.Atoi(ss[j].k); if ea == nil && ec == nil {return a < c}; return ea == nil})
+	for _, s := range ss {n, err := strconv.Atoi(s.k); if err != nil || seen[n] {bad = true}; seen[n] = true}
+	if len(ss) > 0 {all[jp] = ss}}
+if !bad {return}
+n := 0
+for _, p := range paths {
+	jp := strings.TrimSuffix(p, ".uic") + ".json"
+	ss := all[jp]
+	if len(ss) == 0 {continue}
+	b, _ := os.ReadFile(jp)
+	var m map[string]any
+	json.Unmarshal(b, &m)
+	for _, s := range ss {delete(m, s.k)}
+	for _, s := range ss {m[strconv.Itoa(n)] = s.v; n++}
+	out, _ := json.MarshalIndent(m, "", "  ")
+	os.WriteFile(jp, out, 0644)} }
