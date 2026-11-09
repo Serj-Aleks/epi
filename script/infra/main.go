@@ -22,7 +22,7 @@ q.in = disp.New(limit, func(string) bool { return false })
 // фреймы-интерпретаторы: lexic/preposit (9.13) — только системная часть
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 q.in.Frame("trans").Kernel["trans"] = q.trans // транслятор (9.16): ядро — словари среды
-q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus, "qwest": q.qwest, "clone": q.clone, "rename": q.rename} // локальный контекст (9.17), поиск (9.20), клон и переименование (9.19, 9.21)
+q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus, "qwest": q.qwest, "clone": q.clone, "rename": q.rename, "qwizt": q.qwizt} // локальный контекст (9.17), поиск (9.20), клон и переименование (9.19, 9.21)
 // фреймы автора сохраняются в активной теме (9.14)
 q.in.OnParam = func(frame, param string, pred []format.Value) {if err := q.writeConcept(frame, param, pred); err != nil {log.Print(err)}}
 q.in.OnFrame = func(name string, body []format.Value) {if err := q.writeBody(name, body); err != nil {log.Print(err)}}
@@ -156,6 +156,7 @@ fail := func(code int, msg string) { http.Error(w, msg, code) }
 if req.URL.Path == "/api/nexus" {json.NewEncoder(w).Encode(q.nexusGraph(req.URL.Query().Get("name"))); return} // граф локального контекста (9.17)
 if req.URL.Path == "/api/card" {json.NewEncoder(w).Encode(q.card(req.URL.Query().Get("name"))); return} // карточка концепта (панель, 9.19)
 if req.URL.Path == "/api/qwest" {json.NewEncoder(w).Encode(q.qwestFind(req.URL.Query().Get("q"))); return} // поиск: список для панели (9.20)
+if req.URL.Path == "/api/qwizt" {json.NewEncoder(w).Encode(q.qwizFind(req.URL.Query().Get("q"))); return} // поиск во всех темах
 if req.URL.Path == "/api/tags" {json.NewEncoder(w).Encode(q.tags()); return} // теги темы (линза тегов, 9.21)
 if req.URL.Path == "/api/themes" {json.NewEncoder(w).Encode(q.themesInfo()); return} // темы со счётчиками (карточка темы)
 if req.URL.Path == "/api/themeicon" {n := req.URL.Query().Get("name"); if _, ok := q.themeExists(n); !ok || q.themeIcon(n) == "" {http.NotFound(w, req); return}; w.Header().Del("Content-Type"); http.ServeFile(w, req, q.themeIcon(n)); return}

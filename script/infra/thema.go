@@ -93,12 +93,14 @@ for _, l := range strings.Split(string(b), "\n") {
 func (q *Script) conceptFile(name string) string {
 if p, ok := q.cidx[strings.ToLower(name)]; ok {return p}; return letterPath(q.themaDir(), name) }
 // indexConcepts: указатель концептов темы.
-func (q *Script) indexConcepts() {
-q.cidx = map[string]string{}
-filepath.WalkDir(q.themaDir(), func(path string, d os.DirEntry, err error) error {
+func (q *Script) indexConcepts() {q.cidx = themeIndex(q.themaDir()); q.indexTranscl() }
+// themeIndex: указатель концептов темы в папке dir — имя (строчными) → файл.
+func themeIndex(dir string) map[string]string {
+idx := map[string]string{}
+filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 	if err != nil {return nil}
 	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
-	if !d.IsDir() && strings.HasSuffix(path, ".uic") {q.cidx[strings.ToLower(strings.TrimSuffix(d.Name(), ".uic"))] = path}; return nil}); q.indexTranscl() }
+	if !d.IsDir() && strings.HasSuffix(path, ".uic") {idx[strings.ToLower(strings.TrimSuffix(d.Name(), ".uic"))] = path}; return nil}); return idx }
 // conceptLines: строки-модели концепта «Параметр : предикация» (0.23).
 func conceptLines(b []byte) ([]string, error) {return disp.Split(string(b)) }
 // lineKey: параметр строки «Параметр : …».
