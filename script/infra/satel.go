@@ -353,6 +353,7 @@ for _, f := range conceptFiles(dp, main)[1:] {
 		if err := os.WriteFile(f[1], out, 0644); err != nil {return err}
 	case app && exists(f[1]):
 		a, _ := os.ReadFile(f[1]); b, _ := os.ReadFile(f[0])
+		if strings.Contains(string(a), strings.TrimSpace(string(b))) {continue} // такой текст у главного уже есть (клон) — не дублировать
 		if err := os.WriteFile(f[1], []byte(string(a)+sep+string(b)), 0644); err != nil {return err}
 	case !exists(f[1]):
 		os.MkdirAll(filepath.Dir(f[1]), 0755)
