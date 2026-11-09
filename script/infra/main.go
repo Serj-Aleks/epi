@@ -72,7 +72,7 @@ for i := 0; i+2 < len(vs); i += 3 {
 	if vs[i+2].Kind == format.String {t.Answer = vs[i+2].Text} // интерпретация — строка (в том числе сообщение об ошибке)
 	t.Error = errLines[vs[i+2].Line]
 	turns = append(turns, t)}
-q.cur, q.closed, q.turns = name, st.Mode().Perm()&0200 == 0, turns; return nil }
+q.cur, q.closed, q.turns = name, st.Mode().Perm()&0200 == 0, turns; q.saveState(); return nil }
 // newSeans: открыть сеанс seans-<сегодня>.uic. Новый сеанс — на следующий
 // день; в тот же день сеанс продолжается.
 func (q *Script) newSeans() error {

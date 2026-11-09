@@ -60,18 +60,33 @@ if err := q.loadAliases(); err != nil {return err}
 if err := q.loadConcepts(); err != nil {return err}
 ss, err := q.list()
 if err != nil {return err}
-for _, s := range ss {if !s.Closed {return q.switchTo(s.Name)}}; return nil }
-// startTheme: при запуске — тема последнего открытого сеанса; нет такого —
-// первая по алфавиту; тем нет — ни одной (интерфейс предложит создать).
+for _, s := range ss {if !s.Closed {return q.switchTo(s.Name)}}; q.saveState(); return nil }
+// startTheme: при запуске — тема и сеанс, где автор остановился (state.uic, 09.11.2026);
+// нет записи или темы — тема последнего открытого сеанса; нет такого — первая по
+// алфавиту; тем нет — ни одной (интерфейс предложит создать).
 func (q *Script) startTheme() error {
 ts, err := q.themes()
 if err != nil || len(ts) == 0 {return err}
+if t, s := q.loadState(); t != "" {
+	if cur, ok := q.themeExists(t); ok {
+		if err := q.switchTheme(cur); err != nil {return err}
+		if s != "" && s != q.cur && exists(q.seans(s)) {return q.switchTo(s)}; return nil}}
 best, last := ts[0], ""
 for _, t := range ts {
 	q.theme = t
 	ss, err := q.list()
 	if err != nil {return err}
 	for _, s := range ss {if !s.Closed && s.Name > last {best, last = t, s.Name}}}; return q.switchTheme(best) }
+// state.uic: где автор остановился — тема и сеанс (имя — пользователь, 09.11.2026).
+func (q *Script) statePath() string {return filepath.Join(q.dir, "state.uic") }
+func (q *Script) saveState() {writeLines(q.statePath(), []string{"Thema : " + q.theme, "Seans : " + q.cur}) }
+func (q *Script) loadState() (string, string) {
+t, s := "", ""
+b, err := os.ReadFile(q.statePath())
+if err != nil {return "", ""}
+for _, l := range strings.Split(string(b), "\n") {
+	k, v, _ := strings.Cut(l, " : ")
+	if k == "Thema" {t = strings.TrimSpace(v)} else if k == "Seans" {s = strings.TrimSpace(v)}}; return t, s }
 // conceptFile: <тема>/<буквы имени>/<имя>.uic.
 // conceptFile: файл концепта темы — по указателю (клон ПИ лежит по пути другого
 // концепта: numerazia.uic — в N/U/M), иначе по пути из букв имени (новый концепт).
