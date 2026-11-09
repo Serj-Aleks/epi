@@ -181,6 +181,7 @@ if r := in.Raw[sym]; frame == nil && r != nil { // операнд — без в�
 	_, fr := in.prep(sym)
 	if s.prefix == nil || s.op != nil || len(s.a) != 1 {in.unknown(s.toks(), "— «"+sym+"» пишется в начале с одним операндом"); return none, nil}
 	v, ok := r(s.a[0])
+	if err := in.RawErr; !ok && err != nil {in.RawErr = nil; return none, err}
 	if !ok {in.unknown(s.toks(), "— «"+sym+"» не интерпретирует такой операнд"); return none, nil}
 	if fr != nil {in.use(fr)}; return v, nil}
 if frame != nil { // препозиция-фрейм: только в начале, аргументы — объектный блок

@@ -1,6 +1,6 @@
 // epi/script/infra/satel.go
 package main
-import ("os"; "path/filepath"; "regexp"; "sort"; "strings"; "epi/script/disp"; "epi/script/format")
+import ("fmt"; "os"; "path/filepath"; "regexp"; "sort"; "strings"; "epi/script/disp"; "epi/script/format")
 // Спутники концепта (0.22, 9.18): файлы рядом с концептом — то же имя, другое
 // расширение (md, json, svg, css, xml, html, txt); Content — тип спутника, открываемого
 // по умолчанию (md). Карточка концепта — панель с линзами (вариант B, 08.11.2026).
@@ -69,7 +69,9 @@ sort.Strings(inv); return q.tidx[k], inv }
 func (q *Script) clone(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
 src, name := q.cidx[strings.ToLower(arg.Items[0].Text)], capital(arg.Items[1].Text)
-if src == "" || q.conceptPath(name) != "" || checkName(name) != nil {return format.Value{}, false}
+if src == "" {q.in.RawErr = fmt.Errorf("концепта %s в теме нет", arg.Items[0].Text); return format.Value{}, false}
+if checkName(name) != nil {q.in.RawErr = fmt.Errorf("имя %s — с прописной буквы, без пробелов", name); return format.Value{}, false}
+if q.conceptPath(name) != "" {q.in.RawErr = fmt.Errorf("концепт %s уже есть", name); return format.Value{}, false}
 dst := filepath.Join(filepath.Dir(src), strings.ToLower(name)+".uic")
 sb, db := strings.TrimSuffix(src, ".uic"), strings.TrimSuffix(dst, ".uic")
 files := [][2]string{{src, dst}}
@@ -134,8 +136,9 @@ for _, r := range roots {
 func (q *Script) rename(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
 src, name := q.cidx[strings.ToLower(arg.Items[0].Text)], capital(arg.Items[1].Text)
-if src == "" || checkName(name) != nil {return format.Value{}, false}
-if p := q.conceptPath(name); p != "" && !strings.EqualFold(arg.Items[0].Text, name) {return format.Value{}, false}
+if src == "" {q.in.RawErr = fmt.Errorf("концепта %s в теме нет", arg.Items[0].Text); return format.Value{}, false}
+if checkName(name) != nil {q.in.RawErr = fmt.Errorf("имя %s — с прописной буквы, без пробелов", name); return format.Value{}, false}
+if p := q.conceptPath(name); p != "" && !strings.EqualFold(arg.Items[0].Text, name) {q.in.RawErr = fmt.Errorf("концепт %s уже есть", name); return format.Value{}, false}
 old := conceptName(src, "")
 dst := filepath.Join(filepath.Dir(src), strings.ToLower(name)+".uic")
 if dst != src {

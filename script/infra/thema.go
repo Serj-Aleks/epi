@@ -93,7 +93,12 @@ k, _, _ := strings.Cut(line, " "); return k }
 // файле концепта; повторное определение заменяет свою строку.
 func (q *Script) writeConcept(frame, param string, pred []format.Value) error {
 if q.theme == "" {return nil}
-if root, ok := q.linkRoot(param); ok {return q.writeLink(frame, param, pred, root, false)}; return writeParam(q.conceptFile(frame), param, pred) }
+if root, ok := q.linkRoot(param); ok {return q.writeLink(frame, param, pred, root, false)}
+if !format.SameTerm(param, "Alias") {return writeParam(q.conceptFile(frame), param, pred)}
+path := q.conceptFile(frame) // синонимы — группа (9.21)
+old, _ := readLink(path, "Alias")
+if err := writeParam(path, "Alias", pred); err != nil {return err}
+q.cidx[strings.ToLower(frame)] = path; return q.syncAlias(frame, old, names(pred)) }
 // writeParam: строка «Параметр : предикация» в файле концепта path.
 func writeParam(path, param string, pred []format.Value) error {
 var lines []string

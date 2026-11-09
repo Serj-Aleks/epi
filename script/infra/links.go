@@ -168,3 +168,32 @@ for _, r := range roots {
 	if r == q.themaDir() {dir = filepath.Dir(q.conceptFile(name))}
 	if p := filepath.Join(dir, base+".svg"); exists(p) {return p}
 	for _, ext := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if p := filepath.Join(dir, "img", base+"."+ext); exists(p) {return p}}}; return "" }
+// syncAlias: группа синонимов (как SyncAliasGroup ПИ): концепт frame, его синонимы-концепты
+// и их синонимы — одна группа, у каждого в Alias все остальные; кто выбыл из группы, теряет
+// frame. Имена, которые не концепты темы, у каждого остаются (в ПИ терялись). Контекст — заново
+// по Alias участников.
+func (q *Script) syncAlias(frame string, old, now []string) error {
+exist := func(n string) string {return q.cidx[strings.ToLower(n)]}
+group := []string{conceptName(q.conceptFile(frame), "")}
+add := func(n string) {if p := exist(n); p != "" && !has(group, conceptName(p, "")) {group = append(group, conceptName(p, ""))}}
+for _, a := range now {add(a)}
+for _, a := range now {if exist(a) != "" {as, _ := readLink(exist(a), "Alias"); for _, x := range as {add(x)}}}
+put := func(n string, as []string) error { // у самого frame контекст задаёт текущая предикация
+	v := format.Value{Kind: format.Array}
+	for _, a := range as {v.Items = append(v.Items, format.Value{Kind: format.Term, Text: a})}
+	if err := writeParam(exist(n), "Alias", []format.Value{v}); err != nil || format.SameTerm(n, frame) {return err}
+	on := q.in.OnParam
+	q.in.OnParam = nil
+	defer func() {q.in.OnParam = on}()
+	_, err := q.in.Run(n+".Alias : "+format.Format([]format.Value{v}), q.env); return err}
+for _, a := range old {
+	if exist(a) == "" || has(group, a) {continue}
+	as, _ := readLink(exist(a), "Alias")
+	if err := put(conceptName(exist(a), ""), without(as, frame)); err != nil {return err}}
+for _, m := range group {
+	cur := now
+	if !format.SameTerm(m, frame) {cur, _ = readLink(exist(m), "Alias")}
+	var as []string
+	for _, o := range group {if !format.SameTerm(o, m) {as = append(as, o)}}
+	for _, x := range cur {if exist(x) == "" && !has(as, x) {as = append(as, x)}}
+	if err := put(m, as); err != nil {return err}}; return nil }
