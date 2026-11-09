@@ -156,6 +156,8 @@ fail := func(code int, msg string) { http.Error(w, msg, code) }
 if req.URL.Path == "/api/nexus" {json.NewEncoder(w).Encode(q.nexusGraph(req.URL.Query().Get("name"))); return} // граф локального контекста (9.17)
 if req.URL.Path == "/api/card" {json.NewEncoder(w).Encode(q.card(req.URL.Query().Get("name"))); return} // карточка концепта (панель, 9.19)
 if req.URL.Path == "/api/qwest" {json.NewEncoder(w).Encode(q.qwestFind(req.URL.Query().Get("q"))); return} // поиск: список для панели (9.20)
+if req.URL.Path == "/api/tags" {json.NewEncoder(w).Encode(q.tags()); return} // теги темы (линза тегов, 9.21)
+if req.URL.Path == "/api/children" {json.NewEncoder(w).Encode(q.children(req.URL.Query().Get("name"))); return} // дочерние (обратный Taxon)
 if req.URL.Path == "/api/sat" { // спутник концепта: прочитать (GET) или записать (POST)
 	if req.Method == http.MethodGet {
 		p := q.satFile(req.URL.Query().Get("name"), req.URL.Query().Get("ext"))

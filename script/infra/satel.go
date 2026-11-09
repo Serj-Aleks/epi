@@ -153,3 +153,21 @@ if err := q.replaceRefs(old, name); err != nil {return format.Value{}, false}
 q.indexConcepts()
 q.env = disp.NewEnv(nil)
 if q.loadAliases() != nil || q.loadConcepts() != nil {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: name}, true }
+// tags: теги темы — концепты с параметром Rank (как в ПИ: rank задан — концепт-тег);
+// имя, цвет, картинка; по имени.
+func (q *Script) tags() []map[string]string {
+out := []map[string]string{}
+for _, p := range q.cidx {
+	if setting(p, "Rank") == "" {continue}
+	n := conceptName(p, "")
+	t := map[string]string{"name": n, "color": setting(p, "Color")}
+	if q.iconFile(n) != "" {t["icon"] = "/api/icon?name=" + n}
+	out = append(out, t)}
+sort.Slice(out, func(i, j int) bool {return strings.ToLower(out[i]["name"]) < strings.ToLower(out[j]["name"])}); return out }
+// children: дочерние концепта — обратный список Taxon, только существующие (GetChildren ПИ).
+func (q *Script) children(name string) []string {
+p := q.conceptPath(name)
+if p == "" {return []string{}}
+_, inv := readLink(p, "Taxon")
+out := []string{}
+for _, n := range inv {if c := q.conceptPath(n); c != "" {out = append(out, conceptName(c, ""))}}; return out }
