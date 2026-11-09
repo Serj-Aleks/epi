@@ -328,7 +328,7 @@ async function qwestOpen(qs) {
   let rs;
   try { rs = await api("/api/qwest?q=" + encodeURIComponent(qs)); } catch (e) { return; }
   if (qs !== qwestKey) return;
-  rs = rs || []; card.hidden = false; card.innerHTML = ""; cardCss("");
+  rs = rs || []; card.hidden = false; card.innerHTML = ""; card.scrollTop = 0; card.dataset.name = ""; cardCss("");
   const ts = qs.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
   const head = el("chead"), st = pstack[pstack.length - 1] || {}; head.append(pBackBtn(), el("cname", "qwest " + (qs ? "«" + qs + "»" : "—") + " · " + rs.length));
   const flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
@@ -373,6 +373,7 @@ async function cardOpen(name) {
   let c;
   try { c = await api("/api/card?name=" + encodeURIComponent(name)); } catch (e) { return; }
   if (!c.found || name !== cardName) return;
+  const keep = card.dataset.name === c.name ? card.scrollTop : 0; card.dataset.name = c.name; // новая карточка — с начала, та же после правки — на месте
   card.hidden = false; card.innerHTML = "";
   const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
   head.append(pBackBtn(), ic, el("cname", c.name));
@@ -389,6 +390,7 @@ async function cardOpen(name) {
       const box = el("clens"); nxSvg(box, sd); box.append(Object.assign(document.createElement("hr"), { className: "dag-divider" })); nxList(box, d); card.append(box); } }
   if (lens.content) { const box = el("clens"); card.append(box); await lensContent(box, c); }
   if (lens.slots) { const box = el("clens"); lensSlots(box, c); card.append(box); }
+  card.scrollTop = keep;
 }
 function addAnswer(t, turn) {
   const a = el("ans" + (turn.error ? " err" : ""));
