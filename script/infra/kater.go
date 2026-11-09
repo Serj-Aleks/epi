@@ -71,8 +71,8 @@ func blk(ns []string) string {if len(ns) == 0 {return "[]"}; return "[ " + strin
 // piNames: значение настройки осей, графа и списка (N-west, West, S-west, Nord, Graph,
 // List) — имена слотов ПИ заменяются именами связей EPI (tags → Taxon, prefix → Prfix …;
 // 08.11.2026); гашение ПИ «"-nr -tags"» — блоком без кавычек и минусов «[ nr Taxon ]» (09.11.2026).
-var piLinkNames = map[string]string{"tags": "Taxon", "links": "Links", "attrib": "Attrib", "preposit": "Preposit", "prefix": "Prfix", "suffix": "Sufix"}
-var rePiName = regexp.MustCompile(`\b(tags|links|attrib|preposit|prefix|suffix)\b`)
+var piLinkNames = map[string]string{"tags": "Taxon", "links": "Links", "attrib": "Attrib", "preposit": "Preposit", "prefix": "Prfix", "suffix": "Sufix", "themes": "Themes"}
+var rePiName = regexp.MustCompile(`\b(tags|links|attrib|preposit|prefix|suffix|themes)\b`)
 func piNames(line string) string {
 k := lineKey(line)
 if !isParam(line) || !has([]string{"N-west", "West", "S-west", "Nord", "Graph", "List"}, k) {return line}

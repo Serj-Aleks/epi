@@ -1,6 +1,6 @@
 // epi/script/infra/links.go
 package main
-import ("os"; "path/filepath"; "strings"; "epi/script/format")
+import ("os"; "path/filepath"; "sort"; "strconv"; "strings"; "epi/script/format")
 // Связи концептов (ason-spec 9.17): параметры Taxon (обобщение), Links, Prfix, Sufix,
 // Radix (словообразование). В файле концепта — два списка «[ прямой ] [ обратный ]»:
 // автор пишет прямой (Жёлтый.Taxon : [ Цвет ]), обратный script ведёт сам —
@@ -93,7 +93,7 @@ if p == "" {return format.Value{}, false}; return format.Value{Kind: format.Term
 // 9.19: в списке — всегда, на оси — по настройке концепта); graphCodes — коды списка.
 // Настройки осей и списка (N-west, West, S-west, Nord, List) пишутся именами связей EPI.
 var graphTypes = []string{"Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix", "Transcl"}
-var graphCodes = map[string]string{"Alias": "AL", "Attrib": "AT", "Preposit": "PP", "Prfix": "PF", "Sufix": "SF", "Taxon": "TX", "Links": "LK", "Radix": "RX", "Transcl": "TC"}
+var graphCodes = map[string]string{"Themes": "TM", "Alias": "AL", "Attrib": "AT", "Preposit": "PP", "Prfix": "PF", "Sufix": "SF", "Taxon": "TX", "Links": "LK", "Radix": "RX", "Transcl": "TC"}
 // graphType: имя связи графа по значению настройки (без учёта регистра); "" — не связь.
 func graphType(v string) string {for _, t := range graphTypes {if strings.EqualFold(t, v) {return t}}; return "" }
 // setting: значение настройки концепта (Nord : links) — текст без кавычек.
@@ -115,6 +115,8 @@ type gnode struct {
 	Name      string  `json:"name"`
 	Icon      string  `json:"icon,omitempty"`
 	Color     string  `json:"color,omitempty"`
+	Type      string  `json:"type,omitempty"`  // theme — узел-тема (ось север–юг — темы)
+	Theme     string  `json:"theme,omitempty"` // тема концепта-соседа узла-темы
 	Neighbors []gnode `json:"neighbors,omitempty"`}
 // nexusGraph: локальный контекст для графа — как GetGraph в ПИ: оси northwest/west/
 // southwest/north — Prfix, Attrib, Sufix, Preposit или по настройкам концепта
@@ -142,11 +144,14 @@ center, _, _ := mk(name)
 center.Neighbors = resolve(alias, "") // синонимы — только существующие концепты, как в ПИ
 spec := map[string]string{"nw": "Prfix", "wt": "Attrib", "sw": "Sufix", "nr": "Preposit"}
 for a, k := range map[string]string{"nw": "N-west", "wt": "West", "sw": "S-west", "nr": "Nord"} {if t := graphType(setting(path, k)); t != "" {spec[a] = t}}
+themes := strings.EqualFold(setting(path, "Nord"), "Themes") // ось север–юг — темы (как в ПИ, 9.21)
+if themes {spec["nr"] = "Themes"}
 out := map[string]any{"found": true, "center": center, "codes": graphCodes, "graph": settingList(path, "Graph"), "list": settingList(path, "List"),
 	"nwType": spec["nw"], "wtType": spec["wt"], "swType": spec["sw"], "nrType": spec["nr"]}
 pair := map[string]string{"nw": "ne", "wt": "et", "sw": "se", "nr": "st"}
 used := map[string]bool{}
-for a, t := range spec {s := links[t]; out[a], out[pair[a]] = resolve(s[1], t), resolve(s[0], t); used[t] = true}
+for a, t := range spec {if t == "Themes" {continue}; s := links[t]; out[a], out[pair[a]] = resolve(s[1], t), resolve(s[0], t); used[t] = true}
+if themes {out["nr"], out["st"] = q.themeNodes(path)}
 var extra []map[string]any
 for _, t := range graphTypes {
 	if used[t] {continue}
@@ -203,3 +208,33 @@ for _, l := range lines {
 	if !isParam(l) || !format.SameTerm(lineKey(l), key) {continue}
 	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 	if err == nil {return names(vs)}}; return nil }
+// tokens: слова имени для нечёткого поиска (metaTokenize ПИ): строчными, разделители — пробел, «-», «_».
+func tokens(s string) []string {return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {return r == ' ' || r == '-' || r == '_'}) }
+// overlap: слова совпадают по первым deep литерам (слово короче deep не сравнивается — metaTitlesOverlap ПИ).
+func overlap(a, b [][]string, deep int) bool {
+for _, x := range a {for _, y := range b {for _, s := range x {for _, t := range y {
+	rs, rt := []rune(s), []rune(t)
+	if len(rs) >= deep && len(rt) >= deep && string(rs[:deep]) == string(rt[:deep]) {return true}}}}}; return false }
+// nameTokens: слова имени концепта и его синонимов.
+func nameTokens(p string) [][]string {
+out := [][]string{tokens(conceptName(p, ""))}
+as, _ := readLink(p, "Alias")
+for _, a := range as {out = append(out, tokens(a))}; return out }
+// themeNodes: темы на оси север–юг (MatchThemes ПИ): север — темы, в названии которых
+// слово совпадает со словом имени (и синонимов) концепта; юг — темы, где есть концепты
+// с совпадающими именами (они — соседи темы, в подсказке); глубина — Deep (3); своя тема — нет.
+func (q *Script) themeNodes(path string) ([]gnode, []gnode) {
+deep := 3
+if d, err := strconv.Atoi(setting(path, "Deep")); err == nil && d > 0 {deep = d}
+me := nameTokens(path)
+ts, _ := q.themes()
+north, south := []gnode{}, []gnode{}
+for _, t := range ts {
+	if t == q.theme {continue}
+	icon := ""
+	if q.themeIcon(t) != "" {icon = "/api/themeicon?name=" + t}
+	if overlap([][]string{tokens(t)}, me, deep) {north = append(north, gnode{Name: t, Icon: icon, Type: "theme"})}
+	var hits []gnode
+	for _, p := range themeIndex(filepath.Join(q.themaRoot(), t)) {if overlap(nameTokens(p), me, deep) {hits = append(hits, gnode{Name: conceptName(p, ""), Theme: t})}}
+	sort.Slice(hits, func(i, j int) bool {return aLess(hits[i].Name, hits[j].Name)})
+	if len(hits) > 0 {south = append(south, gnode{Name: t, Icon: icon, Type: "theme", Neighbors: hits})}}; return north, south }
