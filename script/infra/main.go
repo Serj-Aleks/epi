@@ -176,6 +176,7 @@ if req.URL.Path == "/api/img" { // картинка контента: <папк�
 	w.Header().Del("Content-Type"); http.ServeFile(w, req, filepath.Join(filepath.Dir(p), "img", f)); return}
 if req.URL.Path == "/api/icon" { // картинка узла графа (спутник концепта)
 	p := q.iconFile(req.URL.Query().Get("name"))
+	if t := req.URL.Query().Get("theme"); t != "" && t != q.theme {p = q.iconOther(t, req.URL.Query().Get("name"))} // концепт другой темы (qwizt)
 	if p == "" {http.NotFound(w, req); return}
 	w.Header().Del("Content-Type"); http.ServeFile(w, req, p); return}
 if q.pending != nil && req.URL.Path != "/api/answer" && req.URL.Path != "/api/state" {fail(http.StatusConflict, "ждёт ответа на вопрос"); return}

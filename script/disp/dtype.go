@@ -55,7 +55,7 @@ type pred struct {
 	left, right *slot
 	toks        []format.Value
 	ok          bool}
-type reader struct{ vs []format.Value }
+type reader struct{ vs []format.Value; raw map[string]bool } // raw — препозиции с невычисляемым операндом (Interp.Raw)
 // aliasParam — параметр-синоним концепта (решено 03.11.2026): `X.Alias : Y`
 // или `X.Alias : [ Y Z ]`; тогда `Y` обозначает тот же фрейм, что `X`.
 const aliasParam = "Alias"

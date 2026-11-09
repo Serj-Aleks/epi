@@ -50,7 +50,7 @@ for k, p := range idx {
 		if !found {ok = false; break}}
 	if !ok {continue}
 	r := map[string]string{"name": name, "key": k, "excerpt": hit, "type": typ, "theme": theme}
-	if theme == q.theme && q.iconFile(name) != "" {r["icon"] = "/api/icon?name=" + name}
+	if theme == q.theme && q.iconFile(name) != "" {r["icon"] = "/api/icon?name=" + name} else if theme != q.theme {r["icon"] = "/api/icon?name=" + name + "&theme=" + theme}
 	out = append(out, r)}
 sort.Slice(out, func(i, j int) bool {return aLess(out[i]["name"], out[j]["name"])}); return out }
 // qwest: препозиция поиска — операнд не вычисляется (слово, строка, число); ответ — число найденных.
@@ -61,3 +61,11 @@ return format.Value{Kind: format.Integer, Text: strconv.Itoa(len(q.qwestFind(arg
 func (q *Script) qwizt(arg format.Value) (format.Value, bool) {
 if arg.Kind != format.Term && arg.Kind != format.String && arg.Kind != format.Integer && arg.Kind != format.Decimal {return format.Value{}, false}
 return format.Value{Kind: format.Integer, Text: strconv.Itoa(len(q.qwizFind(arg.Text)))}, true }
+// iconOther: картинка концепта другой темы — <папка концепта>/<имя>.svg или img/<имя>.*.
+func (q *Script) iconOther(theme, name string) string {
+if _, ok := q.themeExists(theme); !ok || strings.ContainsAny(name, "/\\") {return ""}
+p := themeIndex(filepath.Join(q.themaRoot(), theme))[strings.ToLower(name)]
+if p == "" {return ""}
+base := strings.TrimSuffix(p, ".uic")
+if exists(base + ".svg") {return base + ".svg"}
+for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if f := filepath.Join(filepath.Dir(p), "img", filepath.Base(base)+"."+e); exists(f) {return f}}; return "" }

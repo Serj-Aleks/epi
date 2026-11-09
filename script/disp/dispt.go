@@ -53,7 +53,8 @@ s := &slot{}
 if r.isPrep(i) {
 	p := vs[i]
 	s.prefix = &p
-	i++}
+	i++
+	if p.Kind == format.Term && r.raw[p.Text] && i+1 == len(vs) && vs[i].Kind == format.Term {s.a, s.ok = vs[i:i+1], true; return s, i + 1}} // «qwest numer»: слово со строчной — операнд, не вторая препозиция
 a, j, ok := r.operand(i)
 if !ok {return s, j}
 s.a, i = a, j
@@ -91,8 +92,8 @@ var out []string
 for _, seg := range segments(vs) {out = append(out, format.Format(seg))}; return out, nil }
 // readPred читает предикацию из части seg; часть должна быть ровно одной
 // предикацией, иначе она не распознана целиком.
-func readPred(seg []format.Value) pred {
-r := reader{vs: seg}
+func readPred(seg []format.Value, raw map[string]bool) pred {
+r := reader{vs: seg, raw: raw}
 p := pred{toks: seg}
 var i int
 p.left, i = r.slot(0)
@@ -114,7 +115,7 @@ v, _, err := in.block(vs, env); return v, err }
 func (in *Interp) block(vs []format.Value, env *Env) (format.Value, bool, error) {
 res := none
 for _, seg := range segments(vs) {
-	p := readPred(seg)
+	p := readPred(seg, in.rawNames())
 	if err := in.step(); err != nil {return none, false, err}
 	if !p.ok {
 		in.unknown(p.toks, "не распознана"+caseHint(p.toks, env))
@@ -400,3 +401,7 @@ for _, it := range items.Items {
 	if err := in.step(); err != nil {return none, err}
 	if r, _, err = in.block(corpus[0].Items, env); err != nil {return none, err}}
 in.use(in.Frame("zycle")); return r, nil }
+// rawNames: имена препозиций Raw — для чтения предикации.
+func (in *Interp) rawNames() map[string]bool {
+m := map[string]bool{}
+for k := range in.Raw {m[k] = true}; return m }
