@@ -576,7 +576,7 @@ function addAnswer(t, turn) {
   const f = el("f", (turn.frames || []).join(" ")); f.title = "interpres"; a.append(f);
   t.append(a); scroll();
   if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice(6)); // карточка концепта
-  else if (!turn.error && /^(clone|rename)\s/.test(turn.pred || "")) cardShow(turn.answer); // клон, переименованный — его карточка
+  else if (!turn.error && /^(clone|rename|union)\s/.test(turn.pred || "")) cardShow(turn.answer); // клон, переименованный, главный после слияния — его карточка
   else if (!turn.error && /^qwest\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1")); // поиск — список в панели
   else if (!turn.error && /^qwizt\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1"), false, true); // поиск во всех темах
   else if (!turn.error && cardName) cardShow(cardName); // после правки — карточка заново

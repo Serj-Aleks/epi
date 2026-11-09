@@ -310,7 +310,9 @@ lnrfm := map[string]Prep{
 	{Name: "qwest", Kernel: map[string]Prep{"qwest": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // qwest — поиск, Interp.Raw (среда)
 	{Name: "clone", Kernel: map[string]Prep{"clone": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // clone — клон концепта, Interp.Raw (среда)
 	{Name: "rename", Kernel: map[string]Prep{"rename": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // rename — переименование концепта, Interp.Raw (среда)
-	{Name: "qwizt", Kernel: map[string]Prep{"qwizt": func(a, b *format.Value) (format.Value, bool) {return none, false}}}} } // qwizt — поиск во всех темах, Interp.Raw (среда)
+	{Name: "qwizt", Kernel: map[string]Prep{"qwizt": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // qwizt — поиск во всех темах, Interp.Raw (среда)
+	{Name: "import", Kernel: map[string]Prep{"import": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // import — концепты из другой темы, Interp.Raw (среда)
+	{Name: "union", Kernel: map[string]Prep{"union": func(a, b *format.Value) (format.Value, bool) {return none, false}}}} } // union — слияние дублей, Interp.Raw (среда)
 func upperFirst(s string) string {
 r := []rune(s)
 if len(r) > 0 {r[0] = unicode.ToUpper(r[0])}; return string(r) }

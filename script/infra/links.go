@@ -34,11 +34,7 @@ for _, l := range lines {
 	if len(vs) > 0 {d = names(vs[:1])}
 	if len(vs) > 1 {i = names(vs[1:2])}; return d, i}; return nil, nil }
 // writeLists: строка связи «Param : [ прямой ] [ обратный ]».
-func writeLists(path, param string, d, i []string) error {
-block := func(ns []string) format.Value {
-	v := format.Value{Kind: format.Array}
-	for _, n := range ns {v.Items = append(v.Items, format.Value{Kind: format.Term, Text: n})}; return v}
-return writeParam(path, param, []format.Value{block(d), block(i)}) }
+func writeLists(path, param string, d, i []string) error {return writeParam(path, param, []format.Value{block(d), block(i)}) }
 func has(ns []string, n string) bool {for _, x := range ns {if format.SameTerm(x, n) {return true}}; return false }
 func without(ns []string, n string) []string {
 var out []string
@@ -181,8 +177,7 @@ add := func(n string) {if p := exist(n); p != "" && !has(group, conceptName(p, "
 for _, a := range now {add(a)}
 for _, a := range now {if exist(a) != "" {as, _ := readLink(exist(a), "Alias"); for _, x := range as {add(x)}}}
 put := func(n string, as []string) error { // у самого frame контекст задаёт текущая предикация
-	v := format.Value{Kind: format.Array}
-	for _, a := range as {v.Items = append(v.Items, format.Value{Kind: format.Term, Text: a})}
+	v := block(as)
 	if err := writeParam(exist(n), "Alias", []format.Value{v}); err != nil || format.SameTerm(n, frame) {return err}
 	on := q.in.OnParam
 	q.in.OnParam = nil
