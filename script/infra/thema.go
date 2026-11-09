@@ -199,3 +199,27 @@ for _, l := range strings.Split(string(b), "\n") {
 	q.in.Unknown = append(q.in.Unknown, text)
 	lines = append(lines, line)}
 if legacy {return writeLines(q.ignor(), lines)}; return nil }
+// themeIcon: картинка темы — <тема>/<Тема>.svg или <тема>/img/<Тема>.png|… (как в ПИ).
+func (q *Script) themeIcon(name string) string {
+dir := filepath.Join(q.themaRoot(), name)
+for _, n := range []string{name, strings.ToLower(name)} {
+	if p := filepath.Join(dir, n+".svg"); exists(p) {return p}
+	for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if p := filepath.Join(dir, "img", n+"."+e); exists(p) {return p}}}; return "" }
+// themesInfo: темы для карточки темы (9.21, 9а): имя, картинка, число концептов,
+// спутников и сеансов, последний сеанс; в алфавите темы.
+func (q *Script) themesInfo() []map[string]any {
+ts, _ := q.themes()
+out := []map[string]any{}
+for _, t := range ts {
+	dir := filepath.Join(q.themaRoot(), t)
+	nc, ns, nm, last := 0, 0, 0, ""
+	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {return nil}
+		if d.IsDir() && d.Name() == "prtcl" {
+			es, _ := os.ReadDir(path)
+			for _, e := range es {if strings.HasPrefix(e.Name(), "seans-") {nm++; if e.Name() > last {last = e.Name()}}}; return filepath.SkipDir}
+		if d.IsDir() || filepath.Dir(path) == dir {return nil}
+		if strings.HasSuffix(path, ".uic") {nc++} else {ns++}; return nil})
+	r := map[string]any{"name": t, "concepts": nc, "sats": ns, "seans": nm, "last": strings.TrimSuffix(strings.TrimPrefix(last, "seans-"), ".uic")}
+	if q.themeIcon(t) != "" {r["icon"] = "/api/themeicon?name=" + t}
+	out = append(out, r)}; return out }

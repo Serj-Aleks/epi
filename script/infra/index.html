@@ -72,6 +72,9 @@
   .tabbody { flex: 1; min-width: 0; padding-top: 6px; } .tabbody > .cbody { padding: 0; } .tabnest { margin-top: 8px; border-top: 1px dotted var(--line); padding-top: 6px; } .tabnest .tabh, .tabnest .tabv { padding: 0; }
   .pwrap { padding: 0 14px; overflow-x: auto; } .ptab { width: 100%; border-collapse: collapse; font-size: 13px; } .ptab th { text-align: left; padding: 4px 8px; border-bottom: 2px solid var(--line); color: var(--dim); font-weight: 400; }
   .ptab td { padding: 4px 8px; border-bottom: 1px solid var(--line); } .ptab a { color: var(--acc); text-decoration: none; } .pnum { color: var(--dim); } .ptrig { cursor: pointer; font-size: 10px; color: var(--dim); } .ptrig:hover { color: var(--fg); }
+  #ticon { width: 34px; height: 30px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; } #ticon svg, #ticon img { width: 24px; height: 24px; }
+  .thlist { padding: 4px 0; } .throw { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-bottom: 1px dotted var(--line); flex-wrap: wrap; } .throw.on { background: var(--g2); }
+  .thmeta { color: var(--dim); font-size: 12px; margin-left: auto; } .thfilter { display: flex; align-items: center; gap: 8px; padding: 8px 14px 0; }
   .qlist { padding: 4px 0; } .qrow { padding: 6px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 8px; }
   .qname { color: var(--acc); font-weight: 700; text-decoration: none; } .qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
   .qex { color: var(--fg); font-size: 13px; margin: 2px 0 0 36px; } mark { background: #f3d77a; color: inherit; } .chead .cval { flex: 1; max-width: 20ch; }
@@ -107,6 +110,7 @@
 <body>
 <header>
   <span id="note"></span>
+  <button id="ticon" title="thema card"></button>
   <select id="thema" title="thema"></select>
   <button id="tnew" title="new thema">＋</button>
   <button id="tren" title="rename thema">✎</button>
@@ -266,7 +270,7 @@ let cardName = null, cardTimer = null, cloneSrc = "", cardGen = 0;
 // фильтром) без записи в протокол — это просмотр, а не действие.
 let pstack = [];
 function pPush(s) { const t = pstack[pstack.length - 1]; if (!t || t.k !== s.k || t.a !== s.a) { pstack.push(s); if (pstack.length > 50) pstack.shift(); } }
-function pBack() { if (pstack.length < 2) return; pstack.pop(); const s = pstack[pstack.length - 1]; s.k === "c" ? cardShow(s.a, true) : qwestShow(s.a, true); }
+function pBack() { if (pstack.length < 2) return; pstack.pop(); const s = pstack[pstack.length - 1]; s.k === "c" ? cardShow(s.a, true) : s.k === "t" ? themeShow(true) : qwestShow(s.a, true); }
 function pBackBtn() { const b = document.createElement("button"); b.textContent = "←"; b.title = "back"; b.disabled = pstack.length < 2; b.onclick = pBack; return b; }
 function cardShow(name, back) { if (!back) pPush({ k: "c", a: name }); cardName = name; qwestKey = null; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
 function cardHide() { cardName = null; qwestKey = null; pstack = []; card.hidden = true; card.innerHTML = ""; cardCss(""); }
@@ -358,6 +362,33 @@ async function qwestOpen(qs) {
       const top = el("qtop"); top.append(ic, a); if (r.type) top.append(el("qtype", r.type)); row.append(top);
       if (r.excerpt) { const ex = el("qex"); ex.innerHTML = mark(r.excerpt, ts); row.append(ex); }
       list.append(row); }); };
+  flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw();
+}
+// карточка темы (9.21, 9а; вместо портала ПИ): картинка темы в шапке открывает её в
+// панели — сверху все темы (картинка, имя, концепты, спутники, сеансы, последний сеанс;
+// щелчок — переключить тему), ниже концепты текущей темы в алфавите темы с фильтром.
+function themeShow(back) { if (!back) pPush({ k: "t", a: "", f: "" }); cardName = null; qwestKey = "\u0000t"; clearTimeout(cardTimer); cardTimer = setTimeout(themeOpen, 0); }
+async function themeOpen() {
+  const ts = await api("/api/themes").catch(() => []), rs = last && last.theme ? await api("/api/qwest?q=").catch(() => []) : [];
+  if (qwestKey !== "\u0000t") return;
+  card.hidden = false; card.innerHTML = ""; card.scrollTop = 0; card.dataset.name = ""; cardCss("");
+  const st = pstack[pstack.length - 1] || {}, head = el("chead"), ic = el("cicon"), cur = ts.find(t => t.name === (last && last.theme));
+  if (cur) nxIcon(ic, cur.icon);
+  head.append(pBackBtn(), ic, el("cname", (last && last.theme) || "—"));
+  const tools = el("ctools"), x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x); head.append(tools); card.append(head);
+  const tl = el("clens thlist");
+  ts.forEach(t => { const row = el("throw" + (t.name === (last && last.theme) ? " on" : "")), ti = el("cicon"); nxIcon(ti, t.icon);
+    const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.textContent = t.name; a.onclick = async e => { e.preventDefault(); if (t.name !== last.theme) { await act("/api/thema/open", { name: t.name }); themeShow(); } }; // другая тема — и её карточка
+    row.append(ti, a, el("thmeta", `концептов ${t.concepts} · спутников ${t.sats} · сеансов ${t.seans}` + (t.last ? ` · последний ${t.last}` : ""))); tl.append(row); });
+  card.append(tl);
+  const fh = el("thfilter"), flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false; fh.append(flt, el("thmeta", String(rs.length))); card.append(fh);
+  const list = el("clens qlist"); card.append(list);
+  const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
+    const shown = rs.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
+    if (!shown.length) { list.append(el("cempty", "—")); return; }
+    shown.forEach(r => { const row = el("qrow"), ic2 = el("cicon"); nxIcon(ic2, r.icon);
+      const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.innerHTML = mark(r.name, fs); a.onclick = e => { e.preventDefault(); nxGo(r.name); };
+      const top = el("qtop"); top.append(ic2, a); row.append(top); list.append(row); }); };
   flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw();
 }
 const satTypes = ["md", "json", "svg", "css", "xml", "html", "txt"];
@@ -534,6 +565,7 @@ function show(st) {
     const o = document.createElement("option"); o.value = o.textContent = t; o.selected = t === st.theme; tsel.append(o);
   }
   document.getElementById("tren").disabled = !st.theme;
+  { const ti = document.getElementById("ticon"); ti.innerHTML = ""; ti.disabled = !st.theme; if (st.theme) nxIcon(ti, "/api/themeicon?name=" + encodeURIComponent(st.theme)); } // картинка темы — карточка темы
   document.getElementById("cnew").disabled = !st.theme || !st.current || st.closed;
   document.getElementById("new").disabled = !st.theme;
   if (!st.theme) note.textContent = "создайте тему ＋";
@@ -655,6 +687,7 @@ function askName(m) {
 }
 document.getElementById("tnew").onclick = () => askName("new");
 document.getElementById("tren").onclick = () => askName("rename");
+document.getElementById("ticon").onclick = () => themeShow();
 document.getElementById("cnew").onclick = () => askName("cnew");
 tsel.onchange = () => { if (tsel.value) act("/api/thema/open", { name: tsel.value }); };
 document.getElementById("new").onclick = () => act("/api/new", {});
