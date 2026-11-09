@@ -1,6 +1,6 @@
 // epi/script/infra/satel.go
 package main
-import ("os"; "path/filepath"; "regexp"; "sort"; "strings"; "epi/script/format")
+import ("os"; "path/filepath"; "regexp"; "sort"; "strings"; "epi/script/disp"; "epi/script/format")
 // Спутники концепта (0.22, 9.18): файлы рядом с концептом — то же имя, другое
 // расширение (md, json, svg, css, xml, html, txt); Content — тип спутника, открываемого
 // по умолчанию (md). Карточка концепта — панель с линзами (вариант B, 08.11.2026).
@@ -94,3 +94,59 @@ on, of := q.in.OnParam, q.in.OnFrame
 q.in.OnParam, q.in.OnFrame = nil, nil
 q.loadConceptsIn(dst)
 q.in.OnParam, q.in.OnFrame = on, of; return format.Value{Kind: format.Term, Text: name}, true }
+// refKeys: параметры концепта, в значениях которых — имена концептов (refSlots ПИ).
+var refKeys = []string{"Alias", "Attrib", "Preposit", "Prfix", "Sufix", "Radix", "Taxon", "Links", "Defs", "I-process", "I-sort"}
+var reToken, reRefMark = regexp.MustCompile(`[\p{L}\p{N}_-]+`), regexp.MustCompile(`(\[\[|\{\{)([^\]\}]+)(\]\]|\}\})`)
+// replaceRefs: имя old → name во всех концептах темы и лексикона связей (prfix, sufix,
+// radix): в значениях параметров refKeys и в ссылках и трансклюзиях текстовых спутников
+// (как replaceRefs ПИ).
+func (q *Script) replaceRefs(old, name string) error {
+swap := func(s string) string {return reToken.ReplaceAllStringFunc(s, func(t string) string {if format.SameTerm(t, old) {return name}; return t})}
+mark := func(s string) string {return reRefMark.ReplaceAllStringFunc(s, func(m string) string {
+	sub := reRefMark.FindStringSubmatch(m)
+	if format.SameTerm(strings.TrimSpace(sub[2]), old) && (sub[1] == "[[") == (sub[3] == "]]") {return sub[1] + name + sub[3]}; return m})}
+roots := []string{q.themaDir()}
+for _, c := range []string{"prfix", "sufix", "radix"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
+for _, r := range roots {
+	err := filepath.WalkDir(r, func(path string, d os.DirEntry, err error) error {
+		if err != nil {return nil}
+		if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
+		if d.IsDir() || !strings.HasSuffix(path, ".uic") {return nil}
+		b, err := os.ReadFile(path)
+		if err != nil {return err}
+		lines, err := conceptLines(b)
+		if err != nil {return nil}
+		changed := false
+		for i, l := range lines {
+			if !isParam(l) || !has(refKeys, lineKey(l)) {continue}
+			k := strings.Index(l, ":")
+			if v := l[:k] + swap(l[k:]); v != l {lines[i], changed = v, true}}
+		if changed {if err := writeLines(path, lines); err != nil {return err}}
+		for _, t := range qwestTypes {
+			sp := strings.TrimSuffix(path, ".uic") + "." + t
+			sb, err := os.ReadFile(sp)
+			if err != nil {continue}
+			if v := mark(string(sb)); v != string(sb) {if err := os.WriteFile(sp, []byte(v), 0644); err != nil {return err}}}; return nil})
+	if err != nil {return err}}; return nil }
+// rename: препозиция «rename [ Старое Новое ]» (имя — пользователь, 09.11.2026; как
+// RenameConcept ПИ): файлы концепта, спутников и img/<имя>.* — под новым именем в той же
+// папке; имя заменяется во всех связях и в контенте; контекст темы — заново. Ответ — новое имя.
+func (q *Script) rename(arg format.Value) (format.Value, bool) {
+if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
+src, name := q.cidx[strings.ToLower(arg.Items[0].Text)], capital(arg.Items[1].Text)
+if src == "" || checkName(name) != nil {return format.Value{}, false}
+if p := q.conceptPath(name); p != "" && !strings.EqualFold(arg.Items[0].Text, name) {return format.Value{}, false}
+old := conceptName(src, "")
+dst := filepath.Join(filepath.Dir(src), strings.ToLower(name)+".uic")
+if dst != src {
+	sb, db := strings.TrimSuffix(src, ".uic"), strings.TrimSuffix(dst, ".uic")
+	files := [][2]string{{src, dst}}
+	for _, t := range satTypes {if exists(sb + "." + t) {files = append(files, [2]string{sb + "." + t, db + "." + t})}}
+	sn, dn := filepath.Join(filepath.Dir(src), "img", filepath.Base(sb)), filepath.Join(filepath.Dir(src), "img", filepath.Base(db))
+	for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if exists(sn + "." + e) {files = append(files, [2]string{sn + "." + e, dn + "." + e})}}
+	for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
+	for _, f := range files {if err := os.Rename(f[0], f[1]); err != nil {return format.Value{}, false}}}
+if err := q.replaceRefs(old, name); err != nil {return format.Value{}, false}
+q.indexConcepts()
+q.env = disp.NewEnv(nil)
+if q.loadAliases() != nil || q.loadConcepts() != nil {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: name}, true }

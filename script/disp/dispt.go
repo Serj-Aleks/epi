@@ -306,7 +306,8 @@ lnrfm := map[string]Prep{
 	{Name: "trans", Kernel: map[string]Prep{"trans": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // trans — ядро задаёт среда (словари)
 	{Name: "nexus", Kernel: map[string]Prep{"nexus": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // nexus — Interp.Raw (среда)
 	{Name: "qwest", Kernel: map[string]Prep{"qwest": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // qwest — поиск, Interp.Raw (среда)
-	{Name: "clone", Kernel: map[string]Prep{"clone": func(a, b *format.Value) (format.Value, bool) {return none, false}}}} } // clone — клон концепта, Interp.Raw (среда)
+	{Name: "clone", Kernel: map[string]Prep{"clone": func(a, b *format.Value) (format.Value, bool) {return none, false}}}, // clone — клон концепта, Interp.Raw (среда)
+	{Name: "rename", Kernel: map[string]Prep{"rename": func(a, b *format.Value) (format.Value, bool) {return none, false}}}} } // rename — переименование концепта, Interp.Raw (среда)
 func upperFirst(s string) string {
 r := []rune(s)
 if len(r) > 0 {r[0] = unicode.ToUpper(r[0])}; return string(r) }

@@ -22,7 +22,7 @@ q.in = disp.New(limit, func(string) bool { return false })
 // фреймы-интерпретаторы: lexic/preposit (9.13) — только системная часть
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 q.in.Frame("trans").Kernel["trans"] = q.trans // транслятор (9.16): ядро — словари среды
-q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus, "qwest": q.qwest, "clone": q.clone} // локальный контекст (9.17), поиск (9.20), клон (9.19)
+q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus, "qwest": q.qwest, "clone": q.clone, "rename": q.rename} // локальный контекст (9.17), поиск (9.20), клон и переименование (9.19, 9.21)
 // фреймы автора сохраняются в активной теме (9.14)
 q.in.OnParam = func(frame, param string, pred []format.Value) {if err := q.writeConcept(frame, param, pred); err != nil {log.Print(err)}}
 q.in.OnFrame = func(name string, body []format.Value) {if err := q.writeBody(name, body); err != nil {log.Print(err)}}
