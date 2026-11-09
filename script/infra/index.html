@@ -68,8 +68,8 @@
   .rarrow { width: 12px; flex: none; font-size: 10px; color: var(--dim); user-select: none; } .rarrow.on { cursor: pointer; } .rarrow.on:hover { color: var(--fg); }
   .rlink { color: var(--acc); text-decoration: none; font-size: 13px; } .rlink:hover { text-decoration: underline dotted; } .rkids { padding-left: 20px; border-left: 1px solid var(--line); margin-left: 8px; }
   .tabbar { display: flex; gap: 2px; flex-wrap: wrap; } .tabbar button { font-size: 13px; border-radius: 3px 3px 0 0; } .tabbar button.on { background: var(--acc); color: var(--g1); border-color: var(--acc); }
-  .tabh { padding: 0 14px; } .tabh .tabbar { border-bottom: 1px solid var(--acc); } .tabv { display: flex; gap: 8px; padding: 0 14px; } .tabv .tabbar { flex-direction: column; flex: none; border-right: 1px solid var(--acc); padding-right: 4px; } .tabv .tabbar button { border-radius: 3px 0 0 3px; text-align: left; }
-  .tabbody { flex: 1; min-width: 0; padding-top: 6px; } .tabbody .cbody { padding: 0; } .tabnest { margin-top: 8px; border-top: 1px dotted var(--line); padding-top: 6px; } .tabnest .tabh, .tabnest .tabv { padding: 0; }
+  .tabh { padding: 0 14px; } .tabh > .tabbar { border-bottom: 1px solid var(--acc); } .tabv { display: flex; gap: 8px; padding: 0 14px; } .tabv > .tabbar { flex-direction: column; flex: none; border-right: 1px solid var(--acc); padding-right: 4px; } .tabv > .tabbar button { border-radius: 3px 0 0 3px; text-align: left; } .tabh > .tabbar button { flex: none; }
+  .tabbody { flex: 1; min-width: 0; padding-top: 6px; } .tabbody > .cbody { padding: 0; } .tabnest { margin-top: 8px; border-top: 1px dotted var(--line); padding-top: 6px; } .tabnest .tabh, .tabnest .tabv { padding: 0; }
   .qlist { padding: 4px 0; } .qrow { padding: 6px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 8px; }
   .qname { color: var(--acc); font-weight: 700; text-decoration: none; } .qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
   .qex { color: var(--fg); font-size: 13px; margin: 2px 0 0 36px; } mark { background: #f3d77a; color: inherit; } .chead .cval { flex: 1; max-width: 20ch; }
