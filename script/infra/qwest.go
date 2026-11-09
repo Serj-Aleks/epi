@@ -69,3 +69,25 @@ if p == "" {return ""}
 base := strings.TrimSuffix(p, ".uic")
 if exists(base + ".svg") {return base + ".svg"}
 for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if f := filepath.Join(filepath.Dir(p), "img", filepath.Base(base)+"."+e); exists(f) {return f}}; return "" }
+// find: поиск внутри концепта (SearchInConcept ПИ, 9.21): в имени и текстовых спутниках
+// (md, html, json, xml, txt — стили и svg нет) концепта и его синонимов-концептов; каждое
+// слово запроса («&» — «и») — в одном месте; ответ — концепт, тип спутника, отрывок.
+func (q *Script) find(name, query string) []map[string]string {
+p := q.conceptPath(name)
+out := []map[string]string{}
+ts := qterms(query)
+if p == "" || len(ts) == 0 {return out}
+paths := []string{p}
+as, _ := readLink(p, "Alias")
+for _, a := range as {if ap := q.conceptPath(a); ap != "" && !has(paths, ap) {paths = append(paths, ap)}}
+for _, cp := range paths {
+	n := conceptName(cp, "")
+	if every(strings.ToLower(n), ts) {out = append(out, map[string]string{"name": n, "type": "", "excerpt": ""})}
+	for _, ty := range qwestTypes {
+		b, err := os.ReadFile(strings.TrimSuffix(cp, ".uic") + "." + ty)
+		if err != nil {continue}
+		text := qtext(string(b))
+		low := strings.ToLower(text)
+		if every(low, ts) {out = append(out, map[string]string{"name": n, "type": ty, "excerpt": excerpt(text, low, ts[0])})}}}; return out }
+// every: все слова ts — в строке s.
+func every(s string, ts []string) bool {for _, t := range ts {if !strings.Contains(s, t) {return false}}; return true }

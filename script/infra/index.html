@@ -76,6 +76,7 @@
   .thlist { padding: 4px 0; } .throw { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-bottom: 1px dotted var(--line); flex-wrap: wrap; } .throw.on { background: var(--g2); }
   .thmeta { color: var(--dim); font-size: 12px; margin-left: auto; } .thfilter { display: flex; align-items: center; gap: 8px; padding: 8px 14px 0; }
   .dterm { text-decoration: underline dotted var(--acc); text-underline-offset: 3px; cursor: help; } .dtdef { margin: 4px 0; white-space: pre-wrap; } .dtdict { color: rgba(245, 242, 236, 0.7); text-decoration: none; font-size: 11px; }
+  .chead .cfind { flex: 1; min-width: 8ch; max-width: 22ch; margin-left: auto; } .chead .cfind + .ctools { margin-left: 0; } .flist { padding: 2px 0; }
   .qlist { padding: 4px 0; } .qrow { padding: 6px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 8px; }
   .qname { color: var(--acc); font-weight: 700; text-decoration: none; } .qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
   .qex { color: var(--fg); font-size: 13px; margin: 2px 0 0 36px; } mark { background: #f3d77a; color: inherit; } .chead .cval { flex: 1; max-width: 20ch; }
@@ -270,7 +271,7 @@ function nxList(box, data) {
 // (переход — nexus Имя), {{Имя}} — трансклюзия: контент концепта вставляется (как
 // renderConceptView в ПИ, без повторов по кругу).
 const card = document.getElementById("card"), lens = { graph: true, tags: false, rank: false, tabs: false, process: false, content: true, slots: false };
-let cardName = null, cardTimer = null, cloneSrc = "", cardGen = 0;
+let cardName = null, cardTimer = null, cloneSrc = "", cardGen = 0, cardFind = null; // cardFind — поиск внутри концепта: { name, ext, q }
 // история панели: ← возвращает к прежнему виду (карточка или список qwest с его
 // фильтром) без записи в протокол — это просмотр, а не действие.
 let pstack = [];
@@ -331,7 +332,8 @@ function cardLinks(box) { box.querySelectorAll("a.cref").forEach(a => a.onclick 
 async function lensContent(box, c) {
   const bar = el("cbar"), body = el("cbody");
   const view = async () => { bar.innerHTML = ""; const b = document.createElement("button"); b.textContent = "✎"; b.title = "redaction"; b.onclick = edit; bar.append(b);
-    const h = await cardRender(c.name, c.content, []).catch(() => null); body.innerHTML = h ? h : '<div class="cempty">—</div>'; cardLinks(body); await dictMark(body, c.name); };
+    const f = cardFind && cardFind.name.toLowerCase() === c.name.toLowerCase() ? cardFind : null; // найденное — его спутник, подсвечено
+    const h = await cardRender(c.name, f && f.ext || c.content, []).catch(() => null); body.innerHTML = h ? h : '<div class="cempty">—</div>'; cardLinks(body); await dictMark(body, c.name); if (f) findMark(body, f.q); };
   const edit = async () => { bar.innerHTML = "";
     const s = document.createElement("select"); satTypes.forEach(t => { const o = document.createElement("option"); o.value = o.textContent = t + (c.sats.includes(t) ? "" : " ·"); o.value = t; o.selected = t === c.content; s.append(o); });
     const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "record";
@@ -427,6 +429,26 @@ function dictTip(e, t) {
   const a = document.createElement("a"); a.href = "#"; a.className = "dtdict"; a.textContent = "↗ " + t.dict; a.onclick = ev => { ev.preventDefault(); nxGo(t.dict); }; tip.append(a);
   tip.style.left = Math.min(e.clientX + 12, innerWidth - 300) + "px"; tip.style.top = (e.clientY + 14) + "px"; tip.style.maxWidth = "280px";
   tip.onmouseleave = () => tip.remove(); document.body.append(tip);
+}
+// поиск внутри концепта (как SearchInConcept ПИ): поле в шапке карточки, Enter — список
+// совпадений (концепт и синонимы-концепты, тип спутника, отрывок); щелчок — этот концепт,
+// его спутник в линзе контента, найденное подсвечено; Esc — сбросить. Просмотр, без протокола.
+async function findRun(box, c, q) {
+  box.innerHTML = ""; box.hidden = !q; if (!q) return;
+  const rs = await api("/api/find?name=" + encodeURIComponent(c.name) + "&q=" + encodeURIComponent(q)).catch(() => []), ts = q.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
+  if (!rs.length) { box.append(el("cempty", "не найдено")); return; }
+  rs.forEach(r => { const row = el("qrow"), a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.innerHTML = mark(r.name, ts);
+    a.onclick = e => { e.preventDefault(); cardFind = { name: r.name, ext: r.type, q }; lens.content = true; r.name.toLowerCase() === c.name.toLowerCase() ? cardOpen(c.name) : nxGo(r.name); };
+    const top = el("qtop"); top.append(a, el("qtype", r.type || "имя")); row.append(top);
+    if (r.excerpt) { const ex = el("qex"); ex.innerHTML = mark(r.excerpt, ts); row.append(ex); }
+    box.append(row); });
+}
+function findMark(root, q) {   // подсветка слов запроса в тексте линзы
+  const ts = q.toLowerCase().split("&").map(t => t.trim()).filter(Boolean); if (!ts.length) return;
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), nodes = []; while (walk.nextNode()) nodes.push(walk.currentNode);
+  const re = new RegExp("(" + ts.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
+  nodes.forEach(n => { if (!re.test(n.textContent)) return; re.lastIndex = 0; const s = document.createElement("span"); s.innerHTML = esc(n.textContent).replace(re, "<mark>$1</mark>"); n.replaceWith(...s.childNodes); });
+  const m = root.querySelector("mark"); if (m) setTimeout(() => m.scrollIntoView({ block: "center" }), 50);
 }
 const satTypes = ["md", "json", "svg", "css", "xml", "html", "txt"];
 // линза вкладок ↕ (как ltabs.js ПИ): дочерние концепта (обратный Taxon) — вкладками,
@@ -558,7 +580,12 @@ async function cardOpen(name) {
   [["graph", "✦"], ["tags", "⬡"], ["content", "≡"], ["process", "⊛"], ["rank", "◈"], ["tabs", "↕"], ["slots", "⊞"]].filter(([k]) => (k !== "rank" || cardRank(c) > 0) && (k !== "tabs" || cardSet(c, "Tabs")) && (k !== "process" || cardSet(c, "Process"))).forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardOpen(c.name); }; tools.append(b); });
   const cl = document.createElement("button"); cl.textContent = "⧉"; cl.title = "clone"; cl.onclick = () => { cloneSrc = c.name; askName("clone"); }; tools.prepend(cl); // клон — как в ПИ
   const x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
-  head.append(tools); root.append(head);
+  const fi = document.createElement("input"); fi.className = "cval cfind"; fi.placeholder = "find"; fi.spellcheck = false; fi.title = "поиск внутри концепта и его синонимов (md, html, json, xml, txt)";
+  const mine = cardFind && cardFind.name.toLowerCase() === c.name.toLowerCase(); if (mine) fi.value = cardFind.q;
+  const fbox = el("clens flist"); fbox.hidden = true;
+  fi.onkeydown = e => { if (e.key === "Enter") findRun(fbox, c, fi.value.trim()); if (e.key === "Escape") { fi.value = ""; cardFind = null; cardOpen(c.name); } };
+  head.append(fi, tools); root.append(head, fbox);
+  if (mine && cardFind.q) findRun(fbox, c, cardFind.q);
   const css = c.sats.includes("css") ? (await api("/api/sat?name=" + encodeURIComponent(c.name) + "&ext=css").catch(() => ({}))).text : "";
   if (lens.graph) { const d = await api("/api/nexus?name=" + encodeURIComponent(name)).catch(() => null);
     if (d && d.found) { const sides = ["nw", "ne", "wt", "et", "sw", "se", "nr", "st"];
