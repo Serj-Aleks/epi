@@ -222,7 +222,7 @@ function nxSvg(box, data) {
   if (st.length) outgoing(st, xC, yCT + g.nodeH + g.vSpacing * 2, xBC, xC + g.nodeW, "--graph-nr");
 }
 function nxList(box, data) {
-  const skip = new Set((data.list || "").trim().toLowerCase().split(/\s+/).filter(s => s.startsWith("-")).map(s => s.slice(1)));
+  const skip = new Set((data.list || []).map(s => s.toLowerCase())); // List : [ Taxon … ] — погашенные связи
   const code = t => (data.codes || {})[t] || t, center = data.center.name;
   const secs = [["NW", "nw", "nwType", "nw"], ["NE", "ne", "nwType", "nw"], ["WT", "wt", "wtType", "wt"], ["ET", "et", "wtType", "wt"],
     ["SW", "sw", "swType", "sw"], ["SE", "se", "swType", "sw"], ["NR", "nr", "nrType", "nr"], ["ST", "st", "nrType", "nr"]]
@@ -385,7 +385,7 @@ async function cardOpen(name) {
   cardCss(c.sats.includes("css") ? (await api("/api/sat?name=" + encodeURIComponent(c.name) + "&ext=css").catch(() => ({}))).text : "");
   if (lens.graph) { const d = await api("/api/nexus?name=" + encodeURIComponent(name)).catch(() => null);
     if (d && d.found) { const sides = ["nw", "ne", "wt", "et", "sw", "se", "nr", "st"];
-      const hide = new Set((d.graph || "").trim().toLowerCase().split(/\s+/).filter(s => s.startsWith("-") && sides.includes(s.slice(1))).map(s => s.slice(1)));
+      const hide = new Set((d.graph || []).map(s => s.toLowerCase())); // Graph : [ nr … ] — погашенные стороны
       const sd = Object.assign({}, d); sides.forEach(s => { if (hide.has(s)) sd[s] = []; });
       const box = el("clens"); nxSvg(box, sd); box.append(Object.assign(document.createElement("hr"), { className: "dag-divider" })); nxList(box, d); card.append(box); } }
   if (lens.content) { const box = el("clens"); card.append(box); await lensContent(box, c); }

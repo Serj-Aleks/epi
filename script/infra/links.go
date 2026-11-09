@@ -144,7 +144,7 @@ center, _, _ := mk(name)
 center.Neighbors = resolve(alias, "") // синонимы — только существующие концепты, как в ПИ
 spec := map[string]string{"nw": "Prfix", "wt": "Attrib", "sw": "Sufix", "nr": "Preposit"}
 for a, k := range map[string]string{"nw": "N-west", "wt": "West", "sw": "S-west", "nr": "Nord"} {if t := graphType(setting(path, k)); t != "" {spec[a] = t}}
-out := map[string]any{"found": true, "center": center, "codes": graphCodes, "graph": setting(path, "Graph"), "list": setting(path, "List"),
+out := map[string]any{"found": true, "center": center, "codes": graphCodes, "graph": settingList(path, "Graph"), "list": settingList(path, "List"),
 	"nwType": spec["nw"], "wtType": spec["wt"], "swType": spec["sw"], "nrType": spec["nr"]}
 pair := map[string]string{"nw": "ne", "wt": "et", "sw": "se", "nr": "st"}
 used := map[string]bool{}
@@ -197,3 +197,12 @@ for _, m := range group {
 	for _, o := range group {if !format.SameTerm(o, m) {as = append(as, o)}}
 	for _, x := range cur {if exist(x) == "" && !has(as, x) {as = append(as, x)}}
 	if err := put(m, as); err != nil {return err}}; return nil }
+// settingList: настройка-блок концепта (Graph : [ nr ], List : [ Taxon ]) — имена в блоке.
+func settingList(path, key string) []string {
+b, err := os.ReadFile(path)
+if err != nil {return nil}
+lines, _ := conceptLines(b)
+for _, l := range lines {
+	if !isParam(l) || !format.SameTerm(lineKey(l), key) {continue}
+	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
+	if err == nil {return names(vs)}}; return nil }
