@@ -52,7 +52,7 @@
   .clens { border-bottom: 1px solid var(--line); padding: 8px 0; overflow-x: auto; }
   .cbar { display: flex; justify-content: flex-end; gap: 4px; padding: 0 10px; } .cbar select { font: inherit; }
   .cbody { padding: 0 14px; line-height: 1.5; } .cbody h1, .cbody h2, .cbody h3 { margin: 10px 0 6px; font-size: 1.1em; }
-  .cbody p { margin: 4px 0; } .cbody ul, .cbody ol { margin: 4px 0; padding-left: 22px; } .cbody pre { white-space: pre-wrap; background: var(--g2); padding: 6px; }
+  .cbody p { margin: 4px 0; } .cbody ul, .cbody ol { margin: 4px 0; padding-left: 22px; } .cbody pre { white-space: pre-wrap; background: var(--g2); border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; font-size: 13px; } .cbody code { background: var(--g2); padding: 0 3px; border-radius: 2px; } .cbody pre code { padding: 0; }
   .cbody table { border-collapse: collapse; } .cbody td, .cbody th { border: 1px solid var(--line); padding: 2px 6px; }
   .cbody a { color: var(--acc); } .cbody a.cref { font-weight: 700; text-decoration: none; }
   .cinc { border-left: 3px solid var(--graph-nr); padding-left: 8px; margin: 6px 0; }
@@ -254,7 +254,17 @@ function pPush(s) { const t = pstack[pstack.length - 1]; if (!t || t.k !== s.k |
 function pBack() { if (pstack.length < 2) return; pstack.pop(); const s = pstack[pstack.length - 1]; s.k === "c" ? cardShow(s.a, true) : qwestShow(s.a, true); }
 function pBackBtn() { const b = document.createElement("button"); b.textContent = "←"; b.title = "back"; b.disabled = pstack.length < 2; b.onclick = pBack; return b; }
 function cardShow(name, back) { if (!back) pPush({ k: "c", a: name }); cardName = name; qwestKey = null; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
-function cardHide() { cardName = null; qwestKey = null; pstack = []; card.hidden = true; card.innerHTML = ""; }
+function cardHide() { cardName = null; qwestKey = null; pstack = []; card.hidden = true; card.innerHTML = ""; cardCss(""); }
+// стиль концепта — спутник css (как в ПИ: стиль страницы концепта); в EPI страница
+// концепта — карточка: селекторы body, html, :root относятся к карточке, остальные —
+// внутри неё; правила @ — как есть. Стиль снимается при смене карточки.
+function cardCss(css) {
+  let st = document.getElementById("ccss");
+  if (!st) { st = document.createElement("style"); st.id = "ccss"; document.head.append(st); }
+  st.textContent = (css || "").replace(/\/\*[\s\S]*?\*\//g, "").split("}").map(r => { const i = r.indexOf("{"); if (i < 0) return r;
+    const sel = r.slice(0, i).trim(); if (!sel || sel.startsWith("@")) return r;
+    return sel.split(",").map(s => s.trim().replace(/^(html|body|:root)\b/, "#card")).map(s => s.startsWith("#card") ? s : "#card " + s).join(", ") + " " + r.slice(i); }).join("}");
+}
 const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 function mdHtml(md, name) {   // разметка md — по mdToHtml ПИ (заголовки, списки, таблицы, код, ссылки)
   const code = [];
@@ -318,7 +328,7 @@ async function qwestOpen(qs) {
   let rs;
   try { rs = await api("/api/qwest?q=" + encodeURIComponent(qs)); } catch (e) { return; }
   if (qs !== qwestKey) return;
-  rs = rs || []; card.hidden = false; card.innerHTML = "";
+  rs = rs || []; card.hidden = false; card.innerHTML = ""; cardCss("");
   const ts = qs.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
   const head = el("chead"), st = pstack[pstack.length - 1] || {}; head.append(pBackBtn(), el("cname", "qwest " + (qs ? "«" + qs + "»" : "—") + " · " + rs.length));
   const flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
@@ -368,6 +378,7 @@ async function cardOpen(name) {
   const cl = document.createElement("button"); cl.textContent = "⧉"; cl.title = "clone"; cl.onclick = () => { cloneSrc = c.name; askName("clone"); }; tools.prepend(cl); // клон — как в ПИ
   const x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
   head.append(tools); card.append(head);
+  cardCss(c.sats.includes("css") ? (await api("/api/sat?name=" + encodeURIComponent(c.name) + "&ext=css").catch(() => ({}))).text : "");
   if (lens.graph) { const d = await api("/api/nexus?name=" + encodeURIComponent(name)).catch(() => null);
     if (d && d.found) { const sides = ["nw", "ne", "wt", "et", "sw", "se", "nr", "st"];
       const hide = new Set((d.graph || "").trim().toLowerCase().split(/\s+/).filter(s => s.startsWith("-") && sides.includes(s.slice(1))).map(s => s.slice(1)));
