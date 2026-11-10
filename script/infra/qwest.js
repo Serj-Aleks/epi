@@ -41,7 +41,7 @@ ts.forEach(t => { const row = el("throw" + (t.name === (last && last.theme) ? " 
   row.append(ti, a, el("thmeta", `концептов ${t.concepts} · спутников ${t.sats} · сеансов ${t.seans}` + (t.last ? ` · последний ${t.last}` : ""))); tl.append(row); });
 card.append(tl);
 const fh = el("thfilter"), flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
-const qa = document.createElement("button"); qa.textContent = "во всех темах"; qa.title = "qwizt — поиск слова фильтра во всех темах"; qa.onclick = () => { const v = flt.value.trim(); if (v) runPred("qwizt \"" + v.replace(/"/g, "") + "\""); };
+const qa = document.createElement("button"); qa.textContent = "∀"; qa.title = "qwizt"; qa.onclick = () => { const v = flt.value.trim(); if (v) runPred("qwizt \"" + v.replace(/"/g, "") + "\""); };
 fh.append(flt, qa, el("thmeta", String(rs.length))); card.append(fh);
 const list = el("clens qlist"); card.append(list);
 const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
