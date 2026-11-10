@@ -47,8 +47,6 @@ type Script struct {
 const limit = 10000
 // aSort: алфавит темы — порядок концептов и тем (ASORT ПИ)
 const aSort = "nmlrhgkcsztdbpfvwuoaeiyjqx нмлркхгжщчшсзцтдбпфвюуоёэеиыйяаьъ"
-// gaussDigits: цифры 18-ричной системы Гаусса (o — 0 … g — 17)
-const gaussDigits = "oiztyvslanxedbhfmg"
 // qwestTypes: спутники, в которых ищет qwest; reTags, reMarks, reSpace — разметка, которую убирает qtext
 var qwestTypes = []string{"md", "html", "json", "xml", "txt"}
 var reTags, reMarks, reSpace = regexp.MustCompile(`<[^>]*>`), regexp.MustCompile("[#*_`\\[\\]{}|>]+"), regexp.MustCompile(`\s+`)
@@ -67,8 +65,6 @@ var aOrder = func() map[rune]int {
 m := map[rune]int{' ': -1, '-': -1, ',': -1}
 pos := 0
 for _, c := range aSort {if c != ' ' {m[c] = pos; pos++}}; return m}()
-// reGauss: гаусс-индекс — число в 18-ричной системе Гаусса, цифры gaussDigits (o — 0 … g — 17)
-var reGauss = regexp.MustCompile(`^[` + gaussDigits + `]{2,}$`)
 // linkOrder: связи локального контекста — оси как в ПИ (Prfix, Attrib, Sufix, Preposit), затем Radix, Taxon
 var linkOrder = []string{"Prfix", "Attrib", "Sufix", "Preposit", "Radix", "Taxon", "Links"}
 // graphTypes: связи графа в порядке ПИ, затем Radix и вычисляемая Transcl (в списке всегда, на оси — по настройке)

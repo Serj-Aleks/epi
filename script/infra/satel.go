@@ -354,7 +354,6 @@ for i, v := range vs {
 		if !dup {items = append(items, x)}}
 	vs[i].Items = items}; return lineKey(l) + " : " + format.Format(vs) }
 // situation: новая ситуация «a p b» в json концепта name — номер на единицу больше наибольшего в теме
-// (считаются и гаусс-индексы, ooot — 3); существующие ключи не переписываются
 func (q *Script) situation(name, a, p, b string) error {
 cp := q.cidx[strings.ToLower(name)]
 if cp == "" {return fmt.Errorf("концепта %s в теме нет", name)}
@@ -371,12 +370,8 @@ m := map[string]any{}
 if jb, err := os.ReadFile(jp); err == nil {if json.Unmarshal(jb, &m) != nil {return fmt.Errorf("%s: json не читается", jp)}}
 m[strconv.Itoa(next)] = a + " " + p + " " + b
 out, _ := json.MarshalIndent(m, "", "  "); return os.WriteFile(jp, out, 0644) }
-// sitNum: номер ситуации по ключу — число или гаусс-индекс (18-ричная система Гаусса)
-func sitNum(k string) (int, bool) {
-if n, err := strconv.Atoi(k); err == nil {return n, true}
-if !reGauss.MatchString(k) {return 0, false}
-n := 0
-for _, c := range k {n = n*18 + strings.IndexRune(gaussDigits, c)}; return n, true }
+// sitNum: номер ситуации по ключу
+func sitNum(k string) (int, bool) {n, err := strconv.Atoi(k); return n, err == nil }
 // copyFile: копия файла src в dst, папки создаются (clone, import, union)
 func copyFile(src, dst string) error {
 if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {return err}
