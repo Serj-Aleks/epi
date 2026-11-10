@@ -233,14 +233,12 @@ default:
 	http.NotFound(w, req)} }
 func main() {
 addr := flag.String("addr", "localhost:1944", "адрес")
-catlg := flag.String("catlg", "", "перенести темы ПИ из папки каталога ПИ — kater (ason-spec 9.18) и выйти")
 flag.Parse()
 dir, err := os.Getwd()
 if err != nil {log.Fatal(err)}
 if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {log.Fatal("запуск — из папки script: go run ./infra")}
 q, err := open(dir)
 if err != nil {log.Fatal(err)}
-if *catlg != "" {r, err := q.importKater(*catlg); for _, l := range r {fmt.Println(l)}; if err != nil {log.Fatal(err)}; return}
 http.HandleFunc("/api/", q.handle)
 http.HandleFunc("/style.css", func(w http.ResponseWriter, r *http.Request) {w.Header().Set("Content-Type", "text/css; charset=utf-8"); w.Write(style)})
 http.HandleFunc("/panel.js", func(w http.ResponseWriter, r *http.Request) {w.Header().Set("Content-Type", "text/javascript; charset=utf-8"); w.Write(panel)})

@@ -1,6 +1,6 @@
 // epi/script/infra/satel.go
 package main
-import ("encoding/json"; "fmt"; "os"; "path/filepath"; "regexp"; "sort"; "strconv"; "strings"; "epi/script/disp"; "epi/script/format")
+import ("encoding/json"; "fmt"; "io"; "os"; "path/filepath"; "regexp"; "sort"; "strconv"; "strings"; "epi/script/disp"; "epi/script/format")
 // Спутники концепта (0.22, 9.18): файлы рядом с концептом — то же имя, другое
 // расширение (md, json, svg, css, xml, html, txt); Content — тип спутника, открываемого
 // по умолчанию (md). Карточка концепта — панель с линзами (вариант B, 08.11.2026).
@@ -409,3 +409,12 @@ if n, err := strconv.Atoi(k); err == nil {return n, true}
 if !reGauss.MatchString(k) {return 0, false}
 n := 0
 for _, c := range k {n = n*18 + strings.IndexRune(gaussDigits, c)}; return n, true }
+// copyFile: копия файла src в dst, папки создаются (clone, import, union).
+func copyFile(src, dst string) error {
+if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {return err}
+in, err := os.Open(src)
+if err != nil {return err}
+defer in.Close()
+out, err := os.Create(dst)
+if err != nil {return err}
+if _, err = io.Copy(out, in); err != nil {out.Close(); return err}; return out.Close() }
