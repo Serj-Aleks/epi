@@ -70,7 +70,7 @@ function cardRank(c) { for (const l of c.lines || []) { const m = l.match(/^Rank
 async function cardOpen(name) {
 const gen = ++cardGen, root = document.createElement("div");
 let c;
-try { c = await api("/api/card?name=" + encodeURIComponent(name)); } catch (e) { return; }
+try { c = await api("/api/card?name=" + encodeURIComponent(name)); } catch (e) { note.textContent = "ошибка: " + e.message; return; }
 if (!c.found || name !== cardName) return;
 const keep = card.dataset.name === c.name ? card.scrollTop : 0; card.dataset.name = c.name;
 const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
