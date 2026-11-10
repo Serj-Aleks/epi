@@ -45,7 +45,7 @@ tip.style.left = Math.min(evt.clientX + 12, innerWidth - 230) + "px"; tip.style.
 document.body.append(tip); }
 // щелчок вне подсказки убирает её
 document.addEventListener("click", () => document.querySelectorAll(".dag-tooltip").forEach(e => e.remove()));
-// nxSvg: граф — nw, wt, sw слева, ne, et, se справа, nr сверху, st снизу
+// nxSvg: граф — nw, wt, sw слева, ne, et, se справа, nr сверху, st снизу; тёмный треугольник — в подсказке есть соседи
 function nxSvg(box, data) {
 const g = NXG, center = data.center.name;
 const [nw, sw, wt, ne, se, et, nr, st] = ["nw", "sw", "wt", "ne", "se", "et", "nr", "st"].map(s => data[s] || []);
@@ -79,7 +79,7 @@ const node = (n, x, y, isC, cv) => {
   const tx = g.nodeW - 10, ty = g.nodeH / 2, tg = document.createElementNS(SVGNS, "g"); tg.setAttribute("class", "dag-trigger");
   const hit = document.createElementNS(SVGNS, "rect"); hit.setAttribute("x", g.nodeW - 18); hit.setAttribute("width", 18); hit.setAttribute("height", g.nodeH); hit.setAttribute("fill", "transparent");
   const arr = document.createElementNS(SVGNS, "path"); arr.setAttribute("d", `M ${tx - 4} ${ty - 4} L ${tx + 2} ${ty} L ${tx - 4} ${ty + 4} z`);
-  arr.setAttribute("class", isC || (n.neighbors && n.neighbors.length) ? "dag-trigger-arrow active" : "dag-trigger-arrow");
+  arr.setAttribute("class", isC || nxVisible(n, center).length ? "dag-trigger-arrow active" : "dag-trigger-arrow");
   tg.append(hit, arr); tg.addEventListener("click", e => nxTip(e, n, center));
   if (!isC) grp.addEventListener("click", e => { if (!e.target.closest(".dag-trigger")) nodeGo(n); });
   grp.append(tg); svg.append(grp); };

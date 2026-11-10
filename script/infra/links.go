@@ -96,7 +96,7 @@ if p := q.conceptFile(name); exists(p) {return p}
 for _, c := range []string{"prfix", "sufix", "radix"} {if p := letterPath(filepath.Join(q.dir, "lexic", c), name); exists(p) {return p}}; return "" }
 // nexusGraph: граф (GetGraph ПИ) — оси nw, wt, sw, nr: Prfix, Attrib, Sufix, Preposit или по N-west, West, S-west, Nord
 // слева и сверху обратные списки, справа и снизу прямые, остальное — extra; узлы — только существующие концепты
-// соседи узла — его прямой список той же связи, у центра — синонимы; Transcl вычисляется; Nord : Themes — ось тем
+// соседи узла по той же связи — у входящего его прямой список, у исходящего обратный (в обоих есть центр), у центра — синонимы; Transcl вычисляется; Nord : Themes — ось тем
 func (q *Script) nexusGraph(name string) map[string]any {
 path := q.conceptPath(name)
 if path == "" {return map[string]any{"found": false}}
@@ -105,17 +105,17 @@ mk := func(n string) (gnode, string, bool) {
 	if p == "" {return gnode{}, "", false}
 	g := gnode{Name: conceptName(p, ""), Color: setting(p, "Color")}
 	if q.iconFile(n) != "" {g.Icon = "/api/icon?name=" + n}; return g, p, true}
-resolve := func(ns []string, slot string) []gnode {
+resolve := func(ns []string, slot string, inv bool) []gnode {
 	out := []gnode{}
 	for _, n := range ns {
 		g, p, ok := mk(n)
 		if !ok {continue}
-		if slot != "" {nd, _ := readLink(p, slot); if slot == "Transcl" {nd, _ = q.inclLists(n)}; for _, x := range nd {if xg, _, ok := mk(x); ok {g.Neighbors = append(g.Neighbors, gnode{Name: xg.Name})}}}
+		if slot != "" {nd, ni := readLink(p, slot); if slot == "Transcl" {nd, ni = q.inclLists(n)}; if inv {nd = ni}; for _, x := range nd {if xg, _, ok := mk(x); ok {g.Neighbors = append(g.Neighbors, gnode{Name: xg.Name})}}}
 		out = append(out, g)}; return out}
 alias, links, _ := q.nexusData(name)
 if d, i := q.inclLists(name); len(d)+len(i) > 0 {links["Transcl"] = [2][]string{d, i}}
 center, _, _ := mk(name)
-center.Neighbors = resolve(alias, "")
+center.Neighbors = resolve(alias, "", false)
 spec := map[string]string{"nw": "Prfix", "wt": "Attrib", "sw": "Sufix", "nr": "Preposit"}
 for a, k := range map[string]string{"nw": "N-west", "wt": "West", "sw": "S-west", "nr": "Nord"} {if t := graphType(setting(path, k)); t != "" {spec[a] = t}}
 themes := strings.EqualFold(setting(path, "Nord"), "Themes")
@@ -124,13 +124,13 @@ out := map[string]any{"found": true, "center": center, "codes": graphCodes, "gra
 	"nwType": spec["nw"], "wtType": spec["wt"], "swType": spec["sw"], "nrType": spec["nr"]}
 pair := map[string]string{"nw": "ne", "wt": "et", "sw": "se", "nr": "st"}
 used := map[string]bool{}
-for a, t := range spec {if t == "Themes" {continue}; s := links[t]; out[a], out[pair[a]] = resolve(s[1], t), resolve(s[0], t); used[t] = true}
+for a, t := range spec {if t == "Themes" {continue}; s := links[t]; out[a], out[pair[a]] = resolve(s[1], t, false), resolve(s[0], t, true); used[t] = true}
 if themes {out["nr"], out["st"] = q.themeNodes(path)}
 var extra []map[string]any
 for _, t := range graphTypes {
 	if used[t] {continue}
 	s := links[t]
-	d, i := resolve(s[0], t), resolve(s[1], t)
+	d, i := resolve(s[0], t, true), resolve(s[1], t, false)
 	if len(d)+len(i) > 0 {extra = append(extra, map[string]any{"type": t, "direct": d, "inverse": i})}}
 out["extra"] = extra; return out }
 // iconFile: картинка концепта (как в ПИ) — <папка>/<имя>.svg или <папка>/img/<имя>.png|jpg|jpeg|webp|gif|ico
