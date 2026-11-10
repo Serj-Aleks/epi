@@ -3,6 +3,10 @@ package main
 import (_ "embed"; "epi/script/disp"; "sync")
 //go:embed index.html
 var page []byte
+//go:embed style.css
+var style []byte
+//go:embed panel.js
+var panel []byte
 // Turn — шаг диалога: предикация, интерпретация, фреймы-интерпретаторы.
 type Turn struct {
 	Pred   string   `json:"pred"`

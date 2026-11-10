@@ -242,6 +242,8 @@ q, err := open(dir)
 if err != nil {log.Fatal(err)}
 if *catlg != "" {r, err := q.importKater(*catlg); for _, l := range r {fmt.Println(l)}; if err != nil {log.Fatal(err)}; return}
 http.HandleFunc("/api/", q.handle)
+http.HandleFunc("/style.css", func(w http.ResponseWriter, r *http.Request) {w.Header().Set("Content-Type", "text/css; charset=utf-8"); w.Write(style)})
+http.HandleFunc("/panel.js", func(w http.ResponseWriter, r *http.Request) {w.Header().Set("Content-Type", "text/javascript; charset=utf-8"); w.Write(panel)})
 http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(page)})
