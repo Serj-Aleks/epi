@@ -13,9 +13,7 @@ for _, t := range strings.Split(strings.ToLower(q), "&") {if t = strings.TrimSpa
 func excerpt(text, low, t string) string {
 pos := strings.Index(low, t)
 rs, rp := []rune(text), utf8.RuneCountInString(low[:pos])
-a, b := rp-80, rp+utf8.RuneCountInString(t)+80
-if a < 0 {a = 0}
-if b > len(rs) {b = len(rs)}; return "…" + string(rs[a:b]) + "…" }
+a, b := max(rp-80, 0), min(rp+utf8.RuneCountInString(t)+80, len(rs)); return "…" + string(rs[a:b]) + "…" }
 // qwestFind: найденные концепты текущей темы по запросу q
 func (q *Script) qwestFind(query string) []map[string]string {return q.qwestIn(q.cidx, q.theme, query) }
 // qwizFind: найденные концепты всех тем (qwizt), в каждой строке её тема

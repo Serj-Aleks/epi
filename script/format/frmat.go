@@ -116,9 +116,6 @@ for {
 		b.WriteRune(x)
 	default:
 		b.WriteRune(r)}} }
-// min: меньшее из двух
-func min(a, b int) int {
-if a < b {return a}; return b }
 // IsDef: на позиции i начинается определение «Ключ : …»
 func IsDef(items []Value, i int) bool {return i+1 < len(items) && (items[i].Kind == Term || items[i].Kind == Field) &&
 	items[i+1].Kind == Op && items[i+1].Text == ":" }
