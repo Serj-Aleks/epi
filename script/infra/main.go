@@ -240,11 +240,7 @@ if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {log.Fatal("за�
 q, err := open(dir)
 if err != nil {log.Fatal(err)}
 http.HandleFunc("/api/", q.handle)
-http.HandleFunc("/style.css", func(w http.ResponseWriter, r *http.Request) {w.Header().Set("Content-Type", "text/css; charset=utf-8"); w.Write(style)})
-http.HandleFunc("/panel.js", func(w http.ResponseWriter, r *http.Request) {w.Header().Set("Content-Type", "text/javascript; charset=utf-8"); w.Write(panel)})
-http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(page)})
+http.Handle("/", http.FileServer(http.FS(page)))
 log.Printf("script: http://%s (данные: %s)", *addr, dir)
 log.Fatal(http.ListenAndServe(*addr, nil)) }
 func hasArrow(vs []format.Value) bool {

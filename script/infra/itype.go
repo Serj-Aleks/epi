@@ -1,12 +1,9 @@
 // epi/script/infra/itype.go
 package main
-import (_ "embed"; "epi/script/disp"; "sync")
-//go:embed index.html
-var page []byte
-//go:embed style.css
-var style []byte
-//go:embed panel.js
-var panel []byte
+import ("embed"; "epi/script/disp"; "sync")
+// страница панели: разметка, стили, код
+//go:embed index.html style.css *.js
+var page embed.FS
 // Turn — шаг диалога: предикация, интерпретация, фреймы-интерпретаторы.
 type Turn struct {
 	Pred   string   `json:"pred"`
