@@ -16,15 +16,15 @@ rs, rp := []rune(text), utf8.RuneCountInString(low[:pos])
 a, b := max(rp-80, 0), min(rp+utf8.RuneCountInString(t)+80, len(rs)); return "…" + string(rs[a:b]) + "…" }
 // qwestFind: найденные концепты текущей темы по запросу q
 func (q *Script) qwestFind(query string) []map[string]string {return q.qwestIn(q.cidx, q.theme, query) }
-// qwizFind: найденные концепты всех тем (qwizt), в каждой строке её тема
+// qwizFind: найденные концепты всех тем (qwizt), в каждой строке её тема; нет — пустой список
 func (q *Script) qwizFind(query string) []map[string]string {
 ts, _ := q.themes()
-var out []map[string]string
+out := []map[string]string{}
 for _, t := range ts {idx := q.cidx; if t != q.theme {idx = themeIndex(filepath.Join(q.themaRoot(), t))}; out = append(out, q.qwestIn(idx, t, query)...)}; return out }
-// qwestIn: найденные концепты указателя idx темы theme
+// qwestIn: найденные концепты указателя idx темы theme; нет — пустой список
 func (q *Script) qwestIn(idx map[string]string, theme, query string) []map[string]string {
 ts := qterms(query)
-var out []map[string]string
+out := []map[string]string{}
 for k, p := range idx {
 	name := conceptName(p, "")
 	alias, _ := readLink(p, "Alias")
