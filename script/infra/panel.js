@@ -5,12 +5,13 @@ function el(cls, text) { const d = document.createElement("div"); d.className = 
 function scroll() { log.scrollTop = log.scrollHeight; }
 // addPred: предикация в ленту
 function addPred(text) { const t = el("turn"); t.append(el("pred", text)); log.append(t); scroll(); return t; }
-// addAnswer: ответ в ленту; после nexus, clone, rename, union, qwest, qwizt и правки — панель
-function addAnswer(t, turn) {
+// addAnswer: ответ в ленту; после nexus, clone, rename, union, qwest, qwizt и правки — панель (replay — лента заново, без панели)
+function addAnswer(t, turn, replay) {
 const a = el("ans" + (turn.error ? " err" : ""));
 a.append(el("v", turn.answer));
 const f = el("f", (turn.frames || []).join(" ")); f.title = "interpres"; a.append(f);
 t.append(a); scroll();
+if (replay) return;
 if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice(6));
 else if (!turn.error && /^(clone|rename|union)\s/.test(turn.pred || "")) cardShow(turn.answer);
 else if (!turn.error && /^qwest\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1"));
@@ -21,7 +22,7 @@ async function api(path, body) {
 const r = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 if (!r.ok) throw new Error(await r.text());
 return r.json(); }
-// show: состояние сервера — темы, сеансы, лента текущего сеанса; другая тема или сеанс закрывает панель
+// show: состояние сервера — темы, сеансы, лента текущего сеанса; другая тема или сеанс закрывает панель, без панели — карточка последнего nexus
 function show(st) {
 if (!last || last.theme !== st.theme || last.current !== st.current) cardHide();
 last = st; mode = null; inp.placeholder = "";
@@ -40,7 +41,8 @@ for (const s of st.seanses || []) { const o = document.createElement("option"); 
 writable = !!st.current && !st.closed;
 document.getElementById("close").disabled = !writable;
 log.innerHTML = ""; hist = [];
-for (const turn of st.turns || []) { const t = addPred(turn.pred); addAnswer(t, turn); hist.push(turn.pred); }
+for (const turn of st.turns || []) { const t = addPred(turn.pred); addAnswer(t, turn, true); hist.push(turn.pred); }
+if (card.hidden) { const n = (st.turns || []).filter(t => !t.error && /^nexus \S+$/.test(t.pred)).pop(); if (n) cardShow(n.pred.slice(6)); }
 hpos = hist.length;
 inp.disabled = !writable;
 if (st.pending && st.pending.question) { inp.disabled = true; handle(addPred(st.pending.pred), { question: st.pending.question, options: st.pending.options }); }
@@ -115,10 +117,10 @@ if (mode) {
   return; }
 const text = inp.value.trim(); if (!text) return;
 inp.value = ""; runPred(text); };
-// строка ввода, клавиши: Esc — отмена имени, ↑ ↓ — история
+// строка ввода, клавиши: Esc — отмена ввода имени, ↑ ↓ — история
 inp.addEventListener("keydown", (e) => {
 if (mode === "concept") { if (e.key === "Escape") conceptDone(""); return; }
-if (mode) { if (e.key === "Escape") { inp.value = ""; show(last); } return; }
+if (mode) { if (e.key === "Escape") { mode = null; inp.value = ""; inp.placeholder = ""; note.textContent = ""; inp.disabled = !writable; } return; }
 if (e.key === "ArrowUp" && hpos > 0) { inp.value = hist[--hpos]; e.preventDefault(); }
 if (e.key === "ArrowDown") { hpos = Math.min(hist.length, hpos + 1); inp.value = hist[hpos] || ""; e.preventDefault(); } });
 // кнопки шапки и выбор темы, сеанса
