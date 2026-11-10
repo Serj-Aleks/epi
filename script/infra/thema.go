@@ -26,16 +26,11 @@ case strings.ContainsAny(name, "/\\:*?\"<>|") || strings.IndexFunc(name, unicode
 func (q *Script) themeExists(name string) (string, bool) {
 ts, _ := q.themes()
 for _, t := range ts {if format.SameTerm(t, name) {return t, true}}; return "", false }
-// createTheme: новая тема; первая забирает протокол прежнего вида script/prtcl
+// createTheme: новая тема с протоколом prtcl
 func (q *Script) createTheme(name string) error {
 if err := checkName(name); err != nil {return err}
 if t, ok := q.themeExists(name); ok {return fmt.Errorf("тема %s уже есть", t)}
-ts, err := q.themes()
-if err != nil {return err}
-dir := filepath.Join(q.themaRoot(), name)
-if err := os.MkdirAll(dir, 0755); err != nil {return err}
-legacy := filepath.Join(q.dir, "prtcl")
-if _, err := os.Stat(legacy); len(ts) == 0 && err == nil {if err := os.Rename(legacy, filepath.Join(dir, "prtcl")); err != nil {return err}} else if err := os.MkdirAll(filepath.Join(dir, "prtcl"), 0755); err != nil {return err}; return q.switchTheme(name) }
+if err := os.MkdirAll(filepath.Join(q.themaRoot(), name, "prtcl"), 0755); err != nil {return err}; return q.switchTheme(name) }
 // renameTheme: переименование папки темы; ссылок на имя темы внутри нет
 func (q *Script) renameTheme(old, name string) error {
 if err := checkName(name); err != nil {return err}
@@ -139,7 +134,7 @@ on, of := q.in.OnParam, q.in.OnFrame
 q.in.OnParam, q.in.OnFrame = nil, nil
 defer func() {q.in.OnParam, q.in.OnFrame = on, of}()
 if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {return err}; return q.loadConceptsIn(q.themaDir()) }
-// loadConceptsIn: концепты в папке root — имя из пути, файл прежнего вида переписывается; у связи в контекст — только прямой список
+// loadConceptsIn: концепты в папке root — имя из пути; у связи в контекст — только прямой список
 func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 	if os.IsNotExist(err) && path == root {return nil}
 	if err != nil {return err}
@@ -148,12 +143,8 @@ func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root
 	b, err := os.ReadFile(path)
 	if err != nil {return err}
 	name := conceptName(path, root)
-	var lines []string
-	if isLegacy(b) {
-		_, models, err := readLegacy(path)
-		if err != nil {return err}
-		for _, m := range models {lines = append(lines, m[0]+" : "+m[1])}
-		if err := writeLines(path, lines); err != nil {return err}} else if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}
+	lines, err := conceptLines(b)
+	if err != nil {return fmt.Errorf("%s: %w", path, err)}
 	var body []string
 	for _, l := range lines {
 		if !isParam(l) {body = append(body, l); continue}
@@ -162,25 +153,16 @@ func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root
 	if len(body) > 0 {if _, err := q.in.Run(name+" : [ "+strings.Join(body, " . ")+" ]", q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
 // conceptName: имя концепта из имени файла с прописной первой буквой (К/В/А/Д/Р/А/Т/квадрат.uic → Квадрат)
 func conceptName(path, root string) string { return capital(strings.TrimSuffix(filepath.Base(path), ".uic")) }
-// loadIgnor: база нераспознанных темы — строка на предикацию, нечитаемое — строкой; прежний вид «[ … ]» переписывается
+// loadIgnor: база нераспознанных темы — строка на предикацию, нечитаемое — строкой
 func (q *Script) loadIgnor() error {
 b, err := os.ReadFile(q.ignor())
 if os.IsNotExist(err) {return nil}
 if err != nil {return err}
-var lines []string
-legacy := false
 for _, l := range strings.Split(string(b), "\n") {
 	if l = strings.TrimSpace(l); l == "" {continue}
-	text, line := l, l
-	if vs, err := format.Parse(l); err == nil && len(vs) == 1 {
-		switch vs[0].Kind {
-		case format.Array:
-			text, line, legacy = format.Format(vs[0].Items), format.Format(vs[0].Items), true
-		case format.String:
-			text = vs[0].Text}}
-	q.in.Unknown = append(q.in.Unknown, text)
-	lines = append(lines, line)}
-if legacy {return writeLines(q.ignor(), lines)}; return nil }
+	text := l
+	if vs, err := format.Parse(l); err == nil && len(vs) == 1 && vs[0].Kind == format.String {text = vs[0].Text}
+	q.in.Unknown = append(q.in.Unknown, text)}; return nil }
 // themeIcon: картинка темы — <тема>/<Тема>.svg или <тема>/img/<Тема>.png|… (как в ПИ)
 func (q *Script) themeIcon(name string) string {
 dir := filepath.Join(q.themaRoot(), name)

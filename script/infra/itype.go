@@ -45,7 +45,6 @@ type Script struct {
 	cidx    map[string]string // концепты темы: имя (строчными) → файл
 	tidx    map[string][]string} // трансклюзии темы: имя (строчными) → включаемые концепты
 const limit = 10000
-const gaussABC = "oiztyvslanxedbhfmg"
 // aSort: алфавит темы — порядок концептов и тем (ASORT ПИ)
 const aSort = "nmlrhgkcsztdbpfvwuoaeiyjqx нмлркхгжщчшсзцтдбпфвюуоёэеиыйяаьъ"
 // gaussDigits: цифры 18-ричной системы Гаусса (o — 0 … g — 17)

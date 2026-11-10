@@ -39,7 +39,7 @@ for _, e := range es {
 	ss = append(ss, Seans{Name: n, Closed: st.Mode().Perm()&0200 == 0})}
 sort.Slice(ss, func(i, j int) bool { return ss[i].Name > ss[j].Name }); return ss, nil }
 // switchTo: сделать сеанс текущим; строки сеанса — модели «[ предикация ] -> интерпретация», диалог показывается
-// каким был, заново не выполняется; ошибка отмечена «-> !»; сеанс прежнего вида (только предикации) переносится
+// каким был, заново не выполняется; ошибка отмечена «-> !»
 func (q *Script) switchTo(name string) error {
 st, err := os.Stat(q.seans(name))
 if err != nil {return err}
@@ -48,8 +48,6 @@ if err != nil {return err}
 text, errLines := bangs(string(b))
 vs, err := format.Parse(text)
 if err != nil {return fmt.Errorf("%s: %w", name, err)}
-if len(vs) > 0 && !hasArrow(vs) {
-	if vs, err = q.migrateSeans(name, vs, st.Mode().Perm()); err != nil {return err}}
 var turns []Turn
 for i := 0; i+2 < len(vs); i += 3 {
 	if vs[i+1].Kind != format.Op || vs[i+1].Text != "->" {return fmt.Errorf("%s: строка %d: ожидалась модель «[ … ] -> …»", name, vs[i].Line)}
@@ -231,27 +229,3 @@ http.HandleFunc("/api/", q.handle)
 http.Handle("/", http.FileServer(http.FS(page)))
 log.Printf("script: http://%s (данные: %s)", *addr, dir)
 log.Fatal(http.ListenAndServe(*addr, nil)) }
-// hasArrow: в сеансе есть модели «->»
-func hasArrow(vs []format.Value) bool {
-for _, v := range vs {if v.Kind == format.Op && v.Text == "->" {return true}}; return false }
-// migrateSeans: сеанс прежнего вида один раз выполняется без вопросов и переписывается моделями; права файла сохраняются
-func (q *Script) migrateSeans(name string, vs []format.Value, perm os.FileMode) ([]format.Value, error) {
-ask := q.in.Ask
-q.in.Ask = func(string) bool { return false }
-defer func() { q.in.Ask = ask }()
-known := len(q.in.Unknown)
-var sb strings.Builder
-for _, v := range vs {
-	text := v.Text
-	if v.Kind == format.Array {text = format.Format(v.Items)}
-	val, err := q.in.Run(text, q.env)
-	t := Turn{Pred: text, Answer: val.String()}
-	if err != nil {t.Answer, t.Error = err.Error(), true}
-	sb.WriteString(record(t))}
-q.in.Unknown = q.in.Unknown[:known]
-path := q.seans(name)
-tmp := path + ".tmp"
-if err := os.WriteFile(tmp, []byte(sb.String()), perm); err != nil {return nil, err}
-if err := os.Rename(tmp, path); err != nil {return nil, err}
-out, err := format.Parse(sb.String())
-if err != nil {return nil, fmt.Errorf("%s после переноса: %w", name, err)}; return out, nil }
