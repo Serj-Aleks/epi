@@ -130,5 +130,8 @@ tsel.onchange = () => { if (tsel.value) act("/api/thema/open", { name: tsel.valu
 document.getElementById("new").onclick = () => act("/api/new", {});
 document.getElementById("close").onclick = () => act("/api/close", {});
 sel.onchange = () => { if (sel.value) act("/api/open", { name: sel.value }); };
+// ошибка кода панели — в шапку, чтобы её было видно без консоли
+window.addEventListener("error", e => { note.textContent = "ошибка: " + e.message; });
+window.addEventListener("unhandledrejection", e => { note.textContent = "ошибка: " + (e.reason && e.reason.message || e.reason); });
 // старт
 api("/api/state").then(show);
