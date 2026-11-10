@@ -16,7 +16,7 @@ let mode = null;
 // ответ на вопрос trans — имя концепта
 let conceptDone = null;
 // линзы карточки: включена или нет
-const lens = { graph: true, tags: false, rank: false, tabs: false, process: false, content: true, slots: false };
+const lens = { graph: true, taxon: false, rank: false, tabs: false, process: false, content: true, slots: false };
 // карточка: имя, таймер, источник клона, поколение сборки, найденное внутри концепта { name, ext, q }
 let cardName = null, cardTimer = null, cloneSrc = "", cardGen = 0, cardFind = null;
 // история панели (←) и ключ открытого списка qwest

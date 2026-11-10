@@ -1,4 +1,4 @@
-// script/infra/lense.js — линзы карточки: ≡ контент со словарями, ↕ вкладки, ⊛ процесс, ◈ ранг, ⬡ теги, ⊞ слоты
+// script/infra/lense.js — линзы карточки: ≡ контент со словарями, ↕ вкладки, ⊛ процесс, ◈ ранг, ⬡ таксоны, ⊞ слоты
 // lensContent: ≡ контент — спутник Content или md, найденное внутри концепта подсвечено; ✎ — редактор спутников
 async function lensContent(box, c) {
 const bar = el("cbar"), body = el("cbody");
@@ -81,12 +81,12 @@ const okd = document.createElement("td"), ok = document.createElement("button");
 ok.onclick = async () => { const s = ins.map(v => v.value.trim()); if (s.some(x => !x)) return; try { await api("/api/situation", { name: c.name, text: s.join(" ") }); } catch (e) { note.textContent = e.message; return; } cardOpen(c.name); };
 ins.forEach(v => v.onkeydown = e => { if (e.key === "Enter") ok.click(); }); t.append(add);
 const w = el("pwrap"); w.append(t); box.append(w); }
-// lensRank: ◈ ранг (как lrank.js ПИ) — дерево дочерних на глубину Rank; ▶ раскрыть, ⬡ тег, ▪ концепт
+// lensRank: ◈ ранг (как lrank.js ПИ) — дерево дочерних на глубину Rank; ▶ раскрыть, ⬡ таксон, ▪ концепт
 async function lensRank(box, c) {
 const max = cardRank(c), tree = el("rtree");
 const node = (x, depth) => { const n = el("rnode"), row = el("rrow"), ar = el("rarrow", depth < max ? "▶" : " ");
   const a = document.createElement("a"); a.href = "#"; a.className = "rlink"; a.textContent = x.name; a.onclick = e => { e.preventDefault(); nxGo(x.name); };
-  row.append(ar, el("tpmark", x.tag ? "⬡" : "▪"), a); n.append(row);
+  row.append(ar, el("tpmark", x.taxon ? "⬡" : "▪"), a); n.append(row);
   if (depth < max) { const kids = el("rkids"); kids.hidden = true; n.append(kids); ar.classList.add("on");
     ar.onclick = async () => { if (kids.hidden && !kids.dataset.loaded) { kids.dataset.loaded = "1"; const ch = await api("/api/children?name=" + encodeURIComponent(x.name)).catch(() => []);
         if (!ch.length) kids.append(el("cempty", "—")); ch.forEach(y => kids.append(node(y, depth + 1))); }
@@ -95,11 +95,11 @@ const node = (x, depth) => { const n = el("rnode"), row = el("rrow"), ar = el("r
 const ch = await api("/api/children?name=" + encodeURIComponent(c.name)).catch(() => []);
 if (!ch.length) tree.append(el("cempty", "нет дочерних")); ch.forEach(x => tree.append(node(x, 1)));
 box.append(tree); }
-// lensTags: ⬡ теги (как ltags.js ПИ) — Taxon концепта; тег — концепт с Rank
-// плашка: картинка, имя, ▾ дочерние, × убрать; поле — подбор, «сделать тегом» (Rank : 0), «создать тег»
+// lensTaxon: ⬡ таксоны (как ltags.js ПИ) — Taxon концепта; таксон — концепт с Rank
+// плашка: картинка, имя, ▾ дочерние, × убрать; поле — подбор, «сделать таксоном» (Rank : 0), «создать таксон»
 // каждая правка — предикация Концепт.Taxon : [ … ] в протокол
-async function lensTags(box, c) {
-const all = await api("/api/tags").catch(() => []), mine = [];
+async function lensTaxon(box, c) {
+const all = await api("/api/taxa").catch(() => []), mine = [];
 for (const l of c.lines || []) { const m = l.match(/^Taxon : \[([^\]]*)\]/); if (m) mine.push(...m[1].trim().split(/\s+/).filter(Boolean)); }
 const save = ns => runPred(c.name + ".Taxon : [ " + ns.join(" ") + " ]");
 const pills = el("tpills");
@@ -112,10 +112,10 @@ mine.forEach(n => { const t = all.find(x => x.name.toLowerCase() === n.toLowerCa
   ex.onclick = async () => { const old = p.querySelector(".tplist"); if (old) { old.remove(); return; }
     const ch = await api("/api/children?name=" + encodeURIComponent(t ? t.name : n)).catch(() => []), ls = el("tplist");
     if (!ch.length) ls.append(el("cempty", "—"));
-    ch.forEach(x => { const i = document.createElement("a"); i.href = "#"; i.append(el("tpmark", x.tag ? "⬡" : "▪"), x.name); i.title = x.tag ? "tag" : "concept"; i.onclick = e => { e.preventDefault(); nxGo(x.name); }; ls.append(i); });
+    ch.forEach(x => { const i = document.createElement("a"); i.href = "#"; i.append(el("tpmark", x.taxon ? "⬡" : "▪"), x.name); i.title = x.taxon ? "taxon" : "concept"; i.onclick = e => { e.preventDefault(); nxGo(x.name); }; ls.append(i); });
     p.append(ls); };
   p.append(ic, a, ex, rm); pills.append(p); });
-const inpT = document.createElement("input"); inpT.className = "cval"; inpT.placeholder = "add tag..."; inpT.spellcheck = false;
+const inpT = document.createElement("input"); inpT.className = "cval"; inpT.placeholder = "add taxon..."; inpT.spellcheck = false;
 const drop = el("tdrop");
 const add = n => save(mine.concat([n]));
 inpT.oninput = async () => { drop.innerHTML = ""; const v = inpT.value.trim(), lv = v.toLowerCase(); if (!v) return;
@@ -125,8 +125,8 @@ inpT.oninput = async () => { drop.innerHTML = ""; const v = inpT.value.trim(), l
   if (ms.some(t => t.name.toLowerCase() === lv)) return;
   const ex = await api("/api/card?name=" + encodeURIComponent(v)).catch(() => ({}));
   if (inpT.value.trim() !== v) return;
-  if (ex.found) { const i = el("titem tnew", "сделать тегом «" + ex.name + "»"); i.onmousedown = async e => { e.preventDefault(); if (await runPred(ex.name + ".Rank : 0")) add(ex.name); }; drop.append(i); }
-  else if (/^\p{Lu}[^\s.:\[\]{}()"]*$/u.test(v)) { const i = el("titem tnew", "создать тег «" + v + "»"); i.onmousedown = async e => { e.preventDefault(); if (await runPred(v + " : []") && await runPred(v + ".Rank : 0")) add(v); }; drop.append(i); } };
+  if (ex.found) { const i = el("titem tnew", "сделать таксоном «" + ex.name + "»"); i.onmousedown = async e => { e.preventDefault(); if (await runPred(ex.name + ".Rank : 0")) add(ex.name); }; drop.append(i); }
+  else if (/^\p{Lu}[^\s.:\[\]{}()"]*$/u.test(v)) { const i = el("titem tnew", "создать таксон «" + v + "»"); i.onmousedown = async e => { e.preventDefault(); if (await runPred(v + " : []") && await runPred(v + ".Rank : 0")) add(v); }; drop.append(i); } };
 inpT.onblur = () => setTimeout(() => drop.innerHTML = "", 200);
 const wrap = el("twrap"); wrap.append(inpT, drop);
 box.append(pills, wrap); }

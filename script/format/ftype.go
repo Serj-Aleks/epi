@@ -1,7 +1,7 @@
 // epi/script/format/ftype.go
 package format
 import ("regexp")
-// Kind — вид значения.
+// Kind: вид значения
 type Kind int
 const (
 	Array      Kind = iota // [ ]
@@ -40,8 +40,7 @@ var kindNames = [...]string{"массив", "объект", "выражение"
 	"двоичное-64", "терм", "терм-получение", "ссылка на терм",
 	"селектор", "уточнение", "литерал", "поле", "получение поля",
 	"путь", "оператор"}
-// Value — узел дерева. У блоков заполнено Items, у остальных — Text:
-// написание из исходного текста (у строк — содержимое без кавычек).
+// Value: узел дерева — у блоков Items, у остальных Text (написание, у строк — без кавычек)
 type Value struct {
 	Kind  Kind
 	Text  string
@@ -49,17 +48,17 @@ type Value struct {
 	Line  int
 	Col   int
 	End   int} // строка, на которой значение кончается
-// Error — ошибка разбора с местом в тексте.
+// Error: ошибка разбора с местом в тексте
 type Error struct {
 	Line, Col int
 	Msg       string}
-// Operators — операторы: всегда отдельный токен.
+// Operators: операторы, всегда отдельный токен
 var Operators = map[string]bool{"+": true, "-": true, "*": true, "/": true, "//": true,
 	"%": true, ":": true, ".": true, "<": true, ">": true, "<=": true, ">=": true, "=": true, "<>": true, "->": true,
 	"&": true, "|": true}
-// Терм начинается с буквы любого алфавита (решение 29.10.2026); системный
-// лексикон — общеупотребительные символы и термы латино-эллинской этимологии.
+// termRe: терм начинается с буквы любого алфавита
 const termRe = `\pL[\pL\pN_?!*+~&|-]*`
+// atoms: виды атомов и их шаблоны
 var atoms = []struct {
 	kind Kind
 	re   *regexp.Regexp}{
@@ -84,11 +83,12 @@ var atoms = []struct {
 	{Path, regexp.MustCompile(`^` + termRe + `(/` + termRe + `)+$`)},
 	{GetTerm, regexp.MustCompile(`^:` + termRe + `$`)},
 	{Term, regexp.MustCompile(`^` + termRe + `$`)},}
+// parser: текст и место разбора
 type parser struct {
 	src       []rune
 	pos       int
 	line, col int}
-// Entry — определение объектного блока: ключ и значение (одно или несколько).
+// Entry: определение объектного блока — ключ и значение (одно или несколько)
 type Entry struct {
 	Key   Value
 	Value []Value}

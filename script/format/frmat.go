@@ -1,27 +1,31 @@
-// Package ason читает текст ASON (лексика EPI, claude/ason-spec.md, раздел 2)
-// в дерево значений и пишет дерево обратно в канонический текст.
 // epi/script/format/frmat.go
+// Package format: текст ASON в дерево значений и дерево обратно в канонический текст
 package format
 import ("fmt"; "regexp"; "strings"; "unicode")
+// String: имя вида значения
 func (k Kind) String() string { return kindNames[k] }
+// Error: ошибка разбора с местом
 func (e *Error) Error() string {return fmt.Sprintf("строка %d, позиция %d: %s", e.Line, e.Col, e.Msg) }
+// errAt: ошибка в строке line, позиции col
 func (p *parser) errAt(line, col int, f string, a ...any) error {return &Error{line, col, fmt.Sprintf(f, a...)} }
+// peek: следующая литера без сдвига
 func (p *parser) peek() rune {
 if p.pos < len(p.src) {return p.src[p.pos]}; return 0 }
+// next: следующая литера со сдвигом, счёт строк и позиций
 func (p *parser) next() rune {
 r := p.src[p.pos]
 p.pos++
 if r == '\n' {p.line, p.col = p.line+1, 1} else {p.col++}; return r }
+// isSpace, isDelim, closing: пробел, разделитель, закрывающая скобка блока
 func isSpace(r rune) bool { return r == ' ' || r == '\t' || r == '\n' || r == '\r' }
 func isDelim(r rune) bool { return isSpace(r) || strings.ContainsRune("[](){}", r) }
 func closing(k Kind) rune { return map[Kind]rune{Array: ']', Object: '}', Expr: ')'}[k] }
-// Parse читает весь текст. Результат — последовательность значений верхнего
-// уровня. При любой ошибке возвращается только ошибка: ввод отвергается целиком.
+// Parse: весь текст — значения верхнего уровня; при ошибке ввод отвергается целиком
 func Parse(text string) ([]Value, error) {
 p := &parser{src: []rune(text), line: 1, col: 1}
 items, err := p.seq(0, 0, 0)
 if err != nil {return nil, err}; return items, nil }
-// seq читает значения до закрывающей скобки end (0 — до конца текста).
+// seq: значения до закрывающей скобки end (0 — до конца текста)
 func (p *parser) seq(end rune, line, col int) ([]Value, error) {
 var items []Value
 for {
@@ -34,6 +38,7 @@ for {
 	if err != nil {return nil, err}
 	v.End = p.line
 	items = append(items, v)} }
+// value: одно значение — блок, строка, тег или атом; определение пишется через пробел «Ключ :»
 func (p *parser) value() (Value, error) {
 line, col := p.line, p.col
 r := p.peek()
@@ -86,11 +91,12 @@ for p.pos < len(p.src) && !isDelim(p.peek()) {
 	p.next()}
 tok := string(p.src[start:p.pos])
 if Operators[tok] {return Value{Kind: Op, Text: tok, Line: line, Col: col}, nil}
-if len(tok) > 1 && strings.HasSuffix(tok, ":") {return Value{}, p.errAt(line, col, "определение пишется через пробел: «%s :»", strings.TrimSuffix(tok, ":"))} // решение 9.9
+if len(tok) > 1 && strings.HasSuffix(tok, ":") {return Value{}, p.errAt(line, col, "определение пишется через пробел: «%s :»", strings.TrimSuffix(tok, ":"))}
 for _, a := range atoms {if a.re.MatchString(tok) {return Value{Kind: a.kind, Text: tok, Line: line, Col: col}, nil}}; return Value{}, p.errAt(line, col, "непонятный токен %q", tok) }
-// after проверяет, что за строкой или тегом нет слитно продолжения.
+// after: за строкой или тегом нет слитного продолжения
 func (p *parser) after(v Value) (Value, error) {
 if p.pos < len(p.src) && !isDelim(p.peek()) {return Value{}, p.errAt(p.line, p.col, "после значения нужен пробел или скобка")}; return v, nil }
+// quoted: содержимое строки в кавычках
 func (p *parser) quoted(line, col int) (string, error) {
 var b strings.Builder
 for {
@@ -110,34 +116,34 @@ for {
 		b.WriteRune(x)
 	default:
 		b.WriteRune(r)}} }
+// min: меньшее из двух
 func min(a, b int) int {
 if a < b {return a}; return b }
-// IsDef: на позиции i начинается определение «Ключ : …» (решение 9.9).
+// IsDef: на позиции i начинается определение «Ключ : …»
 func IsDef(items []Value, i int) bool {return i+1 < len(items) && (items[i].Kind == Term || items[i].Kind == Field) &&
 	items[i+1].Kind == Op && items[i+1].Text == ":" }
-// checkObject: объектный блок — определения «Ключ : значение»; значение —
-// всё до следующего определения (решения 2.4.6, 9.9).
+// checkObject: объектный блок — определения «Ключ : значение», значение — до следующего определения
 func checkObject(items []Value, line, col int) error {
 if len(items) > 0 && !IsDef(items, 0) {return &Error{items[0].Line, items[0].Col, "объектный блок должен начинаться с определения «Ключ : значение»"}}
 for i := 0; i < len(items); i++ {
 	if IsDef(items, i) {
 		if i+2 == len(items) || IsDef(items, i+2) {return &Error{items[i].Line, items[i].Col, fmt.Sprintf("у «%s» нет значения", items[i].Text)}}
 		i++}}; return nil }
-// Entries раскладывает объектный блок на пары «ключ — значение».
+// Entries: объектный блок на пары «ключ — значение»
 func (v Value) Entries() []Entry {
 var es []Entry
 for i := 0; i < len(v.Items); i++ {
 	if IsDef(v.Items, i) {
 		es = append(es, Entry{Key: v.Items[i]})
 		i++} else if len(es) > 0 {es[len(es)-1].Value = append(es[len(es)-1].Value, v.Items[i])}}; return es }
-// Format пишет значения в канонический текст (решения 2.4.8, 9.10).
+// Format: значения в канонический текст; перевод строки между значениями сохраняется (отделяет предикации)
 func Format(vs []Value) string {
 var b strings.Builder
 for i, v := range vs {
 	if i > 0 {
-		// перевод строки между значениями сохраняется: он отделяет предикации (9.10)
 		if v.Line > vs[i-1].End && vs[i-1].End > 0 {b.WriteString("\n")} else {b.WriteString(" ")}}
 	b.WriteString(v.String())}; return b.String() }
+// String: значение в канонический текст
 func (v Value) String() string {
 switch v.Kind {
 case Array, Object, Expr:
@@ -149,13 +155,12 @@ case LongString: return "''" + v.Text + "''"
 case Tag: return "<" + v.Text + ">"
 case Binary16: return `#"` + v.Text + `"`
 case Binary64: return `##"` + v.Text + `"`}; return v.Text }
-// Key — ключ терма для сравнения: первая буква — как написана (строчная —
-// препозиция, прописная — объект, решение 9.9), остальные — без учёта регистра.
+// Key: ключ терма — первая буква как написана (строчная — препозиция, прописная — объект), остальные без учёта регистра
 func Key(s string) string {
 r := []rune(s)
 if len(r) == 0 {return s}; return string(r[0]) + strings.ToLower(string(r[1:])) }
-// SameTerm сравнивает написания термов по Key.
+// SameTerm: написания термов равны по Key
 func SameTerm(a, b string) bool { return Key(a) == Key(b) }
-// IsPrepTerm: терм — препозиция (начинается со строчной буквы, решение 9.9).
+// IsPrepTerm: терм — препозиция (со строчной буквы)
 func IsPrepTerm(s string) bool {
 for _, r := range s {return unicode.IsLower(r)}; return false }

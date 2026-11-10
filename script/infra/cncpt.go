@@ -1,9 +1,6 @@
 // epi/script/infra/cncpt.go
 package main
-// Файлы концептов (ason-spec 0.23): модель — одна строка в записи скрипта,
-// ключей и индексов нет. Системная часть — только то, что не выводится из
-// имени, места файла и моделей (имя и путь — из места, число моделей — число
-// строк). Путь концепта — из букв имени (как в ПИ): <тема>/<буквы>/<имя>.uic.
+// файлы концептов: модель — одна строка, ключей и индексов нет; путь — из букв имени (как в ПИ): <тема>/<буквы>/<имя>.uic
 //
 //	интерпретатор  lexic/preposit/A/R/I/F/M/arifm.uic
 //	               Preposit : [ * + - / ]
@@ -12,26 +9,26 @@ package main
 //	концепт автора thema/<Тема>/X/x.uic
 //	               A : 5
 //
-// Файлы прежнего вида (пары «l-<ключ> …» / «r-<ключ> …», ПИ) читаются один раз
-// и переписываются в новом виде.
+// файлы прежнего вида (ПИ, «l-<ключ> …» / «r-<ключ> …») читаются один раз и переписываются
 import ("bufio"; "fmt"; "os"; "path/filepath"; "sort"; "strings"; "epi/script/disp")
-// letterPath: <корень>/<буквы имени>/<имя>.uic.
+// letterPath: <корень>/<буквы имени>/<имя>.uic
 func letterPath(root, name string) string {
 parts := []string{root}
 for _, r := range strings.ToUpper(name) {parts = append(parts, string(r))}; return filepath.Join(append(parts, strings.ToLower(name)+".uic")...) }
+// frameFile: файл фрейма name в классе lexic/<theme>
 func (q *Script) frameFile(theme, name string) string {return letterPath(filepath.Join(q.dir, "lexic", theme), name) }
-// writeLines: файл целиком через временный файл.
+// writeLines: файл целиком через временный файл
 func writeLines(path string, lines []string) error {
 if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {return err}
 tmp := path + ".tmp"
 if err := os.WriteFile(tmp, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {return err}; return os.Rename(tmp, path) }
-// isLegacy: файл прежнего вида (ПИ) — строки «l-…» / «r-…».
+// isLegacy: файл прежнего вида (ПИ) — строки «l-…» / «r-…»
 func isLegacy(b []byte) bool { return strings.HasPrefix(string(b), "l-") }
-// ---- прежний вид (только чтение) ----
+// isGauss: ключ прежнего вида — четыре литеры gaussABC
 func isGauss(s string) bool {
 if len(s) != 4 {return false}
 for _, c := range s {if !strings.ContainsRune(gaussABC, c) {return false}}; return true }
-// readLegacy: системная часть (буква → значение) и модели по порядку записи.
+// readLegacy: системная часть (буква → значение) и модели по порядку записи
 func readLegacy(path string) (map[string]string, [][2]string, error) {
 sys := map[string]string{}
 var models [][2]string
@@ -51,12 +48,7 @@ for sc.Scan() {
 		if _, seen := left[key]; !seen {order = append(order, key)}
 		left[key] = val} else {right[key] = val}}
 for _, k := range order {models = append(models, [2]string{left[k], right[k]})}; return sys, models, sc.Err() }
-// ---- интерпретаторы ----
-// syncFrame: файл интерпретатора — только системная часть «Preposit : [ … ]»;
-// прецеденты интерпретаций во фрейм не пишутся (решено 03.11.2026: история —
-// в протоколе). Существующий файл с прецедентами или прежнего вида
-// переписывается; файл интерпретатора, которого нет, создаётся: каждый
-// интерпретатор системы виден в lexic (0.22).
+// syncFrame: файл интерпретатора — только «Preposit : [ … ]» (история — в протоколе); нет файла — создаётся
 func (q *Script) syncFrame(f *disp.Frame) error {
 path := q.frameFile("preposit", f.Name)
 b, err := os.ReadFile(path)
@@ -66,9 +58,7 @@ for p := range f.Kernel {preps = append(preps, p)}
 sort.Strings(preps)
 line := "Preposit : [ " + strings.Join(preps, " ") + " ]"
 if strings.TrimSpace(string(b)) == line {return nil}; return writeLines(path, []string{line}) }
-// ---- алиасы ----
-// loadAliases: файлы препозиций, кроме интерпретаторов, — предикации
-// (`plus : +`), они выполняются в общем контексте (9.8).
+// loadAliases: файлы препозиций, кроме интерпретаторов, — предикации (plus : +) в общем контексте; прежний вид: r-n имя, r-m алиас
 func (q *Script) loadAliases() error {
 on := q.in.OnAlias
 q.in.OnAlias = nil
@@ -81,7 +71,7 @@ root := filepath.Join(q.dir, "lexic", "preposit"); return filepath.WalkDir(root,
 	b, err := os.ReadFile(path)
 	if err != nil {return err}
 	text := string(b)
-	if isLegacy(b) { // прежний вид: r-n имя, r-m алиас
+	if isLegacy(b) {
 		sys, _, err := readLegacy(path)
 		if err != nil {return err}
 		if sys["n"] == "" || sys["m"] == "" {return nil}

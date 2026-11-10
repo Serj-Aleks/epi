@@ -1,8 +1,8 @@
 // epi/script/format/format_test.go
 package format
 import ("strings"; "testing")
-// Примеры со страницы спецификации ASON (с поправками раздела 2.4 — дата и
-// время через «/» — и 9.9 — определение « : » через пробел).
+// Примеры со страницы спецификации ASON (с поправками: дата и
+// время через «/», определение « : » через пробел)
 var authorExamples = []string{
 	`[ 1 2 3 4 5 ]`,
 	`[ "A" "B" "C" ]`,
@@ -26,7 +26,7 @@ var authorExamples = []string{
 	`( "Bob" + " " + "Smith" )`,
 	`((degrees - 32) / 9) * 5`,
 	`[ (123 + 456) (10.7 + 8.95) ]`,}
-// Предикации из раздела 9 спецификации.
+// Предикации спецификации
 var epiExamples = []string{
 	`A > B -> C`,
 	"Count : [\n    I < 10 -> [ print { X : I } . I : (I + 1) . Count ]\n]",
@@ -44,7 +44,7 @@ for _, src := range append(authorExamples, epiExamples...) {
 func same(a, b []Value) bool {
 if len(a) != len(b) {return false}
 for i := range a {if a[i].Kind != b[i].Kind || a[i].Text != b[i].Text || !same(a[i].Items, b[i].Items) {return false}}; return true }
-// Каждый вид значения из перечня 2.2 и форма терма из 2.3.
+// Каждый вид значения и форма терма
 func TestKinds(t *testing.T) {
 cases := map[string]Kind{
 	`123`: Integer, `-7`: Integer, `1.23`: Decimal, `$1.23`: Money, `1.2.3`: Tuple,
@@ -74,13 +74,13 @@ v, err := Parse(`{ start-time : 10:30 stop-time : start-time + 3:00 }`)
 if err != nil {t.Fatal(err)}
 es := v[0].Entries()
 if len(es) != 2 || es[1].Key.Text != "stop-time" || Format(es[1].Value) != "start-time + 3:00" {t.Fatalf("значение до следующего терма-определения: %+v", es)} }
-// Регистр значим по первой букве (решение 9.9): строчная — препозиция,
-// прописная — объект; остальные буквы — без учёта регистра.
+// Регистр значим по первой букве: строчная — препозиция,
+// прописная — объект; остальные буквы — без учёта регистра
 func TestTermCase(t *testing.T) {
 if !SameTerm("First-Name", "First-NAME") || SameTerm("First", "first") || SameTerm("a", "b") {t.Fatal("сравнение термов")}
 if !SameTerm("Нумерация", "НУМЕРАЦИЯ") || SameTerm("Нумерация", "нумерация") {t.Fatal("сравнение термов кириллицей")}
 if !IsPrepTerm("plus") || IsPrepTerm("Plus") || !IsPrepTerm("в") || IsPrepTerm("Тема") {t.Fatal("препозиция — со строчной буквы")} }
-// Ошибочный ввод отвергается целиком, с местом ошибки.
+// Ошибочный ввод отвергается целиком, с местом ошибки
 func TestErrors(t *testing.T) {
 cases := map[string]string{
 	`[ 1 2`:             "строка 1, позиция 1: блок не закрыт",
@@ -106,7 +106,7 @@ for src, want := range cases {
 	if err == nil {t.Errorf("%q: ошибка не найдена, получено %v", src, v); continue}
 	if v != nil {t.Errorf("%q: при ошибке есть частичный результат", src)}
 	if !strings.Contains(err.Error(), want) {t.Errorf("%q: %q, ожидалось %q", src, err, want)}} }
-// Термы любого алфавита (решение 29.10.2026).
+// Термы любого алфавита
 func TestUnicodeTerms(t *testing.T) {
 cases := map[string]Kind{
 	`нумерация`: Term, `концепт-1`: Term, `:имя`: GetTerm,
@@ -116,7 +116,7 @@ for src, want := range cases {
 	v, err := Parse(src)
 	if err != nil || len(v) != 1 || v[0].Kind != want {t.Errorf("%q: %v %v, ожидалось %v", src, v, err, want)}}
 if _, err := Parse(`1имя`); err == nil {t.Error("терм не может начинаться с цифры")} }
-// Перевод строки отделяет предикации и сохраняется в каноническом тексте (9.10).
+// Перевод строки отделяет предикации и сохраняется в каноническом тексте
 func TestLinesKept(t *testing.T) {
 src := "A : 1\nB : [ X : 2\n  Y : 3 ] C\nD"
 v, err := Parse(src)

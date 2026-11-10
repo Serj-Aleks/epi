@@ -78,7 +78,7 @@ head.append(pBackBtn(), ic, el("cname", c.name));
 if (c.color) { head.style.borderBottom = "3px solid " + c.color; head.querySelector(".cname").style.color = c.color; }
 favicon(c.icon);
 const tools = el("ctools");
-[["graph", "✦"], ["tags", "⬡"], ["content", "≡"], ["process", "⊛"], ["rank", "◈"], ["tabs", "↕"], ["slots", "⊞"]].filter(([k]) => (k !== "rank" || cardRank(c) > 0) && (k !== "tabs" || cardSet(c, "Tabs")) && (k !== "process" || cardSet(c, "Process"))).forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardOpen(c.name); }; tools.append(b); });
+[["graph", "✦"], ["taxon", "⬡"], ["content", "≡"], ["process", "⊛"], ["rank", "◈"], ["tabs", "↕"], ["slots", "⊞"]].filter(([k]) => (k !== "rank" || cardRank(c) > 0) && (k !== "tabs" || cardSet(c, "Tabs")) && (k !== "process" || cardSet(c, "Process"))).forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardOpen(c.name); }; tools.append(b); });
 const cl = document.createElement("button"); cl.textContent = "⧉"; cl.title = "clone"; cl.onclick = () => { cloneSrc = c.name; askName("clone"); }; tools.prepend(cl);
 const x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
 const fi = document.createElement("input"); fi.className = "cval cfind"; fi.placeholder = "find"; fi.spellcheck = false; fi.title = "поиск внутри концепта и его синонимов (md, html, json, xml, txt)";
@@ -93,7 +93,7 @@ if (lens.graph) { const d = await api("/api/nexus?name=" + encodeURIComponent(na
     const hide = new Set((d.graph || []).map(s => s.toLowerCase()));
     const sd = Object.assign({}, d); sides.forEach(s => { if (hide.has(s)) sd[s] = []; });
     const box = el("clens"); nxSvg(box, sd); box.append(Object.assign(document.createElement("hr"), { className: "dag-divider" })); nxList(box, d); root.append(box); } }
-if (lens.tags) { const box = el("clens tlens"); root.append(box); await lensTags(box, c); }
+if (lens.taxon) { const box = el("clens tlens"); root.append(box); await lensTaxon(box, c); }
 if (lens.content) { const box = el("clens"); root.append(box); await lensContent(box, c); }
 if (lens.process && cardSet(c, "Process")) { const box = el("clens"); root.append(box); await lensProcess(box, c); }
 if (lens.rank && cardRank(c) > 0) { const box = el("clens"); root.append(box); await lensRank(box, c); }

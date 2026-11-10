@@ -1,13 +1,9 @@
 // epi/script/infra/trans.go
 package main
 import ("os"; "path/filepath"; "strings"; "unicode"; "unicode/utf8"; "epi/script/format")
-// Транслятор натуральных предикаций (ason-spec 9.16): «trans "текст"» — токены
-// текста классифицируются по словарям; результат — блок предикации нашей
-// грамматики. Словари: препозиции — lexic/preposit, шум — lexic/xdict, знаки
-// определения — lexic/defnt, атрибуты — lexic/atrbt (пока отбрасываются),
-// объекты — концепты темы (формы слова — через Alias). Нераспознанный токен —
-// вопрос с выбором; ответ пополняет словарь.
-// transTokens: слова (буквы и цифры; дефис внутри слова сохраняется) и тире.
+// транслятор trans "текст": слова по словарям — preposit, xdict (шум), defnt (определение), atrbt (атрибуты),
+// объекты — концепты темы (формы слова — Alias); результат — блок предикации, нераспознанное — вопрос с выбором
+// transTokens: слова (буквы, цифры, дефис внутри слова), тире и конец предложения
 func transTokens(text string) []string {
 var ts []string
 var w strings.Builder
@@ -16,15 +12,16 @@ for _, r := range text {
 	switch {
 	case unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' && w.Len() > 0: w.WriteRune(r)
 	case r == '—' || r == '–' || r == '-': flush(); ts = append(ts, "—")
-	case r == '.' || r == '!' || r == '?' || r == ';': flush(); ts = append(ts, ".") // конец предложения
+	case r == '.' || r == '!' || r == '?' || r == ';': flush(); ts = append(ts, ".")
 	default: flush()}}
 flush()
 var out []string
 for _, t := range ts {if t != "" {out = append(out, t)}}; return out }
-// dictFile: слово в словаре класса lexic/<класс> — путь из букв, как у концептов.
+// dictFile: слово в словаре класса lexic/<класс> — путь из букв, как у концептов
 func (q *Script) dictFile(class, word string) string { return letterPath(filepath.Join(q.dir, "lexic", class), word) }
+// exists: файл есть
 func exists(path string) bool {_, err := os.Stat(path); return err == nil }
-// conceptIndex: слово → имя концепта в папке root (имя — из файла, синонимы — Alias).
+// conceptIndex: слово → имя концепта в папке root (имя — из файла, синонимы — Alias)
 func conceptIndex(root string) map[string]string {
 idx := map[string]string{}
 filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -41,9 +38,7 @@ filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {continue}
 		for _, v := range vs {
 			if v.Kind == format.Array {for _, it := range v.Items {idx[strings.ToLower(it.Text)] = name}} else {idx[strings.ToLower(v.Text)] = name}}}; return nil}); return idx }
-// dicts: указатели словарей с формами слов — объекты темы и атрибуты (lexic/atrbt).
-type dicts struct{ obj, atr map[string]string }
-// classify: класс слова по словарям; для объекта и атрибута — имя концепта.
+// classify: класс слова по словарям; для объекта и атрибута — имя концепта
 func (q *Script) classify(w string, d dicts) (string, string) {
 if w == "—" {return "defnt", ""}
 if r, _ := utf8.DecodeRuneInString(w); unicode.IsDigit(r) {return "number", ""}
@@ -51,24 +46,21 @@ for _, c := range []string{"xdict", "defnt", "preposit"} {if exists(q.dictFile(c
 for _, f := range q.in.Frames {if _, ok := f.Kernel[w]; ok {return "preposit", ""}}
 if n, ok := d.atr[w]; ok {return "atrbt", n}
 if n, ok := d.obj[w]; ok {return "thema", n}; return "", "" }
-// capital: имя объекта — с прописной (9.9).
+// capital: имя объекта с прописной
 func capital(w string) string {r, n := utf8.DecodeRuneInString(w); return string(unicode.ToUpper(r)) + w[n:] }
-// learnName: слово w — концепт name в папке root: имя совпадает со словом —
-// новый концепт, иначе слово — синоним (Alias) концепта name.
+// learnName: слово w — концепт name в папке root: совпало с именем — новый концепт, иначе синоним (Alias)
 func learnName(root, w, name string, idx map[string]string) bool {
 if checkName(name) != nil {return false}
 path := letterPath(root, name)
 if strings.EqualFold(name, w) {
 	if !exists(path) {if err := writeLines(path, nil); err != nil {return false}}
 	idx[w] = name; return true}
-var al []format.Value // синонимы концепта name и новое слово
+var al []format.Value
 for k, n := range idx {if n == name && !strings.EqualFold(k, name) {al = append(al, format.Value{Kind: format.Term, Text: k})}}
 al = append(al, format.Value{Kind: format.Term, Text: w})
 if err := writeParam(path, "Alias", []format.Value{{Kind: format.Array, Items: al}}); err != nil {return false}
 idx[w], idx[strings.ToLower(name)] = name, name; return true }
-// learn: ответ на вопрос о слове пополняет словарь: «preposit», «xdict»,
-// «defnt» — слово в словарь класса; «thema:Имя» — объект (концепт темы);
-// «atrbt:Имя» — атрибут (концепт lexic/atrbt).
+// learn: ответ пополняет словарь — preposit, xdict, defnt: слово в словарь; thema:Имя — объект; atrbt:Имя — атрибут
 func (q *Script) learn(w, answer string, d dicts) (string, string) {
 switch answer {
 case "preposit", "xdict", "defnt":
@@ -79,9 +71,8 @@ if name, ok := strings.CutPrefix(answer, "thema:"); ok && q.theme != "" {
 if name, ok := strings.CutPrefix(answer, "atrbt:"); ok {
 	name = capital(strings.TrimSpace(name))
 	if learnName(filepath.Join(q.dir, "lexic", "atrbt"), w, name, d.atr) {return "atrbt", name}}; return "", "" }
-// trans: ядро интерпретатора trans — «trans "текст"» → [ предикация ]. Атрибут
-// — параметр объекта (9.12.1): «прямыми углами» → Угол.Прямой; атрибут
-// цепляется к следующему объекту, а если его нет — к предыдущему.
+// trans: ядро интерпретатора trans "текст" → [ предикация ]; атрибут — параметр следующего объекта, иначе предыдущего
+// («прямыми углами» → Угол.Прямой)
 func (q *Script) trans(a, b *format.Value) (format.Value, bool) {
 if a != nil || b == nil || b.Kind != format.String || q.choose == nil {return format.Value{}, false}
 d := dicts{obj: conceptIndex(q.themaDir()), atr: conceptIndex(filepath.Join(q.dir, "lexic", "atrbt"))}
@@ -90,9 +81,7 @@ var out []format.Value
 var attrs []string
 lastObj := -1
 skip := map[string]bool{}
-// end: конец предложения — атрибуты без следующего объекта цепляются к
-// предыдущему («Угол — прямой» → Угол.Прямой: определение без правой части —
-// атрибутирование); предложения разделяются « . ».
+// end: конец предложения — атрибуты без следующего объекта к предыдущему («Угол — прямой» → Угол.Прямой); разделитель « . »
 end := func() {
 	if len(attrs) > 0 && lastObj >= 0 {out[lastObj].Text += "." + strings.Join(attrs, "."); out[lastObj].Kind = format.Field}
 	if n := len(out); n > 0 && out[n-1].Kind == format.Op && out[n-1].Text == ":" {out = out[:n-1]}
