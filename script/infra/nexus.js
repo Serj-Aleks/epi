@@ -1,4 +1,4 @@
-// script/infra/nexus.js — граф локального контекста nexus (как graph.js, gmetr.js, dgsvg.js, lists.js ПИ)
+// script/infra/nexus.js — граф локального контекста nexus
 // концепт в центре, слева входящие (обратные списки), справа исходящие (прямые), под графом — список связей
 // nxGo: переход к концепту — nexus Имя в протокол; без открытого сеанса — только карточка
 function nxGo(name) { document.querySelectorAll(".dag-tooltip").forEach(e => e.remove()); if (!writable) { cardShow(name); return; } inp.value = "nexus " + name; document.getElementById("f").requestSubmit(); }
@@ -27,7 +27,7 @@ const L = nxColumn(new Array(u), new Array(m), new Array(l), 0);
 const top = u ? L.upperY : m ? L.middleY : l ? L.lowerY : 0;
 const bot = l ? L.lowerY + nxColH(l) : m ? L.middleY + nxColH(m) : u ? L.upperY + nxColH(u) : 0;
 return { above: Math.max(0, -top), below: Math.max(0, bot) }; }
-// nxVisible: соседи узла для подсказки (как в ПИ); у темы — её концепты с совпадающими именами
+// nxVisible: соседи узла для подсказки; у темы — её концепты с совпадающими именами
 function nxVisible(n, center) {
 const nb = n.neighbors || [];
 if (n.name === center || n.type === "theme") return nb;

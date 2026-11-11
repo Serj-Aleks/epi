@@ -163,7 +163,7 @@ for _, l := range strings.Split(string(b), "\n") {
 	text := l
 	if vs, err := format.Parse(l); err == nil && len(vs) == 1 && vs[0].Kind == format.String {text = vs[0].Text}
 	q.in.Unknown = append(q.in.Unknown, text)}; return nil }
-// themeIcon: картинка темы — <тема>/<Тема>.svg или <тема>/img/<Тема>.png|… (как в ПИ)
+// themeIcon: картинка темы — <тема>/<Тема>.svg или <тема>/img/<Тема>.png|…
 func (q *Script) themeIcon(name string) string {
 dir := filepath.Join(q.themaRoot(), name)
 for _, n := range []string{name, strings.ToLower(name)} {

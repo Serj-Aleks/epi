@@ -1,9 +1,9 @@
 // epi/script/infra/qwest.go
 package main
 import ("os"; "path/filepath"; "sort"; "strconv"; "strings"; "unicode/utf8"; "epi/script/format")
-// поиск qwest (как в ПИ): qwest слово, qwest "слово & слово" — концепты, у которых каждое слово есть в имени,
+// поиск qwest: qwest слово, qwest "слово & слово" — концепты, у которых каждое слово есть в имени,
 // синонимах или тексте спутников md, html, json, xml, txt; qwest "" — все; ответ — число, список — в панели
-// qtext: текст спутника без разметки (как StripContent в ПИ)
+// qtext: текст спутника без разметки
 func qtext(s string) string {return strings.TrimSpace(reSpace.ReplaceAllString(reMarks.ReplaceAllString(reTags.ReplaceAllString(s, " "), " "), " ")) }
 // qterms: слова запроса — строчными, разделитель «&»
 func qterms(q string) []string {
@@ -67,7 +67,7 @@ if p == "" {return ""}
 base := strings.TrimSuffix(p, ".uic")
 if exists(base + ".svg") {return base + ".svg"}
 for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if f := filepath.Join(filepath.Dir(p), "img", filepath.Base(base)+"."+e); exists(f) {return f}}; return "" }
-// find: поиск внутри концепта (SearchInConcept ПИ) — в имени и спутниках md, html, json, xml, txt концепта и синонимов
+// find: поиск внутри концепта — в имени и спутниках md, html, json, xml, txt концепта и синонимов
 // каждое слово запроса (& — и) в одном месте; ответ — концепт, тип спутника, отрывок
 func (q *Script) find(name, query string) []map[string]string {
 p := q.conceptPath(name)

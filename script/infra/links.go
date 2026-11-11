@@ -2,7 +2,7 @@
 package main
 import ("os"; "path/filepath"; "sort"; "strconv"; "strings"; "epi/script/format")
 // связи концептов — Taxon, Links, Attrib, Preposit, Prfix, Sufix, Radix; в файле два списка «[ прямой ] [ обратный ]»
-// автор пишет прямой (Жёлтый.Taxon : [ Цвет ]), обратный script ведёт сам (Цвет: Taxon : [ ] [ Жёлтый ]), как в ПИ
+// автор пишет прямой (Жёлтый.Taxon : [ Цвет ]), обратный script ведёт сам (Цвет: Taxon : [ ] [ Жёлтый ])
 // linkRoot: где цели связи — Taxon, Links, Attrib, Preposit в теме; Prfix, Sufix, Radix — в теме, если есть, иначе в lexic
 func (q *Script) linkRoot(param string) (string, bool) {
 switch format.Key(param) {
@@ -37,7 +37,7 @@ func without(ns []string, n string) []string {
 var out []string
 for _, x := range ns {if !format.SameTerm(x, n) {out = append(out, x)}}; return out }
 // writeLink: прямой список связи у frame, у целей обратный — добавленные получают frame, убранные теряют
-// strict — только у существующих целей (ссылки контента, как в ПИ)
+// strict — только у существующих целей (ссылки контента)
 func (q *Script) writeLink(frame, param string, pred []format.Value, root string, strict bool) error {
 path := q.conceptFile(frame)
 old, inv := readLink(path, param)
@@ -94,7 +94,7 @@ for _, l := range lines {
 func (q *Script) conceptPath(name string) string {
 if p := q.conceptFile(name); exists(p) {return p}
 for _, c := range []string{"prfix", "sufix", "radix"} {if p := letterPath(filepath.Join(q.dir, "lexic", c), name); exists(p) {return p}}; return "" }
-// nexusGraph: граф (GetGraph ПИ) — оси nw, wt, sw, nr: Prfix, Attrib, Sufix, Preposit или по N-west, West, S-west, Nord
+// nexusGraph: граф — оси nw, wt, sw, nr: Prfix, Attrib, Sufix, Preposit или по N-west, West, S-west, Nord
 // слева и сверху обратные списки, справа и снизу прямые, остальное — extra; узлы — только существующие концепты
 // соседи узла по той же связи — у входящего его прямой список, у исходящего обратный (в обоих есть центр), у центра — синонимы; Transcl вычисляется; Nord : Themes — ось тем
 func (q *Script) nexusGraph(name string) map[string]any {
@@ -133,7 +133,7 @@ for _, t := range graphTypes {
 	d, i := resolve(s[0], t, true), resolve(s[1], t, false)
 	if len(d)+len(i) > 0 {extra = append(extra, map[string]any{"type": t, "direct": d, "inverse": i})}}
 out["extra"] = extra; return out }
-// iconFile: картинка концепта (как в ПИ) — <папка>/<имя>.svg или <папка>/img/<имя>.png|jpg|jpeg|webp|gif|ico
+// iconFile: картинка концепта — <папка>/<имя>.svg или <папка>/img/<имя>.png|jpg|jpeg|webp|gif|ico
 func (q *Script) iconFile(name string) string {
 if name == "" || strings.ContainsAny(name, "/\\") {return ""}
 roots := []string{q.themaDir()}
@@ -144,7 +144,7 @@ for _, r := range roots {
 	if r == q.themaDir() {dir = filepath.Dir(q.conceptFile(name))}
 	if p := filepath.Join(dir, base+".svg"); exists(p) {return p}
 	for _, ext := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if p := filepath.Join(dir, "img", base+"."+ext); exists(p) {return p}}}; return "" }
-// syncAlias: группа синонимов (SyncAliasGroup ПИ) — у каждого в Alias все остальные, выбывший теряет frame
+// syncAlias: группа синонимов — у каждого в Alias все остальные, выбывший теряет frame
 // имена, которые не концепты темы, остаются; контекст участников заново, у frame его задаёт текущая предикация
 func (q *Script) syncAlias(frame string, old, now []string) error {
 exist := func(n string) string {return q.cidx[strings.ToLower(n)]}
@@ -179,9 +179,9 @@ for _, l := range lines {
 	if !isParam(l) || !format.SameTerm(lineKey(l), key) {continue}
 	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 	if err == nil {return names(vs)}}; return nil }
-// tokens: слова имени для нечёткого поиска (metaTokenize ПИ): строчными, разделители — пробел, «-», «_»
+// tokens: слова имени для нечёткого поиска: строчными, разделители — пробел, «-», «_»
 func tokens(s string) []string {return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {return r == ' ' || r == '-' || r == '_'}) }
-// overlap: слова совпадают по первым deep литерам, короче deep не сравниваются (metaTitlesOverlap ПИ)
+// overlap: слова совпадают по первым deep литерам, короче deep не сравниваются
 func overlap(a, b [][]string, deep int) bool {
 for _, x := range a {for _, y := range b {for _, s := range x {for _, t := range y {
 	rs, rt := []rune(s), []rune(t)
@@ -191,7 +191,7 @@ func nameTokens(p string) [][]string {
 out := [][]string{tokens(conceptName(p, ""))}
 as, _ := readLink(p, "Alias")
 for _, a := range as {out = append(out, tokens(a))}; return out }
-// themeNodes: темы на оси север–юг (MatchThemes ПИ) — север: слово названия совпадает со словом имени концепта
+// themeNodes: темы на оси север–юг — север: слово названия совпадает со словом имени концепта
 // юг: в теме концепты с совпадающими именами (соседи темы); глубина Deep (3), своя тема — нет
 func (q *Script) themeNodes(path string) ([]gnode, []gnode) {
 deep := 3

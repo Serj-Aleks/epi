@@ -1,4 +1,4 @@
-// script/infra/cards.js — карточка концепта: одна панель рядом с лентой, линзы как в ПИ (cncpt.html)
+// script/infra/cards.js — карточка концепта: одна панель рядом с лентой
 // в контенте [[Имя]] — ссылка, {{Имя}} — трансклюзия
 // pPush: вид панели в историю ← (просмотр, без протокола)
 function pPush(s) { const t = pstack[pstack.length - 1]; if (!t || t.k !== s.k || t.a !== s.a) { pstack.push(s); if (pstack.length > 50) pstack.shift(); } }
@@ -10,7 +10,7 @@ function pBackBtn() { const b = document.createElement("button"); b.textContent 
 function cardShow(name, back) { if (!back) pPush({ k: "c", a: name }); cardName = name; qwestKey = null; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
 // cardHide: закрыть панель
 function cardHide() { cardName = null; qwestKey = null; pstack = []; card.hidden = true; card.innerHTML = ""; cardCss(""); favicon(""); }
-// favicon: картинка вкладки браузера — концепта открытой карточки (как в ПИ)
+// favicon: картинка вкладки браузера — концепта открытой карточки
 function favicon(url) { let l = document.querySelector("link[rel=icon]"); if (!l) { l = document.createElement("link"); l.rel = "icon"; document.head.append(l); } l.href = url || "data:,"; }
 // cardCss: стиль концепта (спутник css) — body, html, :root относятся к карточке, остальное внутри неё
 function cardCss(css) {
@@ -21,7 +21,7 @@ st.textContent = (css || "").replace(/\/\*[\s\S]*?\*\//g, "").split("}").map(r =
   return sel.split(",").map(s => s.trim().replace(/^(html|body|:root)\b/, "#card")).map(s => s.startsWith("#card") ? s : "#card " + s).join(", ") + " " + r.slice(i); }).join("}"); }
 // esc: текст для html
 function esc(s) { return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
-// mdHtml: md в html (как mdToHtml ПИ) — заголовки, списки, таблицы, код, ссылки; своя картинка — из img концепта
+// mdHtml: md в html — заголовки, списки, таблицы, код, ссылки; своя картинка — из img концепта
 function mdHtml(md, name) {
 const code = [];
 md = md.replace(/```([\s\S]+?)```/g, (_, c) => { code.push("<pre><code>" + esc(c.replace(/^\n/, "").replace(/\n$/, "")) + "</code></pre>"); return `\x00C${code.length - 1}\x00`; });
@@ -46,7 +46,7 @@ for (const line of md.split("\n")) {
   else { endList(); h += "<p>" + inl(line) + "</p>"; } }
 endList(); endTab();
 return h.replace(/\x00C(\d+)\x00/g, (_, i) => code[i]); }
-// cardRender: контент концепта с трансклюзиями, без повторов по кругу (как renderConceptView ПИ)
+// cardRender: контент концепта с трансклюзиями, без повторов по кругу
 async function cardRender(name, ext, seen) {
 const c = await api("/api/card?name=" + encodeURIComponent(name));
 if (!c.found) return null;

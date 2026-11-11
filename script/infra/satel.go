@@ -54,7 +54,7 @@ k := strings.ToLower(name)
 var inv []string
 for o, ns := range q.tidx {if o != k && has(ns, name) {inv = append(inv, conceptName(q.cidx[o], ""))}}
 sort.Strings(inv); return q.tidx[k], inv }
-// clone: clone [ Исходный Новый ] (CloneConcept ПИ) — файл, спутники и img/<имя>.* под новым именем в папку исходного
+// clone: clone [ Исходный Новый ] — файл, спутники и img/<имя>.* под новым именем в папку исходного
 // прямые списки — те же, у целей клон в обратных, обратные клона пусты; ответ — имя клона
 func (q *Script) clone(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
@@ -68,7 +68,7 @@ for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
 for _, f := range files {if err := copyFile(f[0], f[1]); err != nil {return format.Value{}, false}}
 q.adopt(name, dst); return format.Value{Kind: format.Term, Text: name}, true }
 // replaceRefs: имя old → name во всех концептах темы и лексикона связей (prfix, sufix, radix) — в значениях refKeys,
-// ссылках и трансклюзиях текстовых спутников (replaceRefs ПИ)
+// ссылках и трансклюзиях текстовых спутников
 func (q *Script) replaceRefs(old, name string) error {
 swap := func(s string) string {return reToken.ReplaceAllStringFunc(s, func(t string) string {if format.SameTerm(t, old) {return name}; return t})}
 mark := func(s string) string {return reRefMark.ReplaceAllStringFunc(s, func(m string) string {
@@ -97,7 +97,7 @@ for _, r := range roots {
 			if err != nil {continue}
 			if v := mark(string(sb)); v != string(sb) {if err := os.WriteFile(sp, []byte(v), 0644); err != nil {return err}}}; return nil})
 	if err != nil {return err}}; return nil }
-// rename: rename [ Старое Новое ] (RenameConcept ПИ) — файлы концепта, спутников и img/<имя>.* под новым именем
+// rename: rename [ Старое Новое ] — файлы концепта, спутников и img/<имя>.* под новым именем
 // в той же папке, имя заменяется во всех связях и в контенте, контекст темы заново; ответ — новое имя
 func (q *Script) rename(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
@@ -115,7 +115,7 @@ if err := q.replaceRefs(old, name); err != nil {return format.Value{}, false}
 q.indexConcepts()
 q.env = disp.NewEnv(nil)
 if q.loadAliases() != nil || q.loadConcepts() != nil {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: name}, true }
-// taxa: таксоны темы — концепты с параметром Rank (как в ПИ), имя, цвет, картинка, в алфавите темы
+// taxa: таксоны темы — концепты с параметром Rank, имя, цвет, картинка, в алфавите темы
 func (q *Script) taxa() []map[string]string {
 out := []map[string]string{}
 for _, p := range q.cidx {
@@ -125,7 +125,7 @@ for _, p := range q.cidx {
 	if q.iconFile(n) != "" {t["icon"] = "/api/icon?name=" + n}
 	out = append(out, t)}
 sort.Slice(out, func(i, j int) bool {return aLess(out[i]["name"], out[j]["name"])}); return out }
-// children: дочерние концепта — обратный список Taxon, только существующие (GetChildren ПИ); taxon — дочерний сам таксон (задан Rank)
+// children: дочерние концепта — обратный список Taxon, только существующие; taxon — дочерний сам таксон (задан Rank)
 func (q *Script) children(name string) []map[string]any {
 p := q.conceptPath(name)
 if p == "" {return []map[string]any{}}
@@ -133,7 +133,7 @@ _, inv := readLink(p, "Taxon")
 out := []map[string]any{}
 for _, n := range inv {if c := q.conceptPath(n); c != "" {out = append(out, map[string]any{"name": conceptName(c, ""), "taxon": setting(c, "Rank") != ""})}}
 sort.SliceStable(out, func(i, j int) bool {return aLess(out[i]["name"].(string), out[j]["name"].(string))}); return out }
-// process: ситуации процесса (GetConceptProcess ПИ) — тройки «объект препозиция объект» из json-спутника концепта
+// process: ситуации процесса — тройки «объект препозиция объект» из json-спутника концепта
 // и концептов I-process; строка — номер, три имени, есть ли концепт, его синонимы; по номеру ситуации
 func (q *Script) process(name string) []map[string]any {
 p := q.cidx[strings.ToLower(name)]
@@ -161,7 +161,7 @@ for _, cp := range paths {
 		s, _ := sat[k].(string)
 		if f := strings.Fields(s); len(f) == 3 {out = append(out, map[string]any{"key": k, "a": cell(f[0]), "p": cell(f[1]), "b": cell(f[2])})}}}
 sort.SliceStable(out, func(i, j int) bool {a, ea := sitNum(out[i]["key"].(string)); b, eb := sitNum(out[j]["key"].(string)); return ea && (!eb || a < b)}); return out }
-// aLess: a раньше b в алфавите темы (CompareByASort ПИ); литеры вне алфавита — в конце
+// aLess: a раньше b в алфавите темы; литеры вне алфавита — в конце
 func aLess(a, b string) bool {
 ra, rb := []rune(strings.ToLower(a)), []rune(strings.ToLower(b))
 for i := 0; i < len(ra) && i < len(rb); i++ {
@@ -171,7 +171,7 @@ for i := 0; i < len(ra) && i < len(rb); i++ {
 	if !ok {ob = limit}
 	if oa != ob {return oa < ob}}; return len(ra) < len(rb) }
 // dict: словари концепта — концепты из его Defs, словарь — json-спутник «термин : определение»
-// Deep — первые литеры слова для нечёткого поиска (по умолчанию 3, как в ПИ); длинные термины раньше
+// Deep — первые литеры слова для нечёткого поиска (по умолчанию 3); длинные термины раньше
 func (q *Script) dict(name string) map[string]any {
 p := q.conceptPath(name)
 out := map[string]any{"deep": 3, "terms": []map[string]string{}}
@@ -188,14 +188,14 @@ for _, n := range settingList(p, "Defs") {
 	for k, v := range sat {if s, ok := v.(string); ok && strings.TrimSpace(k) != "" {terms = append(terms, map[string]string{"term": k, "def": s, "dict": conceptName(dp, "")})}}}
 sort.Slice(terms, func(i, j int) bool {return len(terms[i]["term"]) > len(terms[j]["term"])})
 if terms != nil {out["terms"] = terms}; return out }
-// conceptFiles: пары «откуда → куда» для концепта src → dst — файл, спутники, img/<имя>.* (conceptFiles ПИ)
+// conceptFiles: пары «откуда → куда» для концепта src → dst — файл, спутники, img/<имя>.*
 func conceptFiles(src, dst string) [][2]string {
 sb, db := strings.TrimSuffix(src, ".uic"), strings.TrimSuffix(dst, ".uic")
 files := [][2]string{{src, dst}}
 for _, t := range satTypes {if exists(sb + "." + t) {files = append(files, [2]string{sb + "." + t, db + "." + t})}}
 sn, dn := filepath.Join(filepath.Dir(src), "img", filepath.Base(sb)), filepath.Join(filepath.Dir(dst), "img", filepath.Base(db))
 for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if exists(sn + "." + e) {files = append(files, [2]string{sn + "." + e, dn + "." + e})}}; return files }
-// importC: import [ Тема Имя … ] (ImportConcepts ПИ) — названные концепты, их синонимы, Taxon и Links (прямые
+// importC: import [ Тема Имя … ] — названные концепты, их синонимы, Taxon и Links (прямые
 // и обратные) и ещё уровень связей; имеющиеся в теме пропускаются; файлы по тому же пути
 // сначала все обратные списки пусты, потом прямые — у целей; ответ — число перенесённых
 func (q *Script) importC(arg format.Value) (format.Value, bool) {
@@ -255,7 +255,7 @@ on, of := q.in.OnParam, q.in.OnFrame
 q.in.OnParam, q.in.OnFrame = nil, nil
 q.loadConceptsIn(dst)
 q.in.OnParam, q.in.OnFrame = on, of }
-// union: union [ Главный Дубль … ] (UnionConcepts ПИ) — строки дублей в главный: связи — объединение, Rank — большее,
+// union: union [ Главный Дубль … ] — строки дублей в главный: связи — объединение, Rank — большее,
 // прочее — если у главного нет; json по ключам (занятый — «ключ-2»), md, html, txt, css дописываются, прочие — если нет
 // дубли удаляются, ссылки на них — на главный; ответ — имя главного
 func (q *Script) union(arg format.Value) (format.Value, bool) {
@@ -308,7 +308,7 @@ func indexOf(ls []string, s string) int {for i, l := range ls {if l == s {return
 func block(ns []string) format.Value {
 v := format.Value{Kind: format.Array}
 for _, n := range ns {v.Items = append(v.Items, format.Value{Kind: format.Term, Text: n})}; return v }
-// mergeSats: спутники дубля dp → главного main (mergeSatellites ПИ); текст, который у главного уже есть, не дописывается
+// mergeSats: спутники дубля dp → главного main; текст, который у главного уже есть, не дописывается
 func mergeSats(main, dp string) error {
 seps := map[string]string{"md": "\n\n---\n\n", "html": "\n", "txt": "\n", "css": "\n"}
 for _, f := range conceptFiles(dp, main)[1:] {
@@ -330,7 +330,7 @@ for _, f := range conceptFiles(dp, main)[1:] {
 	case !exists(f[1]):
 		os.MkdirAll(filepath.Dir(f[1]), 0755)
 		if err := copyFile(f[0], f[1]); err != nil {return err}}}; return nil }
-// selfClean: у главного после слияния — без ссылок на себя и повторов в значениях связей и refKeys (uniqueRefs ПИ)
+// selfClean: у главного после слияния — без ссылок на себя и повторов в значениях связей и refKeys
 func selfClean(path, name string) {
 b, _ := os.ReadFile(path)
 lines, _ := conceptLines(b)

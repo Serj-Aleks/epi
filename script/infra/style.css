@@ -1,5 +1,5 @@
 /* script/infra/style.css — стили панели */
-/* переменные: бумага, обложка (шапка и строка ввода), текст, оси графа (как в ПИ) */
+/* переменные: бумага, обложка (шапка и строка ввода), текст, оси графа */
 :root { --bg: #efe6d2; --g1: #fbf6ea; --g2: #f3ebda; --bar: #cddfee; --barline: #a9c3da;
   --fg: #2b2a33; --dim: #7d8aa0; --acc: #2f55a4; --err: #b23a22; --line: #a9c3da; --btn: #e6f0f8;
   --graph-nw: rgb(180, 80, 100); --graph-wt: rgb(80, 160, 100); --graph-sw: rgb(224, 150, 90); --graph-nr: rgb(70, 130, 180);
@@ -69,7 +69,7 @@ form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
 .cinc { border-left: 3px solid var(--graph-nr); padding-left: 8px; margin: 6px 0; }
 .cempty { color: var(--dim); }
 .cedit { width: 100%; min-height: 40vh; font: 13px/1.4 inherit; font-family: inherit; background: var(--g1); border: 1px solid var(--line); margin-top: 6px; }
-/* граф nexus (как graph.css ПИ) */
+/* граф nexus */
 .dag-svg { display: block; margin: 0 auto; flex-shrink: 0; }
 .dag-node { cursor: pointer; transition: opacity 0.15s; }
 .dag-node:hover { opacity: 0.75; }
@@ -175,7 +175,7 @@ input.ckey { width: 9ch; padding: 2px 4px; flex: none; }
 .qname { color: var(--acc); font-weight: 700; text-decoration: none; }
 .qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
 .qex { color: var(--fg); font-size: 13px; margin: 0 0 2px 40px; }
-/* фон дня недели (как в ПИ и ТЕМП): понедельник — клетка, среда — линейка, суббота — белый, остальные — сетка своего цвета */
+/* фон дня недели: понедельник — клетка, среда — линейка, суббота — белый, остальные — сетка своего цвета */
 body.day-monday { background-color: #fff; background-image: linear-gradient(#e1e8ed 1px, transparent 1px), linear-gradient(90deg, #e1e8ed 1px, transparent 1px); background-size: 20px 20px; }
 body.day-wednesday { background-color: #fdfae6; background-image: repeating-linear-gradient(transparent, transparent 24px, #a4b0be 25px); background-attachment: local; }
 body.day-saturday { background-color: #fff; }
@@ -184,7 +184,7 @@ body.day-thursday { --day-color-rgb: 80, 160, 100; }
 body.day-friday { --day-color-rgb: 180, 80, 100; }
 body.day-sunday { --day-color-rgb: 224, 150, 90; }
 body.day-tuesday, body.day-thursday, body.day-friday, body.day-sunday { background-color: #fefdfa; background-image: repeating-linear-gradient(rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px); background-attachment: local; }
-/* понедельник, среда, суббота — лист тетради: линия полей в 90px от правого края ленты (как в ПИ) */
+/* понедельник, среда, суббота — лист тетради: линия полей в 90px от правого края ленты */
 body.day-monday::after, body.day-wednesday::after, body.day-saturday::after { content: ""; position: fixed; top: 0; bottom: 0; right: 90px; width: 4px; border-left: 1px solid rgba(255, 100, 100, 0.5); border-right: 1px solid rgba(255, 100, 100, 0.5); pointer-events: none; z-index: 50; }
 body:has(#card:not([hidden]))::after { right: calc(50% + 90px); }
 /* узкий экран: карточка над лентой, линия полей — у правого края */

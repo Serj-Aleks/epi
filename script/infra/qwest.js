@@ -5,7 +5,7 @@ function qwestShow(qs, back, all) { if (!back) pPush({ k: "q", a: qs, f: "", all
 function qinfo(r) { return ["параметров " + (r.params || 0), r.sats ? "спутники " + r.sats : "", r.rank ? "Rank " + r.rank : ""].filter(Boolean).join(" · "); }
 // mark: подсветить слова в тексте
 function mark(s, ts) { let r = esc(s); ts.forEach(t => { r = r.replace(new RegExp(esc(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`); }); return r; }
-// qwestOpen: список qwest с фильтром по имени (& — и, как в ПИ), ⬡ — таксон, ▪ — концепт; концепт другой темы переключает тему
+// qwestOpen: список qwest с фильтром по имени (& — и), ⬡ — таксон, ▪ — концепт; концепт другой темы переключает тему
 async function qwestOpen(qs, all) {
 let rs;
 try { rs = await api((all ? "/api/qwizt?q=" : "/api/qwest?q=") + encodeURIComponent(qs)); } catch (e) { return; }
@@ -26,7 +26,7 @@ const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().spl
     if (r.excerpt) { const ex = el("qex"); ex.innerHTML = mark(r.excerpt, ts); row.append(ex); }
     list.append(row); }); };
 flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw(); }
-// themeShow: карточка темы (вместо портала ПИ) — картинка темы в шапке
+// themeShow: карточка темы — картинка темы в шапке
 function themeShow(back) { if (!back) pPush({ k: "t", a: "", f: "" }); cardName = null; qwestKey = "\u0000t"; clearTimeout(cardTimer); cardTimer = setTimeout(themeOpen, 0); }
 // themeOpen: сверху все темы (щелчок — переключить и открыть её карточку), ниже концепты текущей темы с фильтром (⬡ — таксон, ▪ — концепт)
 async function themeOpen() {
@@ -53,7 +53,7 @@ const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().spl
     const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.title = qinfo(r); a.innerHTML = mark(r.name, fs); a.onclick = e => { e.preventDefault(); nxGo(r.name); };
     const top = el("qtop"), mk = el("tpmark", r.taxon ? "⬡" : "▪"); top.append(mk, ic2, a); row.append(top); list.append(row); }); };
 flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw(); }
-// findRun: поиск внутри концепта (как SearchInConcept ПИ) — концепт и синонимы, тип спутника, отрывок
+// findRun: поиск внутри концепта — концепт и синонимы, тип спутника, отрывок
 // щелчок — концепт, его спутник в линзе контента, найденное подсвечено
 async function findRun(box, c, q) {
 box.innerHTML = ""; box.hidden = !q; if (!q) return;

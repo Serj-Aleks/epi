@@ -59,12 +59,12 @@ const show = async (x, b) => { bar.querySelectorAll("button").forEach(y => y.cla
   if (!h && !xm) body.append(el("cempty", "—")); };
 items.forEach((x, i) => { const b = document.createElement("button"); b.textContent = x.name; b.ondblclick = () => nxGo(x.name); b.title = "двойной щелчок — карточка"; b.onclick = () => show(x, b); bar.append(b); if (!i) show(x, b); });
 wrap.append(bar, body); box.append(wrap); }
-// lensTabs: ↕ вкладки (как ltabs.js ПИ)
+// lensTabs: ↕ вкладки
 async function lensTabs(box, c) {
 const items = await tabsOf(c);
 if (!items.length) { box.append(el("cempty", "нет дочерних")); return; }
 tabsRender(box, items, cardSet(c, "Tabs")); }
-// lensProcess: ⊛ процесс (как prces.js ПИ) — ситуации: объект, препозиция, объект; ▶ — синонимы
+// lensProcess: ⊛ процесс — ситуации: объект, препозиция, объект; ▶ — синонимы
 // последняя строка — новая ситуация со следующим номером в теме
 async function lensProcess(box, c) {
 const rows = await api("/api/process?name=" + encodeURIComponent(c.name)).catch(() => []);
@@ -81,7 +81,7 @@ const okd = document.createElement("td"), ok = document.createElement("button");
 ok.onclick = async () => { const s = ins.map(v => v.value.trim()); if (s.some(x => !x)) return; try { await api("/api/situation", { name: c.name, text: s.join(" ") }); } catch (e) { note.textContent = e.message; return; } cardOpen(c.name); };
 ins.forEach(v => v.onkeydown = e => { if (e.key === "Enter") ok.click(); }); t.append(add);
 const w = el("pwrap"); w.append(t); box.append(w); }
-// lensRank: ◈ ранг (как lrank.js ПИ) — дерево дочерних на глубину Rank; ▶ раскрыть, ⬡ таксон, ▪ концепт
+// lensRank: ◈ ранг — дерево дочерних на глубину Rank; ▶ раскрыть, ⬡ таксон, ▪ концепт
 async function lensRank(box, c) {
 const max = cardRank(c), tree = el("rtree");
 const node = (x, depth) => { const n = el("rnode"), row = el("rrow"), ar = el("rarrow", depth < max ? "▶" : " ");
@@ -95,7 +95,7 @@ const node = (x, depth) => { const n = el("rnode"), row = el("rrow"), ar = el("r
 const ch = await api("/api/children?name=" + encodeURIComponent(c.name)).catch(() => []);
 if (!ch.length) tree.append(el("cempty", "нет дочерних")); ch.forEach(x => tree.append(node(x, 1)));
 box.append(tree); }
-// lensTaxon: ⬡ таксоны (как ltags.js ПИ) — Taxon концепта; таксон — концепт с Rank
+// lensTaxon: ⬡ таксоны — Taxon концепта; таксон — концепт с Rank
 // плашка: картинка, имя, ▾ дочерние, × убрать; поле — подбор, «сделать таксоном» (Rank : 0), «создать таксон»
 // каждая правка — предикация Концепт.Taxon : [ … ] в протокол
 async function lensTaxon(box, c) {
