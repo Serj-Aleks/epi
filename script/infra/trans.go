@@ -19,8 +19,6 @@ var out []string
 for _, t := range ts {if t != "" {out = append(out, t)}}; return out }
 // dictFile: слово в словаре класса lexic/<класс> — путь из букв, как у концептов
 func (q *Script) dictFile(class, word string) string { return letterPath(filepath.Join(q.dir, "lexic", class), word) }
-// exists: файл есть
-func exists(path string) bool {_, err := os.Stat(path); return err == nil }
 // conceptIndex: слово → имя концепта в папке root (имя — из файла, синонимы — Alias)
 func conceptIndex(root string) map[string]string {
 idx := map[string]string{}
@@ -46,8 +44,6 @@ for _, c := range []string{"xdict", "defnt", "preposit"} {if exists(q.dictFile(c
 for _, f := range q.in.Frames {if _, ok := f.Kernel[w]; ok {return "preposit", ""}}
 if n, ok := d.atr[w]; ok {return "atrbt", n}
 if n, ok := d.obj[w]; ok {return "thema", n}; return "", "" }
-// capital: имя объекта с прописной
-func capital(w string) string {r, n := utf8.DecodeRuneInString(w); return string(unicode.ToUpper(r)) + w[n:] }
 // learnName: слово w — концепт name в папке root: совпало с именем — новый концепт, иначе синоним (Alias)
 func learnName(root, w, name string, idx map[string]string) bool {
 if checkName(name) != nil {return false}

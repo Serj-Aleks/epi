@@ -81,19 +81,6 @@ p := q.conceptPath(arg.Text)
 if p == "" {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: conceptName(p, "")}, true }
 // graphType: имя связи графа по значению настройки (без учёта регистра); "" — не связь
 func graphType(v string) string {for _, t := range graphTypes {if strings.EqualFold(t, v) {return t}}; return "" }
-// setting: значение настройки концепта (Nord : Links) без кавычек
-func setting(path, key string) string {
-b, err := os.ReadFile(path)
-if err != nil {return ""}
-lines, _ := conceptLines(b)
-for _, l := range lines {
-	if !isParam(l) || !format.SameTerm(lineKey(l), key) {continue}
-	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
-	if err == nil && len(vs) == 1 {return vs[0].Text}}; return "" }
-// conceptPath: файл существующего концепта в теме или в лексиконе (prfix, sufix, radix); "" — концепта нет
-func (q *Script) conceptPath(name string) string {
-if p := q.conceptFile(name); exists(p) {return p}
-for _, c := range []string{"prfix", "sufix", "radix"} {if p := letterPath(filepath.Join(q.dir, "lexic", c), name); exists(p) {return p}}; return "" }
 // nexusGraph: граф — оси nw, wt, sw, nr: Prfix, Attrib, Sufix, Preposit или по N-west, West, S-west, Nord
 // слева и сверху обратные списки, справа и снизу прямые, остальное — extra; узлы — только существующие концепты
 // соседи узла по той же связи — у входящего его прямой список, у исходящего обратный (в обоих есть центр), у центра — синонимы; Transcl вычисляется; Nord : Themes — ось тем
@@ -133,17 +120,6 @@ for _, t := range graphTypes {
 	d, i := resolve(s[0], t, true), resolve(s[1], t, false)
 	if len(d)+len(i) > 0 {extra = append(extra, map[string]any{"type": t, "direct": d, "inverse": i})}}
 out["extra"] = extra; return out }
-// iconFile: картинка концепта — <папка>/<имя>.svg или <папка>/img/<имя>.png|jpg|jpeg|webp|gif|ico
-func (q *Script) iconFile(name string) string {
-if name == "" || strings.ContainsAny(name, "/\\") {return ""}
-roots := []string{q.themaDir()}
-for _, c := range []string{"prfix", "sufix", "radix", "preposit", "atrbt", "constans"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
-base := strings.ToLower(name)
-for _, r := range roots {
-	dir := filepath.Dir(letterPath(r, name))
-	if r == q.themaDir() {dir = filepath.Dir(q.conceptFile(name))}
-	if p := filepath.Join(dir, base+".svg"); exists(p) {return p}
-	for _, ext := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if p := filepath.Join(dir, "img", base+"."+ext); exists(p) {return p}}}; return "" }
 // syncAlias: группа синонимов — у каждого в Alias все остальные, выбывший теряет frame
 // имена, которые не концепты темы, остаются; контекст участников заново, у frame его задаёт текущая предикация
 func (q *Script) syncAlias(frame string, old, now []string) error {
@@ -170,15 +146,6 @@ for _, m := range group {
 	for _, o := range group {if !format.SameTerm(o, m) {as = append(as, o)}}
 	for _, x := range cur {if exist(x) == "" && !has(as, x) {as = append(as, x)}}
 	if err := put(m, as); err != nil {return err}}; return nil }
-// settingList: имена в настройке-блоке концепта (Graph : [ nr ], List : [ Taxon ])
-func settingList(path, key string) []string {
-b, err := os.ReadFile(path)
-if err != nil {return nil}
-lines, _ := conceptLines(b)
-for _, l := range lines {
-	if !isParam(l) || !format.SameTerm(lineKey(l), key) {continue}
-	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
-	if err == nil {return names(vs)}}; return nil }
 // tokens: слова имени для нечёткого поиска: строчными, разделители — пробел, «-», «_»
 func tokens(s string) []string {return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {return r == ' ' || r == '-' || r == '_'}) }
 // overlap: слова совпадают по первым deep литерам, короче deep не сравниваются

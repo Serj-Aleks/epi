@@ -1,8 +1,8 @@
 // epi/script/infra/thema.go
 package main
+import ("fmt"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
 // темы автора: тема — папка thema/<Имя> с протоколом prtcl и концептами (путь из букв имени, строки «Параметр : предикация»)
 // активная тема одна, системный лексикон lexic — общий
-import ("fmt"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
 // themaRoot, themaDir: папка тем и папка активной темы
 func (q *Script) themaRoot() string { return filepath.Join(q.dir, "thema") }
 func (q *Script) themaDir() string  { return filepath.Join(q.themaRoot(), q.theme) }
@@ -75,9 +75,6 @@ if err != nil {return "", ""}
 for _, l := range strings.Split(string(b), "\n") {
 	k, v, _ := strings.Cut(l, " : ")
 	if k == "Thema" {t = strings.TrimSpace(v)} else if k == "Seans" {s = strings.TrimSpace(v)}}; return t, s }
-// conceptFile: файл концепта темы — по указателю (клон лежит по пути другого концепта), иначе по буквам имени
-func (q *Script) conceptFile(name string) string {
-if p, ok := q.cidx[strings.ToLower(name)]; ok {return p}; return letterPath(q.themaDir(), name) }
 // indexConcepts: указатель концептов темы
 func (q *Script) indexConcepts() {q.cidx = themeIndex(q.themaDir()); q.indexTranscl() }
 // themeIndex: указатель концептов темы в папке dir — имя (строчными) → файл
@@ -87,88 +84,6 @@ filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 	if err != nil {return nil}
 	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
 	if !d.IsDir() && strings.HasSuffix(path, ".uic") {idx[strings.ToLower(strings.TrimSuffix(d.Name(), ".uic"))] = path}; return nil}); return idx }
-// conceptLines: строки концепта «Параметр : предикация»
-func conceptLines(b []byte) ([]string, error) {return disp.Split(string(b)) }
-// lineKey: параметр строки «Параметр : …»
-func lineKey(line string) string {
-k, _, _ := strings.Cut(line, " "); return k }
-// writeConcept: параметр фрейма автора строкой в файле концепта, повторное определение заменяет строку; синонимы — группа
-func (q *Script) writeConcept(frame, param string, pred []format.Value) error {
-if q.theme == "" {return nil}
-if root, ok := q.linkRoot(param); ok {return q.writeLink(frame, param, pred, root, false)}
-if format.SameTerm(param, "Rank") {return q.writeRank(frame, pred)}
-if !format.SameTerm(param, "Alias") {q.known(q.conceptFile(frame)); return writeParam(q.conceptFile(frame), param, pred)}
-path := q.conceptFile(frame)
-old, _ := readLink(path, "Alias")
-if err := writeParam(path, "Alias", pred); err != nil {return err}
-q.cidx[strings.ToLower(frame)] = path; return q.syncAlias(frame, old, names(pred)) }
-// writeRank: ранг концепта; пустой ранг (Rank : []) — концепт больше не таксон, он убирается из Taxon всех дочерних
-func (q *Script) writeRank(frame string, pred []format.Value) error {
-path := q.conceptFile(frame); q.known(path)
-was := setting(path, "Rank") != ""
-if err := writeParam(path, "Rank", pred); err != nil || !was || setting(path, "Rank") != "" {return err}
-_, kids := readLink(path, "Taxon")
-root, _ := q.linkRoot("Taxon")
-for _, k := range kids {
-	kp := q.conceptPath(k); if kp == "" {continue}
-	d, _ := readLink(kp, "Taxon")
-	var ns []format.Value
-	for _, n := range d {if !format.SameTerm(n, frame) {ns = append(ns, format.Value{Kind: format.Term, Text: n})}}
-	if err := q.writeLink(conceptName(kp, ""), "Taxon", ns, root, false); err != nil {return err}}; return nil }
-// writeParam: строка «Параметр : предикация» в файле концепта path (пустое значение — «Параметр :»); новый параметр — перед телом фрейма; повтор строки параметра убирается
-func writeParam(path, param string, pred []format.Value) error {
-var lines []string
-if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
-text := strings.TrimRight(param + " : " + strings.ReplaceAll(format.Format(pred), "\n", " . "), " ")
-found := false
-out := lines[:0]
-for _, l := range lines {if isParam(l) && format.SameTerm(lineKey(l), param) {if found {continue}; l, found = text, true}; out = append(out, l)}
-lines = out
-if !found {lines = append(lines, "")
-	k := len(lines) - 1
-	for k > 0 && !isParam(lines[k-1]) {lines[k] = lines[k-1]; k--}
-	lines[k] = text}; return writeLines(path, lines) }
-// isParam: строка концепта — параметр «Имя : значение» или «Имя :» (имя с прописной, без точки), иначе тело фрейма
-func isParam(l string) bool {
-f := strings.Fields(l)
-if len(f) < 2 || f[1] != ":" || strings.Contains(f[0], ".") {return false}
-r, _ := utf8.DecodeRuneInString(f[0]); return unicode.IsUpper(r) }
-// writeBody: тело фрейма «Фрейм : [ … ]» строками после параметров концепта
-func (q *Script) writeBody(frame string, body []format.Value) error {
-if q.theme == "" {return nil}
-path := q.conceptFile(frame)
-var lines []string
-if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
-var out []string
-for _, l := range lines {if isParam(l) {out = append(out, l)}}
-preds, err := disp.Split(format.Format(body))
-if err != nil {return err}
-q.known(path); return writeLines(path, append(out, preds...)) }
-// loadConcepts: системные концепты (lexic/constans) и концепты темы в контекст; концепт темы дополняет и переопределяет системный
-func (q *Script) loadConcepts() error {
-on, of := q.in.OnParam, q.in.OnFrame
-q.in.OnParam, q.in.OnFrame = nil, nil
-defer func() {q.in.OnParam, q.in.OnFrame = on, of}()
-if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {return err}; return q.loadConceptsIn(q.themaDir()) }
-// loadConceptsIn: концепты в папке root — имя из пути; у связи в контекст — только прямой список
-func (q *Script) loadConceptsIn(root string) error {return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-	if os.IsNotExist(err) && path == root {return nil}
-	if err != nil {return err}
-	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
-	if d.IsDir() || !strings.HasSuffix(path, ".uic") {return nil}
-	b, err := os.ReadFile(path)
-	if err != nil {return err}
-	name := conceptName(path, root)
-	lines, err := conceptLines(b)
-	if err != nil {return fmt.Errorf("%s: %w", path, err)}
-	var body []string
-	for _, l := range lines {
-		if !isParam(l) {body = append(body, l); continue}
-		if _, ok := q.linkRoot(lineKey(l)); ok {l = directOnly(l)}
-		if _, err := q.in.Run(name+"."+l, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}
-	if len(body) > 0 {if _, err := q.in.Run(name+" : [ "+strings.Join(body, " . ")+" ]", q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
-// conceptName: имя концепта из имени файла с прописной первой буквой (К/В/А/Д/Р/А/Т/квадрат.uic → Квадрат)
-func conceptName(path, root string) string { return capital(strings.TrimSuffix(filepath.Base(path), ".uic")) }
 // loadIgnor: база нераспознанных темы — строка на предикацию, нечитаемое — строкой
 func (q *Script) loadIgnor() error {
 b, err := os.ReadFile(q.ignor())
@@ -202,6 +117,3 @@ for _, t := range ts {
 	r := map[string]any{"name": t, "concepts": nc, "taxa": nt, "sats": ns, "seans": nm, "last": strings.TrimSuffix(strings.TrimPrefix(last, "seans-"), ".uic")}
 	if q.themeIcon(t) != "" {r["icon"] = "/api/themeicon?name=" + t}
 	out = append(out, r)}; return out }
-// known: файл концепта темы в указатель (новый концепт виден сразу), файлы лексикона — нет
-func (q *Script) known(path string) {
-if q.theme != "" && strings.HasPrefix(path, q.themaDir()+string(filepath.Separator)) {q.cidx[strings.ToLower(strings.TrimSuffix(filepath.Base(path), ".uic"))] = path} }

@@ -1,6 +1,6 @@
 // epi/script/infra/itype.go
 package main
-import ("embed"; "regexp"; "epi/script/disp"; "sync")
+import ("embed"; "regexp"; "sync"; "epi/script/disp")
 // страница панели: разметка, стили, код
 //go:embed index.html style.css *.js
 var page embed.FS
