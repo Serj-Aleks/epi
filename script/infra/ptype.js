@@ -21,3 +21,5 @@ const lens = { graph: true, taxon: false, rank: false, tabs: false, process: fal
 let cardName = null, cardTimer = null, cloneSrc = "", cardGen = 0, cardFind = null;
 // история панели (←) и ключ открытого списка qwest
 let pstack = [], qwestKey = null;
+// фон дня недели: класс body по номеру дня (0 — воскресенье)
+const days = ["day-sunday", "day-monday", "day-tuesday", "day-wednesday", "day-thursday", "day-friday", "day-saturday"];

@@ -135,5 +135,6 @@ sel.onchange = () => { if (sel.value) act("/api/open", { name: sel.value }); };
 // ошибка кода панели — в шапку, чтобы её было видно без консоли
 window.addEventListener("error", e => { note.textContent = "ошибка: " + e.message; });
 window.addEventListener("unhandledrejection", e => { note.textContent = "ошибка: " + (e.reason && e.reason.message || e.reason); });
-// старт
+// старт: фон дня, состояние сервера
+document.body.classList.add(days[new Date().getDay()]);
 api("/api/state").then(show);
