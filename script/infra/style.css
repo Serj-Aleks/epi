@@ -37,7 +37,7 @@
   /* карточка концепта (вариант B): панель рядом с лентой, на узком экране — над ней */
   #work { flex: 1; display: flex; min-height: 0; }
   #work #log { flex: 1; min-width: 0; }
-  #card { width: 50%; overflow-y: auto; border-left: 1px solid var(--barline); background: var(--g1); font-size: 14px; }
+  #card { width: 50%; overflow-y: auto; border-left: 1px solid var(--barline); font-size: 14px; }
   #card[hidden] { display: none; }
   @media (max-width: 800px) { #work { flex-direction: column; } #card { order: -1; width: auto; max-height: 55vh; border-left: 0; border-bottom: 1px solid var(--barline); } }
   .chead { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--g2); border-bottom: 1px solid var(--line); }
@@ -110,5 +110,7 @@
   body.day-friday { --day-color-rgb: 180, 80, 100; }
   body.day-sunday { --day-color-rgb: 224, 150, 90; }
   body.day-tuesday, body.day-thursday, body.day-friday, body.day-sunday { background-color: #fefdfa; background-image: repeating-linear-gradient(rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px); background-attachment: local; }
-  /* понедельник, среда, суббота — двойная линия у края панели (в ПИ — у боковой панели) */
-  body.day-monday #card, body.day-wednesday #card, body.day-saturday #card { border-left: 4px double var(--barline); }
+  /* понедельник, среда, суббота — тетрадь: полоса полей у края карточки (в ПИ — у боковой панели) */
+  body.day-monday::after, body.day-wednesday::after, body.day-saturday::after { content: ""; position: fixed; top: 0; bottom: 0; right: 0; width: 4px; border-left: 1px solid var(--barline); border-right: 1px solid var(--barline); pointer-events: none; z-index: 50; }
+  body:has(#card:not([hidden]))::after { right: 50%; }
+  @media (max-width: 800px) { body:has(#card:not([hidden]))::after { right: 0; } }
