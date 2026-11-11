@@ -64,14 +64,15 @@ function cardLinks(box) { box.querySelectorAll("a.cref").forEach(a => a.onclick 
 function cardSet(c, k) { for (const l of c.lines || []) { if (l.startsWith(k + " : ")) return l.slice(k.length + 3).replace(/^\[\s*|\s*\]$/g, "").trim(); } return ""; }
 // cardRank: Rank концепта, без него 0
 function cardRank(c) { for (const l of c.lines || []) { const m = l.match(/^Rank : (\d+)/); if (m) return +m[1]; } return 0; }
-// cardOpen: собрать карточку отдельно и поставить целиком (правки подряд не дублируют линзы)
+// cardOpen: собрать карточку отдельно и поставить целиком (правки подряд не дублируют линзы); имя сверяется без учёта регистра (NewSeans — карточка Newseans)
 // та же карточка после правки — на месте, новая — с начала; цвет концепта — в шапке, картинка — во вкладке
 // кнопки линз ◈, ↕, ⊛ — только при Rank > 0, Tabs, Process
 async function cardOpen(name) {
 const gen = ++cardGen, root = document.createElement("div");
 let c;
 try { c = await api("/api/card?name=" + encodeURIComponent(name)); } catch (e) { note.textContent = "ошибка: " + e.message; return; }
-if (!c.found || name !== cardName) return;
+if (!c.found || !cardName || name.toLowerCase() !== cardName.toLowerCase()) return;
+cardName = c.name;
 const keep = card.dataset.name === c.name ? card.scrollTop : 0; card.dataset.name = c.name;
 const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
 head.append(pBackBtn(), ic, el("cname", c.name));
