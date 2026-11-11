@@ -132,7 +132,7 @@ in.Run(`Loop : [ @true -> [ Loop ] ]`, env)
 if _, err := in.Run(`Loop`, env); err == nil {t.Fatal("цикл должен остановиться")}
 v, err := in.Run(`2 + 3`, env)
 if err != nil || v.String() != "5" {t.Fatalf("после остановки: %v %v", v, err)} }
-// Параметры фрейма: «Фрейм.Параметр»; параметров вне фрейма нет
+// Параметры фрейма: «Фрейм.Параметр»; параметров вне фрейма нет; «Фрейм.Параметр :» — пустое значение
 func TestParams(t *testing.T) {
 expect(t, map[string]string{
 	`X.A : 5 . X.A * X.A`:                        "25",
@@ -147,7 +147,8 @@ for src, rec := range map[string]string{
 	`x.A : 1`:       "x.A : 1",
 	`X.a : 1`:       "X.a : 1",} {
 	_, in, _, err := run(t, src, 100, true)
-	if err != nil || len(in.Unknown) != 1 || in.Unknown[0] != rec {t.Errorf("%q: записано %q, ошибка %v", src, in.Unknown, err)}} }
+	if err != nil || len(in.Unknown) != 1 || in.Unknown[0] != rec {t.Errorf("%q: записано %q, ошибка %v", src, in.Unknown, err)}}
+if _, in, _, err := run(t, `X.A : 5 . X.A :`, 100, true); err != nil || len(in.Unknown) != 0 {t.Errorf("«X.A :» — пустое значение: записано %q, ошибка %v", in.Unknown, err)} }
 // Интерпретаторы: «и», «или» в logic; trgnm; lnrfm; алиасы к термам ядра
 func TestNewInterpreters(t *testing.T) {
 cases := []struct{ src, want, frames string }{

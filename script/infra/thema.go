@@ -115,11 +115,11 @@ for _, k := range kids {
 	var ns []format.Value
 	for _, n := range d {if !format.SameTerm(n, frame) {ns = append(ns, format.Value{Kind: format.Term, Text: n})}}
 	if err := q.writeLink(conceptName(kp, ""), "Taxon", ns, root, false); err != nil {return err}}; return nil }
-// writeParam: строка «Параметр : предикация» в файле концепта path; новый параметр — перед телом фрейма
+// writeParam: строка «Параметр : предикация» в файле концепта path (пустое значение — «Параметр :»); новый параметр — перед телом фрейма
 func writeParam(path, param string, pred []format.Value) error {
 var lines []string
 if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
-text := param + " : " + strings.ReplaceAll(format.Format(pred), "\n", " . ")
+text := strings.TrimRight(param + " : " + strings.ReplaceAll(format.Format(pred), "\n", " . "), " ")
 found := false
 for i, l := range lines {if isParam(l) && format.SameTerm(lineKey(l), param) {lines[i], found = text, true}}
 if !found {lines = append(lines, "")

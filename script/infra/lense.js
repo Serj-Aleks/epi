@@ -130,10 +130,10 @@ inpT.oninput = async () => { drop.innerHTML = ""; const v = inpT.value.trim(), l
 inpT.onblur = () => setTimeout(() => drop.innerHTML = "", 200);
 const wrap = el("twrap"); wrap.append(inpT, drop);
 box.append(pills, wrap); }
-// lensSlots: ⊞ строки концепта — ✓ отправляет Концепт.Параметр : значение в строку ввода, пустое — [] (Rank : [] — не таксон)
+// lensSlots: ⊞ строки концепта — ✓ отправляет Концепт.Параметр : значение в строку ввода; пустое — «Концепт.Параметр :», у связи — [] (Rank : — не таксон)
 // у связи правится только прямой список, обратный ведёт script; первая строка — имя (rename), последняя — новый параметр
 function lensSlots(box, c) {
-const send = (k, v) => { if (!k.trim()) return; inp.value = c.name + "." + k.trim() + " : " + (v.trim() || "[]"); document.getElementById("f").requestSubmit(); };
+const send = (k, v) => { k = k.trim(); v = v.trim(); if (!k) return; inp.value = c.name + "." + k + " :" + (v ? " " + v : linkKeys.includes(k) ? " []" : ""); document.getElementById("f").requestSubmit(); };
 const row = (key, val, inv) => { const r = el("crow");
   const k = document.createElement(key === null ? "input" : "span"); k.className = "ckey"; if (key === null) k.placeholder = "Param"; else k.textContent = key;
   const v = document.createElement("input"); v.className = "cval"; v.value = val; v.spellcheck = false;
@@ -144,7 +144,7 @@ const row = (key, val, inv) => { const r = el("crow");
   const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "rename"; ok.onclick = () => { const n = v.value.trim(); if (n && n !== c.name) runPred("rename [ " + c.name + " " + n + " ]"); };
   v.onkeydown = e => { if (e.key === "Enter") ok.click(); }; r.append(k, v, ok); box.append(r); }
 for (const l of c.lines || []) {
-  const m = l.match(/^(\p{Lu}[^\s.]*) : (.*)$/u);
+  const m = l.match(/^(\p{Lu}[^\s.]*) :(?: (.*))?$/u); if (m) m[2] = m[2] || "";
   if (!m) { box.append(el("cbodyline", l)); continue; }
   if (linkKeys.includes(m[1]) && m[2].startsWith("[")) { const j = m[2].indexOf("]"); row(m[1], m[2].slice(0, j + 1), m[2].slice(j + 1).trim()); }
   else row(m[1], m[2]); }

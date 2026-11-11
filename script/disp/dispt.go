@@ -42,11 +42,12 @@ vs := r.vs
 if i >= len(vs) || vs[i].Kind == format.Op || r.isPrep(i) || format.IsDef(vs, i) {return nil, i, false}
 if vs[i].Kind == format.Term && i+1 < len(vs) && vs[i+1].Kind == format.Object {return vs[i : i+2], i + 2, true}; return vs[i : i+1], i + 1, true }
 // slot: слот с позиции i — определение (значение с препозиции — алиас препозиции), препозиция в начале или между операндами
-// у Raw-препозиции слово со строчной — операнд (qwest numer); в слоте одна препозиция
+// у Raw-препозиции слово со строчной — операнд (qwest numer); в слоте одна препозиция; «Ключ :» в конце — пустое значение
 func (r reader) slot(i int) (*slot, int) {
 vs := r.vs
 if format.IsDef(vs, i) {
 	key := vs[i]
+	if i+2 >= len(vs) {return &slot{def: &key, ok: true}, i + 2}
 	if r.isPrep(i + 2) {return &slot{def: &key, a: vs[i+2 : i+3], alias: true, ok: true}, i + 3}
 	inner, j := r.slot(i + 2)
 	inner.def = &key; return inner, j}
