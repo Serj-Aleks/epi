@@ -115,21 +115,23 @@ for _, k := range kids {
 	var ns []format.Value
 	for _, n := range d {if !format.SameTerm(n, frame) {ns = append(ns, format.Value{Kind: format.Term, Text: n})}}
 	if err := q.writeLink(conceptName(kp, ""), "Taxon", ns, root, false); err != nil {return err}}; return nil }
-// writeParam: строка «Параметр : предикация» в файле концепта path (пустое значение — «Параметр :»); новый параметр — перед телом фрейма
+// writeParam: строка «Параметр : предикация» в файле концепта path (пустое значение — «Параметр :»); новый параметр — перед телом фрейма; повтор строки параметра убирается
 func writeParam(path, param string, pred []format.Value) error {
 var lines []string
 if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
 text := strings.TrimRight(param + " : " + strings.ReplaceAll(format.Format(pred), "\n", " . "), " ")
 found := false
-for i, l := range lines {if isParam(l) && format.SameTerm(lineKey(l), param) {lines[i], found = text, true}}
+out := lines[:0]
+for _, l := range lines {if isParam(l) && format.SameTerm(lineKey(l), param) {if found {continue}; l, found = text, true}; out = append(out, l)}
+lines = out
 if !found {lines = append(lines, "")
 	k := len(lines) - 1
 	for k > 0 && !isParam(lines[k-1]) {lines[k] = lines[k-1]; k--}
 	lines[k] = text}; return writeLines(path, lines) }
-// isParam: строка концепта — параметр «Имя : значение» (имя с прописной, без точки), иначе тело фрейма
+// isParam: строка концепта — параметр «Имя : значение» или «Имя :» (имя с прописной, без точки), иначе тело фрейма
 func isParam(l string) bool {
 f := strings.Fields(l)
-if len(f) < 3 || f[1] != ":" || strings.Contains(f[0], ".") {return false}
+if len(f) < 2 || f[1] != ":" || strings.Contains(f[0], ".") {return false}
 r, _ := utf8.DecodeRuneInString(f[0]); return unicode.IsUpper(r) }
 // writeBody: тело фрейма «Фрейм : [ … ]» строками после параметров концепта
 func (q *Script) writeBody(frame string, body []format.Value) error {
