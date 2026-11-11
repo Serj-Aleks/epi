@@ -226,6 +226,8 @@ if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {log.Fatal("за�
 q, err := open(dir)
 if err != nil {log.Fatal(err)}
 http.HandleFunc("/api/", q.handle)
-http.Handle("/", http.FileServer(http.FS(page)))
+http.Handle("/", noCache(http.FileServer(http.FS(page))))
 log.Printf("script: http://%s (данные: %s)", *addr, dir)
 log.Fatal(http.ListenAndServe(*addr, nil)) }
+// noCache: страница панели всегда свежая — браузер не берёт прежние стили и код из кэша после обновления
+func noCache(h http.Handler) http.Handler {return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {w.Header().Set("Cache-Control", "no-cache"); h.ServeHTTP(w, r)}) }
