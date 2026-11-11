@@ -55,7 +55,7 @@
   .tpills { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 6px; } .tpill { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 12px; padding: 1px 8px 1px 2px; position: relative; font-size: 13px; }
   .tpill a { color: var(--acc); text-decoration: none; font-weight: 700; } .tpic { width: 20px; height: 20px; } .tpx { cursor: pointer; color: var(--dim); padding: 0 2px; } .tpx:hover { color: var(--fg); }
   .tplist { position: absolute; top: calc(100% + 4px); left: 0; z-index: 5; background: var(--g1); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,.1); padding: 4px 0; display: flex; flex-direction: column; min-width: 180px; }
-  .tplist a { display: flex; align-items: center; gap: 6px; padding: 4px 12px; white-space: nowrap; color: var(--acc); text-decoration: none; font-size: 13px; } .tplist a:hover { background: var(--g2); } .tpmark { color: var(--dim); font-size: 11px; flex: none; }
+  .tplist a { display: flex; align-items: center; gap: 6px; padding: 4px 12px; white-space: nowrap; color: var(--acc); text-decoration: none; font-size: 13px; } .tplist a:hover { background: var(--g2); } .tpmark { color: var(--dim); font-size: 11px; flex: none; width: 1.2em; text-align: center; }
   .twrap { position: relative; padding: 0 14px; display: flex; } .tdrop { position: absolute; top: 100%; left: 14px; z-index: 5; background: var(--g1); border: 1px solid var(--line); max-height: 40vh; overflow-y: auto; }
   .tdrop:empty { display: none; } .titem { padding: 2px 10px; cursor: pointer; font-size: 13px; } .titem:hover { background: var(--g2); } .tnew { color: var(--acc); font-style: italic; }
   .rtree { padding: 4px 14px; } .rrow { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 3px; white-space: nowrap; } .rrow:hover { background: var(--g2); }
@@ -71,9 +71,9 @@
   .thmeta { color: var(--dim); font-size: 12px; margin-left: auto; } .thfilter { display: flex; align-items: center; gap: 8px; padding: 8px 14px 0; }
   .dterm { text-decoration: underline dotted var(--acc); text-underline-offset: 3px; cursor: help; } .dtdef { margin: 4px 0; white-space: pre-wrap; } .dtdict { color: rgba(245, 242, 236, 0.7); text-decoration: none; font-size: 11px; }
   .chead .cfind { flex: 1; min-width: 8ch; max-width: 22ch; margin-left: auto; } .chead .cfind + .ctools { margin-left: 0; } .flist { padding: 2px 0; }
-  .qlist { padding: 4px 0; } .qrow { padding: 6px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 8px; }
+  .qlist { padding: 4px 0; } .qrow { padding: 2px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 6px; } .qrow .cicon { width: 20px; height: 20px; }
   .qname { color: var(--acc); font-weight: 700; text-decoration: none; } .qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
-  .qex { color: var(--fg); font-size: 13px; margin: 2px 0 0 36px; } mark { background: #f3d77a; color: inherit; } .chead .cval { flex: 1; max-width: 20ch; }
+  .qex { color: var(--fg); font-size: 13px; margin: 0 0 2px 40px; } mark { background: #f3d77a; color: inherit; } .chead .cval { flex: 1; max-width: 20ch; }
   .crow { display: flex; gap: 6px; align-items: center; padding: 2px 14px; flex-wrap: wrap; } .ckey { width: 9ch; color: var(--dim); font-size: 13px; }
   input.ckey { width: 9ch; padding: 2px 4px; flex: none; } .cval { flex: 1; min-width: 10ch; font: 13px inherit; font-family: inherit; padding: 2px 4px; background: var(--g1); border: 1px solid var(--line); color: var(--fg); }
   .crow input.ckey { background: var(--g1); border: 1px solid var(--line); color: var(--fg); font: 13px inherit; font-family: inherit; }
