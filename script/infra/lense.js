@@ -130,10 +130,10 @@ inpT.oninput = async () => { drop.innerHTML = ""; const v = inpT.value.trim(), l
 inpT.onblur = () => setTimeout(() => drop.innerHTML = "", 200);
 const wrap = el("twrap"); wrap.append(inpT, drop);
 box.append(pills, wrap); }
-// lensSlots: ⊞ строки концепта — ✓ отправляет Концепт.Параметр : значение в строку ввода
+// lensSlots: ⊞ строки концепта — ✓ отправляет Концепт.Параметр : значение в строку ввода, пустое — [] (Rank : [] — не таксон)
 // у связи правится только прямой список, обратный ведёт script; первая строка — имя (rename), последняя — новый параметр
 function lensSlots(box, c) {
-const send = (k, v) => { if (!k.trim() || !v.trim()) return; inp.value = c.name + "." + k.trim() + " : " + v.trim(); document.getElementById("f").requestSubmit(); };
+const send = (k, v) => { if (!k.trim()) return; inp.value = c.name + "." + k.trim() + " : " + (v.trim() || "[]"); document.getElementById("f").requestSubmit(); };
 const row = (key, val, inv) => { const r = el("crow");
   const k = document.createElement(key === null ? "input" : "span"); k.className = "ckey"; if (key === null) k.placeholder = "Param"; else k.textContent = key;
   const v = document.createElement("input"); v.className = "cval"; v.value = val; v.spellcheck = false;
