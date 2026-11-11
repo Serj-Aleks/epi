@@ -21,11 +21,13 @@ st.textContent = (css || "").replace(/\/\*[\s\S]*?\*\//g, "").split("}").map(r =
   return sel.split(",").map(s => s.trim().replace(/^(html|body|:root)\b/, "#card")).map(s => s.startsWith("#card") ? s : "#card " + s).join(", ") + " " + r.slice(i); }).join("}"); }
 // esc: текст для html
 function esc(s) { return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+// refLinks: ссылки [[Имя]] — на концепт (md и html)
+function refLinks(s) { return s.replace(/\[\[([^\]]+)\]\]/g, (_, n) => `<a href="#" class="cref" data-n="${esc(n.trim())}">${esc(n.trim())}</a>`); }
 // mdHtml: md в html — заголовки, списки, таблицы, код, ссылки; своя картинка — из img концепта
 function mdHtml(md, name) {
 const code = [];
 md = md.replace(/```([\s\S]+?)```/g, (_, c) => { code.push("<pre><code>" + esc(c.replace(/^\n/, "").replace(/\n$/, "")) + "</code></pre>"); return `\x00C${code.length - 1}\x00`; });
-const inl = s => s.replace(/\[\[([^\]]+)\]\]/g, (_, n) => `<a href="#" class="cref" data-n="${esc(n.trim())}">${esc(n.trim())}</a>`)
+const inl = s => refLinks(s)
   .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => `<img src="${/^(https?:\/)?\//.test(src) ? src : "/api/img?name=" + encodeURIComponent(name) + "&f=" + encodeURIComponent(src)}" alt="${esc(alt)}" style="max-width:100%">`)
   .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
   .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>").replace(/`(.+?)`/g, "<code>$1</code>");
@@ -55,7 +57,7 @@ const raw = (await api("/api/sat?name=" + encodeURIComponent(name) + "&ext=" + e
 if (!raw.trim()) return "";
 const inc = [], vis = new Set(seen).add(c.name.toLowerCase());
 const marked = raw.split(/(```[\s\S]*?```)/).map((p, i) => i % 2 ? p : p.replace(/\{\{([^{}]+)\}\}/g, (_, n) => { inc.push(n.trim()); return `\x00I${inc.length - 1}\x00`; })).join("");
-const html = ext === "md" ? mdHtml(marked, c.name) : ext === "html" || ext === "svg" ? marked : "<pre>" + esc(marked) + "</pre>";
+const html = ext === "md" ? mdHtml(marked, c.name) : ext === "html" ? refLinks(marked) : ext === "svg" ? marked : "<pre>" + esc(marked) + "</pre>";
 const parts = await Promise.all(inc.map(n => vis.has(n.toLowerCase()) ? null : cardRender(n, "", vis).catch(() => null)));
 return html.replace(/\x00I(\d+)\x00/g, (_, i) => parts[i] == null ? esc("{{" + inc[i] + "}}") : `<div class="cinc" title="${esc(inc[i])}">${parts[i]}</div>`); }
 // cardLinks: ссылки [[Имя]] ведут к концепту

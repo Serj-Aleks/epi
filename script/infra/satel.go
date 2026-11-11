@@ -19,14 +19,16 @@ lines := []string{}
 if b, err := os.ReadFile(p); err == nil {lines, _ = conceptLines(b)}
 c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color")}
 if q.iconFile(name) != "" {c["icon"] = "/api/icon?name=" + name}; return c }
-// writeSat: записать спутник; у md прямой список Links — ссылки [[ ]] контента, обратные у целей ведёт writeLink
+// writeSat: записать спутник; прямой список Links — ссылки [[ ]] спутников md и html вместе, обратные у целей ведёт writeLink
 func (q *Script) writeSat(name, ext, text string) error {
 p := q.satFile(name, ext)
 if p == "" {return os.ErrNotExist}
 if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {return err}
 if err := os.WriteFile(p, []byte(text), 0644); err != nil {return err}
 if k := strings.ToLower(name); q.cidx[k] != "" {if ns := transcl(q.cidx[k]); len(ns) > 0 {q.tidx[k] = ns} else {delete(q.tidx, k)}}
-if ext != "md" || !strings.HasPrefix(q.conceptPath(name), q.themaDir()) {return nil}
+if (ext != "md" && ext != "html") || !strings.HasPrefix(q.conceptPath(name), q.themaDir()) {return nil}
+text = ""
+for _, t := range []string{"md", "html"} {if b, err := os.ReadFile(q.satFile(name, t)); err == nil {text += string(b) + "\n"}}
 seen := map[string]bool{}
 var ns []string
 for _, m := range reLink.FindAllStringSubmatch(reFence.ReplaceAllString(text, ""), -1) {
