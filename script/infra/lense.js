@@ -112,7 +112,7 @@ mine.forEach(n => { const t = all.find(x => x.name.toLowerCase() === n.toLowerCa
   ex.onclick = async () => { const old = p.querySelector(".tplist"); if (old) { old.remove(); return; }
     const ch = await api("/api/children?name=" + encodeURIComponent(t ? t.name : n)).catch(() => []), ls = el("tplist");
     if (!ch.length) ls.append(el("cempty", "—"));
-    ch.forEach(x => { const i = document.createElement("a"); i.href = "#"; i.append(el("tpmark", x.taxon ? "⬡" : "▪"), x.name); i.title = x.taxon ? "taxon" : "concept"; i.onclick = e => { e.preventDefault(); nxGo(x.name); }; ls.append(i); });
+    ch.forEach(x => { const i = document.createElement("a"); i.href = "#"; i.append(el("tpmark", x.taxon ? "⬡" : "▪"), x.name); i.onclick = e => { e.preventDefault(); nxGo(x.name); }; ls.append(i); });
     p.append(ls); };
   p.append(ic, a, ex, rm); pills.append(p); });
 const inpT = document.createElement("input"); inpT.className = "cval"; inpT.placeholder = "add taxon..."; inpT.spellcheck = false;

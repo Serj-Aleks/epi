@@ -20,7 +20,7 @@ const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().spl
   if (!shown.length) { list.append(el("cempty", "—")); return; }
   shown.forEach(r => { const row = el("qrow"), ic = el("cicon"); nxIcon(ic, r.icon);
     const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.innerHTML = mark(r.name, ts.concat(fs)); a.onclick = async e => { e.preventDefault(); if (all && r.theme !== last.theme) await act("/api/thema/open", { name: r.theme }); nxGo(r.name); };
-    const top = el("qtop"), mk = el("tpmark", r.taxon ? "⬡" : "▪"); mk.title = r.taxon ? "taxon" : "concept"; top.append(mk, ic, a); if (r.type || all) top.append(el("qtype", (all ? r.theme + (r.type ? " · " : "") : "") + (r.type || ""))); row.append(top);
+    const top = el("qtop"), mk = el("tpmark", r.taxon ? "⬡" : "▪"); top.append(mk, ic, a); if (r.type || all) top.append(el("qtype", (all ? r.theme + (r.type ? " · " : "") : "") + (r.type || ""))); row.append(top);
     if (r.excerpt) { const ex = el("qex"); ex.innerHTML = mark(r.excerpt, ts); row.append(ex); }
     list.append(row); }); };
 flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw(); }
@@ -49,7 +49,7 @@ const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().spl
   if (!shown.length) { list.append(el("cempty", "—")); return; }
   shown.forEach(r => { const row = el("qrow"), ic2 = el("cicon"); nxIcon(ic2, r.icon);
     const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.innerHTML = mark(r.name, fs); a.onclick = e => { e.preventDefault(); nxGo(r.name); };
-    const top = el("qtop"), mk = el("tpmark", r.taxon ? "⬡" : "▪"); mk.title = r.taxon ? "taxon" : "concept"; top.append(mk, ic2, a); row.append(top); list.append(row); }); };
+    const top = el("qtop"), mk = el("tpmark", r.taxon ? "⬡" : "▪"); top.append(mk, ic2, a); row.append(top); list.append(row); }); };
 flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw(); }
 // findRun: поиск внутри концепта (как SearchInConcept ПИ) — концепт и синонимы, тип спутника, отрывок
 // щелчок — концепт, его спутник в линзе контента, найденное подсвечено
