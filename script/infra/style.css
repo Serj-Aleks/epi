@@ -102,7 +102,7 @@
   input { flex: 1; background: none; border: 0; color: var(--fg); font: inherit; padding: 12px 16px 12px 1ch; outline: none; }
   input:disabled { opacity: .4; }
   /* фон дня недели (как в ПИ и ТЕМП): понедельник — клетка, среда — линейка, суббота — белый, остальные — сетка своего цвета */
-  body.day-monday { background-color: var(--g1); background-image: linear-gradient(#e1e8ed 1px, transparent 1px), linear-gradient(90deg, #e1e8ed 1px, transparent 1px); background-size: 20px 20px; }
+  body.day-monday { background-color: #fff; background-image: linear-gradient(#e1e8ed 1px, transparent 1px), linear-gradient(90deg, #e1e8ed 1px, transparent 1px); background-size: 20px 20px; }
   body.day-wednesday { background-color: #fdfae6; background-image: repeating-linear-gradient(transparent, transparent 24px, #a4b0be 25px); background-attachment: local; }
   body.day-saturday { background-color: #fff; }
   body.day-tuesday { --day-color-rgb: 70, 130, 180; }
@@ -110,7 +110,7 @@
   body.day-friday { --day-color-rgb: 180, 80, 100; }
   body.day-sunday { --day-color-rgb: 224, 150, 90; }
   body.day-tuesday, body.day-thursday, body.day-friday, body.day-sunday { background-color: #fefdfa; background-image: repeating-linear-gradient(rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px); background-attachment: local; }
-  /* понедельник, среда, суббота — тетрадь: полоса полей у края карточки (в ПИ — у боковой панели) */
-  body.day-monday::after, body.day-wednesday::after, body.day-saturday::after { content: ""; position: fixed; top: 0; bottom: 0; right: 0; width: 4px; border-left: 1px solid var(--barline); border-right: 1px solid var(--barline); pointer-events: none; z-index: 50; }
-  body:has(#card:not([hidden]))::after { right: 50%; }
-  @media (max-width: 800px) { body:has(#card:not([hidden]))::after { right: 0; } }
+  /* понедельник, среда, суббота — лист тетради: линия полей в 90px от правого края листа (ленты), как в ПИ */
+  body.day-monday::after, body.day-wednesday::after, body.day-saturday::after { content: ""; position: fixed; top: 0; bottom: 0; right: 90px; width: 4px; border-left: 1px solid rgba(255, 100, 100, 0.5); border-right: 1px solid rgba(255, 100, 100, 0.5); pointer-events: none; z-index: 50; }
+  body:has(#card:not([hidden]))::after { right: calc(50% + 90px); }
+  @media (max-width: 800px) { body:has(#card:not([hidden]))::after { right: 90px; } }
