@@ -21,7 +21,7 @@ func (q *Script) qwizFind(query string) []map[string]string {
 ts, _ := q.themes()
 out := []map[string]string{}
 for _, t := range ts {idx := q.cidx; if t != q.theme {idx = themeIndex(filepath.Join(q.themaRoot(), t))}; out = append(out, q.qwestIn(idx, t, query)...)}; return out }
-// qwestIn: найденные концепты указателя idx темы theme, taxon — концепт с Rank; нет — пустой список
+// qwestIn: найденные концепты указателя idx темы theme — taxon и rank (концепт с Rank), число параметров, спутники; нет — пустой список
 func (q *Script) qwestIn(idx map[string]string, theme, query string) []map[string]string {
 ts := qterms(query)
 out := []map[string]string{}
@@ -43,7 +43,11 @@ for k, p := range idx {
 		if !found {ok = false; break}}
 	if !ok {continue}
 	r := map[string]string{"name": name, "key": k, "excerpt": hit, "type": typ, "theme": theme}
-	if setting(p, "Rank") != "" {r["taxon"] = "1"}
+	if rk := setting(p, "Rank"); rk != "" {r["taxon"], r["rank"] = "1", rk}
+	np, sats := 0, []string{}
+	if b, err := os.ReadFile(p); err == nil {ls, _ := conceptLines(b); for _, l := range ls {if isParam(l) {np++}}}
+	for _, t := range satTypes {if exists(strings.TrimSuffix(p, ".uic") + "." + t) {sats = append(sats, t)}}
+	r["params"], r["sats"] = strconv.Itoa(np), strings.Join(sats, " ")
 	if theme == q.theme && q.iconFile(name) != "" {r["icon"] = "/api/icon?name=" + name} else if theme != q.theme {r["icon"] = "/api/icon?name=" + name + "&theme=" + theme}
 	out = append(out, r)}
 sort.Slice(out, func(i, j int) bool {return aLess(out[i]["name"], out[j]["name"])}); return out }

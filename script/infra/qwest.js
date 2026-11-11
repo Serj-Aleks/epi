@@ -1,6 +1,8 @@
 // script/infra/qwest.js — поиск qwest, qwizt, карточка темы, поиск внутри концепта
 // qwestShow: список найденного в панели; all — qwizt, во всех темах
 function qwestShow(qs, back, all) { if (!back) pPush({ k: "q", a: qs, f: "", all }); cardName = null; qwestKey = (all ? "\u0001" : "") + qs; clearTimeout(cardTimer); cardTimer = setTimeout(() => qwestOpen(qs, all), 0); }
+// qinfo: подсказка строки списка — число параметров, спутники, ранг таксона
+function qinfo(r) { return ["параметров " + (r.params || 0), r.sats ? "спутники " + r.sats : "", r.rank ? "Rank " + r.rank : ""].filter(Boolean).join(" · "); }
 // mark: подсветить слова в тексте
 function mark(s, ts) { let r = esc(s); ts.forEach(t => { r = r.replace(new RegExp(esc(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`); }); return r; }
 // qwestOpen: список qwest с фильтром по имени (& — и, как в ПИ), ⬡ — таксон, ▪ — концепт; концепт другой темы переключает тему
@@ -19,7 +21,7 @@ const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().spl
   const shown = rs.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
   if (!shown.length) { list.append(el("cempty", "—")); return; }
   shown.forEach(r => { const row = el("qrow"), ic = el("cicon"); nxIcon(ic, r.icon);
-    const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.innerHTML = mark(r.name, ts.concat(fs)); a.onclick = async e => { e.preventDefault(); if (all && r.theme !== last.theme) await act("/api/thema/open", { name: r.theme }); nxGo(r.name); };
+    const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.title = qinfo(r); a.innerHTML = mark(r.name, ts.concat(fs)); a.onclick = async e => { e.preventDefault(); if (all && r.theme !== last.theme) await act("/api/thema/open", { name: r.theme }); nxGo(r.name); };
     const top = el("qtop"), mk = el("tpmark", r.taxon ? "⬡" : "▪"); top.append(mk, ic, a); if (r.type || all) top.append(el("qtype", (all ? r.theme + (r.type ? " · " : "") : "") + (r.type || ""))); row.append(top);
     if (r.excerpt) { const ex = el("qex"); ex.innerHTML = mark(r.excerpt, ts); row.append(ex); }
     list.append(row); }); };
@@ -48,7 +50,7 @@ const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().spl
   const shown = rs.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
   if (!shown.length) { list.append(el("cempty", "—")); return; }
   shown.forEach(r => { const row = el("qrow"), ic2 = el("cicon"); nxIcon(ic2, r.icon);
-    const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.innerHTML = mark(r.name, fs); a.onclick = e => { e.preventDefault(); nxGo(r.name); };
+    const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.title = qinfo(r); a.innerHTML = mark(r.name, fs); a.onclick = e => { e.preventDefault(); nxGo(r.name); };
     const top = el("qtop"), mk = el("tpmark", r.taxon ? "⬡" : "▪"); top.append(mk, ic2, a); row.append(top); list.append(row); }); };
 flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw(); }
 // findRun: поиск внутри концепта (как SearchInConcept ПИ) — концепт и синонимы, тип спутника, отрывок
