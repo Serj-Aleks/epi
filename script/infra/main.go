@@ -123,7 +123,7 @@ if err != nil {log.Print(err)}; return map[string]any{
 	"seanses": ss, "current": q.cur, "closed": q.closed, "turns": q.turns,
 	"pending": map[string]any{"pred": q.pPred, "question": q.pQuest, "options": q.pOpts},} }
 // handle: запросы панели /api/…; Choice — ответ на вопрос с выбором, Ext — тип спутника
-// situation: Text — «объект препозиция объект»; sat: GET читает спутник, POST пишет; img — <папка концепта>/img/<файл>
+// situation: Text — «объект препозиция объект»; sat: GET читает спутник, POST пишет; img — <папка концепта>/img/<файл>, без name — <тема>/img/<файл>
 // icon с theme — концепт другой темы (qwizt); в новой теме сразу открывается сеанс; закрытый сеанс — файл только для чтения
 func (q *Script) handle(w http.ResponseWriter, req *http.Request) {
 w.Header().Set("Content-Type", "application/json")
@@ -163,9 +163,10 @@ if req.URL.Path == "/api/sat" {
 	if err := q.writeSat(body.Name, body.Ext, body.Text); err != nil {fail(http.StatusBadRequest, err.Error()); return}
 	json.NewEncoder(w).Encode(q.card(body.Name)); return}
 if req.URL.Path == "/api/img" {
-	p, f := q.conceptPath(req.URL.Query().Get("name")), req.URL.Query().Get("f")
-	if p == "" || f == "" || f != filepath.Base(f) {http.NotFound(w, req); return}
-	w.Header().Del("Content-Type"); http.ServeFile(w, req, filepath.Join(filepath.Dir(p), "img", f)); return}
+	n, f, dir := req.URL.Query().Get("name"), req.URL.Query().Get("f"), q.themaDir()
+	if n != "" {p := q.conceptPath(n); if p == "" {http.NotFound(w, req); return}; dir = filepath.Dir(p)}
+	if f == "" || f != filepath.Base(f) {http.NotFound(w, req); return}
+	w.Header().Del("Content-Type"); http.ServeFile(w, req, filepath.Join(dir, "img", f)); return}
 if req.URL.Path == "/api/icon" {
 	p := q.iconFile(req.URL.Query().Get("name"))
 	if t := req.URL.Query().Get("theme"); t != "" && t != q.theme {p = q.iconOther(t, req.URL.Query().Get("name"))}

@@ -23,12 +23,12 @@ st.textContent = (css || "").replace(/\/\*[\s\S]*?\*\//g, "").split("}").map(r =
 function esc(s) { return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 // refLinks: ссылки [[Имя]] — на концепт (md и html)
 function refLinks(s) { return s.replace(/\[\[([^\]]+)\]\]/g, (_, n) => `<a href="#" class="cref" data-n="${esc(n.trim())}">${esc(n.trim())}</a>`); }
-// mdHtml: md в html — заголовки, списки, таблицы, код, ссылки; своя картинка — из img концепта
+// mdHtml: md в html — заголовки, списки, таблицы, код, ссылки; картинка файл — из img концепта, /img/файл — из img темы
 function mdHtml(md, name) {
 const code = [];
 md = md.replace(/```([\s\S]+?)```/g, (_, c) => { code.push("<pre><code>" + esc(c.replace(/^\n/, "").replace(/\n$/, "")) + "</code></pre>"); return `\x00C${code.length - 1}\x00`; });
 const inl = s => refLinks(s)
-  .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => `<img src="${/^(https?:\/)?\//.test(src) ? src : "/api/img?name=" + encodeURIComponent(name) + "&f=" + encodeURIComponent(src)}" alt="${esc(alt)}" style="max-width:100%">`)
+  .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => `<img src="${/^\/img\/[^/]+$/.test(src) ? "/api/img?f=" + encodeURIComponent(src.slice(5)) : /^(https?:\/)?\//.test(src) ? src : "/api/img?name=" + encodeURIComponent(name) + "&f=" + encodeURIComponent(src)}" alt="${esc(alt)}" style="max-width:100%">`)
   .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
   .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>").replace(/`(.+?)`/g, "<code>$1</code>");
 let h = "", list = "", tab = false, head = false;
