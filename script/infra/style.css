@@ -1,116 +1,194 @@
-/* script/infra/style.css — стили панели (из index.html) */
-  /* тетрадь: страница — старая бумага в линейку, шапка и строка ввода — бледно-голубая обложка */
-  :root { --bg: #efe6d2; --g1: #fbf6ea; --g2: #f3ebda; --bar: #cddfee; --barline: #a9c3da;
-    --fg: #2b2a33; --dim: #7d8aa0; --acc: #2f55a4; --err: #b23a22; --line: #a9c3da; --btn: #e6f0f8; }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; color: var(--fg);
-    /* без фона дня — бумага со свечением в центре */
-    background: radial-gradient(ellipse at 50% 40%, var(--g1) 0%, var(--g2) 45%, var(--bg) 100%) fixed;
-    font: 16px/1.5 "DejaVu Sans Mono", "Noto Sans Mono", monospace; }
-  body { display: flex; flex-direction: column; }
-  header { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 8px 16px; border-bottom: 1px solid var(--barline); background: var(--bar); }
-  header select { background: var(--btn); color: var(--fg); border: 1px solid var(--line); font: inherit;
-    padding: 2px 6px; border-radius: 4px; max-width: 60vw; }
-  button { background: var(--btn); border: 1px solid var(--line); color: var(--fg); min-width: 32px; height: 28px;
-    border-radius: 4px; cursor: pointer; font: inherit; }
-  button:hover, button:focus { border-color: var(--acc); color: var(--acc); outline: none; }
-  button:disabled { opacity: .3; cursor: default; border-color: var(--line); color: var(--fg); }
-  #note { color: var(--err); font-size: 13px; }
-  .gap { width: 16px; }
-  input::placeholder { color: var(--dim); }
-  /* лента: знак Θ APOTHEOS поверх фона дня */
-  #log { flex: 1; overflow-y: auto; padding: 12px 16px 8px; font-size: 14px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%232f55a4' stroke-opacity='.07' stroke-width='3'%3E%3Cellipse cx='32' cy='32' rx='22' ry='26'/%3E%3Cpath d='M21 32H43'/%3E%3C/g%3E%3C/svg%3E") center 55% / min(70vh, 70vw) no-repeat fixed; }
-  .turn { margin: 0 0 10px; }
-  #log, .turn, .pred, .ans, .q { line-height: 20px; }
-  .pred { white-space: pre-wrap; word-break: break-word; }
-  .pred::before { content: "› "; color: var(--acc); }
-  .ans { display: flex; gap: 12px; align-items: baseline; padding-left: 2ch; white-space: pre-wrap; word-break: break-word; }
-  .ans .v { color: var(--acc); }
-  .ans.err .v { color: var(--err); }
-  .ans .f, .q .f { margin-left: auto; color: var(--dim); font-size: 13px; white-space: nowrap; }
-  .q { padding-left: 2ch; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .q button { height: 22px; line-height: 20px; }
-  /* граф локального контекста (nexus, 9.17) — стили графа ПИ (web/css/graph.css) */
-  :root { --graph-nw: rgb(180, 80, 100); --graph-wt: rgb(80, 160, 100); --graph-sw: rgb(224, 150, 90); --graph-nr: rgb(70, 130, 180);
-    --graph-nw-bg: rgba(180, 80, 100, 0.08); --graph-wt-bg: rgba(80, 160, 100, 0.08); --graph-sw-bg: rgba(224, 150, 90, 0.08); --graph-nr-bg: rgba(70, 130, 180, 0.08); }
-  /* карточка концепта (вариант B): панель рядом с лентой, на узком экране — над ней */
-  #work { flex: 1; display: flex; min-height: 0; }
-  #work #log { flex: 1; min-width: 0; }
-  #card { width: 50%; overflow-y: auto; border-left: 1px solid var(--barline); font-size: 14px; }
-  #card[hidden] { display: none; }
-  @media (max-width: 800px) { #work { flex-direction: column; } #card { order: -1; width: auto; max-height: 55vh; border-left: 0; border-bottom: 1px solid var(--barline); } }
-  .chead { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--g2); border-bottom: 1px solid var(--line); }
-  .cicon { width: 28px; height: 28px; flex: none; } .cname { font-weight: 700; color: var(--acc); }
-  .ctools { margin-left: auto; display: flex; gap: 4px; } .ctools button.on { background: var(--acc); color: var(--g1); border-color: var(--acc); }
-  .clens { border-bottom: 1px solid var(--line); padding: 8px 0; overflow-x: auto; }
-  .cbar { display: flex; justify-content: flex-end; gap: 4px; padding: 0 10px; } .cbar select { font: inherit; }
-  .cbody { padding: 0 14px; line-height: 1.5; } .cbody h1, .cbody h2, .cbody h3 { margin: 10px 0 6px; font-size: 1.1em; }
-  .cbody p { margin: 4px 0; } .cbody ul, .cbody ol { margin: 4px 0; padding-left: 22px; } .cbody pre { white-space: pre-wrap; background: var(--g2); border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; font-size: 13px; } .cbody code { background: var(--g2); padding: 0 3px; border-radius: 2px; } .cbody pre code { padding: 0; }
-  .cbody table { border-collapse: collapse; } .cbody td, .cbody th { border: 1px solid var(--line); padding: 2px 6px; }
-  .cbody a { color: var(--acc); } .cbody a.cref { font-weight: 700; text-decoration: none; }
-  .cinc { border-left: 3px solid var(--graph-nr); padding-left: 8px; margin: 6px 0; }
-  .cempty { color: var(--dim); } .cedit { width: 100%; min-height: 40vh; font: 13px/1.4 inherit; font-family: inherit; background: var(--g1); border: 1px solid var(--line); margin-top: 6px; }
-  .clens.tlens { overflow: visible; position: relative; z-index: 3; }
-  .tpills { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 6px; } .tpill { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 12px; padding: 1px 8px 1px 2px; position: relative; font-size: 13px; }
-  .tpill a { color: var(--acc); text-decoration: none; font-weight: 700; } .tpic { width: 20px; height: 20px; } .tpx { cursor: pointer; color: var(--dim); padding: 0 2px; } .tpx:hover { color: var(--fg); }
-  .tplist { position: absolute; top: calc(100% + 4px); left: 0; z-index: 5; background: var(--g1); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,.1); padding: 4px 0; display: flex; flex-direction: column; min-width: 180px; }
-  .tplist a { display: flex; align-items: center; gap: 6px; padding: 4px 12px; white-space: nowrap; color: var(--acc); text-decoration: none; font-size: 13px; } .tplist a:hover { background: var(--g2); } .tpmark { color: var(--dim); font-size: 11px; flex: none; width: 1.2em; text-align: center; }
-  .twrap { position: relative; padding: 0 14px; display: flex; } .tdrop { position: absolute; top: 100%; left: 14px; z-index: 5; background: var(--g1); border: 1px solid var(--line); max-height: 40vh; overflow-y: auto; }
-  .tdrop:empty { display: none; } .titem { padding: 2px 10px; cursor: pointer; font-size: 13px; } .titem:hover { background: var(--g2); } .tnew { color: var(--acc); font-style: italic; }
-  .rtree { padding: 4px 14px; } .rrow { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 3px; white-space: nowrap; } .rrow:hover { background: var(--g2); }
-  .rarrow { width: 12px; flex: none; font-size: 10px; color: var(--dim); user-select: none; } .rarrow.on { cursor: pointer; } .rarrow.on:hover { color: var(--fg); }
-  .rlink { color: var(--acc); text-decoration: none; font-size: 13px; } .rlink:hover { text-decoration: underline dotted; } .rkids { padding-left: 20px; border-left: 1px solid var(--line); margin-left: 8px; }
-  .tabbar { display: flex; gap: 2px; flex-wrap: wrap; } .tabbar button { font-size: 13px; border-radius: 3px 3px 0 0; } .tabbar button.on { background: var(--acc); color: var(--g1); border-color: var(--acc); }
-  .tabh { padding: 0 14px; } .tabh > .tabbar { border-bottom: 1px solid var(--acc); } .tabv { display: flex; gap: 8px; padding: 0 14px; } .tabv > .tabbar { flex-direction: column; flex: none; border-right: 1px solid var(--acc); padding-right: 4px; } .tabv > .tabbar button { border-radius: 3px 0 0 3px; text-align: left; } .tabh > .tabbar button { flex: none; }
-  .tabbody { flex: 1; min-width: 0; padding-top: 6px; } .tabbody > .cbody { padding: 0; } .tabnest { margin-top: 8px; border-top: 1px dotted var(--line); padding-top: 6px; } .tabnest .tabh, .tabnest .tabv { padding: 0; }
-  .pwrap { padding: 0 14px; overflow-x: auto; } .ptab { width: 100%; border-collapse: collapse; font-size: 13px; } .ptab th { text-align: left; padding: 4px 8px; border-bottom: 2px solid var(--line); color: var(--dim); font-weight: 400; }
-  .ptab td { padding: 4px 8px; border-bottom: 1px solid var(--line); } .ptab a { color: var(--acc); text-decoration: none; } .pnum { color: var(--dim); } .ptrig { cursor: pointer; font-size: 10px; color: var(--dim); } .ptrig:hover { color: var(--fg); }
-  #ticon { width: 34px; height: 30px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; } #ticon svg, #ticon img { width: 24px; height: 24px; }
-  .thlist { padding: 4px 0; } .throw { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-bottom: 1px dotted var(--line); flex-wrap: wrap; } .throw.on { background: var(--g2); }
-  .thmeta { color: var(--dim); font-size: 12px; margin-left: auto; } .thfilter { display: flex; align-items: center; gap: 8px; padding: 8px 14px 0; }
-  .dterm { text-decoration: underline dotted var(--acc); text-underline-offset: 3px; cursor: help; } .dtdef { margin: 4px 0; white-space: pre-wrap; } .dtdict { color: rgba(245, 242, 236, 0.7); text-decoration: none; font-size: 11px; }
-  .chead .cfind { flex: 1; min-width: 8ch; max-width: 22ch; margin-left: auto; } .chead .cfind + .ctools { margin-left: 0; } .flist { padding: 2px 0; }
-  .qlist { padding: 4px 0; } .qrow { padding: 2px 14px; border-bottom: 1px dotted var(--line); } .qtop { display: flex; align-items: center; gap: 6px; } .qrow .cicon { width: 20px; height: 20px; }
-  .qname { color: var(--acc); font-weight: 700; text-decoration: none; } .qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
-  .qex { color: var(--fg); font-size: 13px; margin: 0 0 2px 40px; } mark { background: #f3d77a; color: inherit; } .chead .cval { flex: 1; max-width: 20ch; }
-  .crow { display: flex; gap: 6px; align-items: center; padding: 2px 14px; flex-wrap: wrap; } .ckey { width: 9ch; color: var(--dim); font-size: 13px; }
-  input.ckey { width: 9ch; padding: 2px 4px; flex: none; } .cval { flex: 1; min-width: 10ch; font: 13px inherit; font-family: inherit; padding: 2px 4px; background: var(--g1); border: 1px solid var(--line); color: var(--fg); }
-  .crow input.ckey { background: var(--g1); border: 1px solid var(--line); color: var(--fg); font: 13px inherit; font-family: inherit; }
-  .cinv { width: 100%; padding-left: calc(9ch + 6px); color: var(--dim); font-size: 12px; } .cbodyline { padding: 2px 14px; font-size: 13px; color: var(--fg); white-space: pre-wrap; }
-  .dag-svg { display: block; margin: 0 auto; flex-shrink: 0; }
-  .dag-node { cursor: pointer; transition: opacity 0.15s; } .dag-node:hover { opacity: 0.75; }
-  .dag-node-rect { fill: var(--g1); stroke: #c9bfa8; stroke-width: 1.5px; }
-  .dag-node-center { cursor: default; } .dag-node-center:hover { opacity: 1; }
-  .dag-node-center .dag-node-rect { fill: var(--g2); stroke: var(--fg); stroke-width: 2px; }
-  .dag-trigger { cursor: pointer; } .dag-trigger-arrow { fill: #d4cfc7; } .dag-trigger-arrow.active { fill: var(--dim); }
-  .dag-node:hover .dag-trigger-arrow.active { fill: var(--fg); }
-  .dag-divider { margin: 8px 0; border: none; border-top: 1px solid var(--line); }
-  .dag-list { padding: 0 8px; display: flex; flex-direction: column; gap: 4px; }
-  .dag-section { font-size: 12px; line-height: 1.6; color: var(--fg); }
-  .dag-section-label { color: var(--dim); font-weight: 700; letter-spacing: 0.08em; }
-  .dag-section-nw .dag-section-label { color: var(--graph-nw); } .dag-section-wt .dag-section-label { color: var(--graph-wt); }
-  .dag-section-sw .dag-section-label { color: var(--graph-sw); } .dag-section-nr .dag-section-label { color: var(--graph-nr); }
-  .dag-link { color: var(--acc); text-decoration: none; font-weight: 500; } .dag-link:hover { color: var(--fg); }
-  .dag-link-secondary { color: var(--dim); font-weight: 400; } .dag-link-sep { color: var(--dim); user-select: none; }
-  .dag-tooltip { position: fixed; background: var(--fg); color: var(--g1); padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,0.25); max-width: 220px; }
-  .dag-tooltip-title { display: block; color: inherit; text-decoration: none; font-weight: 500; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.15); }
-  .dag-tooltip-list { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-direction: column; gap: 2px; }
-  .dag-tooltip-list a { color: rgba(245, 242, 236, 0.7); text-decoration: none; display: block; } .dag-tooltip-list a:hover { color: var(--g1); text-decoration: underline; }
-  form { display: flex; border-top: 1px solid var(--barline); background: var(--bar); }
-  form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
-  input { flex: 1; background: none; border: 0; color: var(--fg); font: inherit; font-size: 14px; padding: 10px 16px 10px 1ch; outline: none; }
-  input:disabled { opacity: .4; }
-  /* фон дня недели (как в ПИ и ТЕМП): понедельник — клетка, среда — линейка, суббота — белый, остальные — сетка своего цвета */
-  body.day-monday { background-color: #fff; background-image: linear-gradient(#e1e8ed 1px, transparent 1px), linear-gradient(90deg, #e1e8ed 1px, transparent 1px); background-size: 20px 20px; }
-  body.day-wednesday { background-color: #fdfae6; background-image: repeating-linear-gradient(transparent, transparent 24px, #a4b0be 25px); background-attachment: local; }
-  body.day-saturday { background-color: #fff; }
-  body.day-tuesday { --day-color-rgb: 70, 130, 180; }
-  body.day-thursday { --day-color-rgb: 80, 160, 100; }
-  body.day-friday { --day-color-rgb: 180, 80, 100; }
-  body.day-sunday { --day-color-rgb: 224, 150, 90; }
-  body.day-tuesday, body.day-thursday, body.day-friday, body.day-sunday { background-color: #fefdfa; background-image: repeating-linear-gradient(rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px); background-attachment: local; }
-  /* понедельник, среда, суббота — лист тетради: линия полей в 90px от правого края листа (ленты), как в ПИ */
-  body.day-monday::after, body.day-wednesday::after, body.day-saturday::after { content: ""; position: fixed; top: 0; bottom: 0; right: 90px; width: 4px; border-left: 1px solid rgba(255, 100, 100, 0.5); border-right: 1px solid rgba(255, 100, 100, 0.5); pointer-events: none; z-index: 50; }
-  body:has(#card:not([hidden]))::after { right: calc(50% + 90px); }
-  @media (max-width: 800px) { body:has(#card:not([hidden]))::after { right: 90px; } }
+/* script/infra/style.css — стили панели */
+/* переменные: бумага, обложка (шапка и строка ввода), текст, оси графа (как в ПИ) */
+:root { --bg: #efe6d2; --g1: #fbf6ea; --g2: #f3ebda; --bar: #cddfee; --barline: #a9c3da;
+  --fg: #2b2a33; --dim: #7d8aa0; --acc: #2f55a4; --err: #b23a22; --line: #a9c3da; --btn: #e6f0f8;
+  --graph-nw: rgb(180, 80, 100); --graph-wt: rgb(80, 160, 100); --graph-sw: rgb(224, 150, 90); --graph-nr: rgb(70, 130, 180);
+  --graph-nw-bg: rgba(180, 80, 100, 0.08); --graph-wt-bg: rgba(80, 160, 100, 0.08); --graph-sw-bg: rgba(224, 150, 90, 0.08); --graph-nr-bg: rgba(70, 130, 180, 0.08); }
+/* основа: без фона дня — бумага со свечением в центре */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; color: var(--fg); background: radial-gradient(ellipse at 50% 40%, var(--g1) 0%, var(--g2) 45%, var(--bg) 100%) fixed; font: 16px/1.5 "DejaVu Sans Mono", "Noto Sans Mono", monospace; }
+body { display: flex; flex-direction: column; }
+button { background: var(--btn); border: 1px solid var(--line); color: var(--fg); min-width: 32px; height: 28px; border-radius: 4px; cursor: pointer; font: inherit; }
+button:hover, button:focus { border-color: var(--acc); color: var(--acc); outline: none; }
+button:disabled { opacity: .3; cursor: default; border-color: var(--line); color: var(--fg); }
+input { flex: 1; background: none; border: 0; color: var(--fg); font: inherit; font-size: 14px; padding: 10px 16px 10px 1ch; outline: none; }
+input::placeholder { color: var(--dim); }
+input:disabled { opacity: .4; }
+mark { background: #f3d77a; color: inherit; }
+/* шапка: темы, сеансы, подсказки */
+header { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 8px 16px; border-bottom: 1px solid var(--barline); background: var(--bar); }
+header select { background: var(--btn); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 2px 6px; border-radius: 4px; max-width: 60vw; }
+#note { color: var(--err); font-size: 13px; }
+.gap { width: 16px; }
+#ticon { width: 34px; height: 30px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; }
+#ticon svg, #ticon img { width: 24px; height: 24px; }
+/* лента: предикации и ответы, знак Θ APOTHEOS поверх фона дня */
+#log { flex: 1; overflow-y: auto; padding: 12px 16px 8px; font-size: 14px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%232f55a4' stroke-opacity='.07' stroke-width='3'%3E%3Cellipse cx='32' cy='32' rx='22' ry='26'/%3E%3Cpath d='M21 32H43'/%3E%3C/g%3E%3C/svg%3E") center 55% / min(70vh, 70vw) no-repeat fixed; }
+#log, .turn, .pred, .ans, .q { line-height: 20px; }
+.turn { margin: 0 0 10px; }
+.pred { white-space: pre-wrap; word-break: break-word; }
+.pred::before { content: "› "; color: var(--acc); }
+.ans { display: flex; gap: 12px; align-items: baseline; padding-left: 2ch; white-space: pre-wrap; word-break: break-word; }
+.ans .v { color: var(--acc); }
+.ans.err .v { color: var(--err); }
+.ans .f, .q .f { margin-left: auto; color: var(--dim); font-size: 13px; white-space: nowrap; }
+.q { padding-left: 2ch; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.q button { height: 22px; line-height: 20px; }
+/* строка ввода */
+form { display: flex; border-top: 1px solid var(--barline); background: var(--bar); }
+form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
+/* раскладка: карточка — панель рядом с лентой */
+#work { flex: 1; display: flex; min-height: 0; }
+#work #log { flex: 1; min-width: 0; }
+#card { width: 50%; overflow-y: auto; border-left: 1px solid var(--barline); font-size: 14px; }
+#card[hidden] { display: none; }
+/* карточка: шапка, линзы, контент */
+.chead { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--g2); border-bottom: 1px solid var(--line); }
+.chead .cval { flex: 1; max-width: 20ch; }
+.chead .cfind { flex: 1; min-width: 8ch; max-width: 22ch; margin-left: auto; }
+.chead .cfind + .ctools { margin-left: 0; }
+.cicon { width: 28px; height: 28px; flex: none; }
+.cname { font-weight: 700; color: var(--acc); }
+.ctools { margin-left: auto; display: flex; gap: 4px; }
+.ctools button.on { background: var(--acc); color: var(--g1); border-color: var(--acc); }
+.clens { border-bottom: 1px solid var(--line); padding: 8px 0; overflow-x: auto; }
+.flist { padding: 2px 0; }
+.cbar { display: flex; justify-content: flex-end; gap: 4px; padding: 0 10px; }
+.cbar select { font: inherit; }
+.cbody { padding: 0 14px; line-height: 1.5; }
+.cbody h1, .cbody h2, .cbody h3 { margin: 10px 0 6px; font-size: 1.1em; }
+.cbody p { margin: 4px 0; }
+.cbody ul, .cbody ol { margin: 4px 0; padding-left: 22px; }
+.cbody pre { white-space: pre-wrap; background: var(--g2); border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; font-size: 13px; }
+.cbody code { background: var(--g2); padding: 0 3px; border-radius: 2px; }
+.cbody pre code { padding: 0; }
+.cbody table { border-collapse: collapse; }
+.cbody td, .cbody th { border: 1px solid var(--line); padding: 2px 6px; }
+.cbody a { color: var(--acc); }
+.cbody a.cref { font-weight: 700; text-decoration: none; }
+.cinc { border-left: 3px solid var(--graph-nr); padding-left: 8px; margin: 6px 0; }
+.cempty { color: var(--dim); }
+.cedit { width: 100%; min-height: 40vh; font: 13px/1.4 inherit; font-family: inherit; background: var(--g1); border: 1px solid var(--line); margin-top: 6px; }
+/* граф nexus (как graph.css ПИ) */
+.dag-svg { display: block; margin: 0 auto; flex-shrink: 0; }
+.dag-node { cursor: pointer; transition: opacity 0.15s; }
+.dag-node:hover { opacity: 0.75; }
+.dag-node-rect { fill: var(--g1); stroke: #c9bfa8; stroke-width: 1.5px; }
+.dag-node-center { cursor: default; }
+.dag-node-center:hover { opacity: 1; }
+.dag-node-center .dag-node-rect { fill: var(--g2); stroke: var(--fg); stroke-width: 2px; }
+.dag-trigger { cursor: pointer; }
+.dag-trigger-arrow { fill: #d4cfc7; }
+.dag-trigger-arrow.active { fill: var(--dim); }
+.dag-node:hover .dag-trigger-arrow.active { fill: var(--fg); }
+.dag-divider { margin: 8px 0; border: none; border-top: 1px solid var(--line); }
+.dag-list { padding: 0 8px; display: flex; flex-direction: column; gap: 4px; }
+.dag-section { font-size: 12px; line-height: 1.6; color: var(--fg); }
+.dag-section-label { color: var(--dim); font-weight: 700; letter-spacing: 0.08em; }
+.dag-section-nw .dag-section-label { color: var(--graph-nw); }
+.dag-section-wt .dag-section-label { color: var(--graph-wt); }
+.dag-section-sw .dag-section-label { color: var(--graph-sw); }
+.dag-section-nr .dag-section-label { color: var(--graph-nr); }
+.dag-link { color: var(--acc); text-decoration: none; font-weight: 500; }
+.dag-link:hover { color: var(--fg); }
+.dag-link-secondary { color: var(--dim); font-weight: 400; }
+.dag-link-sep { color: var(--dim); user-select: none; }
+.dag-tooltip { position: fixed; background: var(--fg); color: var(--g1); padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,0.25); max-width: 220px; }
+.dag-tooltip-title { display: block; color: inherit; text-decoration: none; font-weight: 500; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+.dag-tooltip-list { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-direction: column; gap: 2px; }
+.dag-tooltip-list a { color: rgba(245, 242, 236, 0.7); text-decoration: none; display: block; }
+.dag-tooltip-list a:hover { color: var(--g1); text-decoration: underline; }
+/* линза ⬡ таксоны: плашки, дочерние, подбор */
+.clens.tlens { overflow: visible; position: relative; z-index: 3; }
+.tpills { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 6px; }
+.tpill { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 12px; padding: 1px 8px 1px 2px; position: relative; font-size: 13px; }
+.tpill a { color: var(--acc); text-decoration: none; font-weight: 700; }
+.tpic { width: 20px; height: 20px; }
+.tpx { cursor: pointer; color: var(--dim); padding: 0 2px; }
+.tpx:hover { color: var(--fg); }
+.tpmark { color: var(--dim); font-size: 11px; flex: none; width: 1.2em; text-align: center; }
+.tplist { position: absolute; top: calc(100% + 4px); left: 0; z-index: 5; background: var(--g1); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,.1); padding: 4px 0; display: flex; flex-direction: column; min-width: 180px; }
+.tplist a { display: flex; align-items: center; gap: 6px; padding: 4px 12px; white-space: nowrap; color: var(--acc); text-decoration: none; font-size: 13px; }
+.tplist a:hover { background: var(--g2); }
+.twrap { position: relative; padding: 0 14px; display: flex; }
+.tdrop { position: absolute; top: 100%; left: 14px; z-index: 5; background: var(--g1); border: 1px solid var(--line); max-height: 40vh; overflow-y: auto; }
+.tdrop:empty { display: none; }
+.titem { padding: 2px 10px; cursor: pointer; font-size: 13px; }
+.titem:hover { background: var(--g2); }
+.tnew { color: var(--acc); font-style: italic; }
+/* линза ◈ ранг: дерево дочерних */
+.rtree { padding: 4px 14px; }
+.rrow { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 3px; white-space: nowrap; }
+.rrow:hover { background: var(--g2); }
+.rarrow { width: 12px; flex: none; font-size: 10px; color: var(--dim); user-select: none; }
+.rarrow.on { cursor: pointer; }
+.rarrow.on:hover { color: var(--fg); }
+.rlink { color: var(--acc); text-decoration: none; font-size: 13px; }
+.rlink:hover { text-decoration: underline dotted; }
+.rkids { padding-left: 20px; border-left: 1px solid var(--line); margin-left: 8px; }
+/* линза ↕ вкладки: hrznt сверху, vrtcl сбоку, вложенные */
+.tabbar { display: flex; gap: 2px; flex-wrap: wrap; }
+.tabbar button { font-size: 13px; border-radius: 3px 3px 0 0; }
+.tabbar button.on { background: var(--acc); color: var(--g1); border-color: var(--acc); }
+.tabh { padding: 0 14px; }
+.tabh > .tabbar { border-bottom: 1px solid var(--acc); }
+.tabh > .tabbar button { flex: none; }
+.tabv { display: flex; gap: 8px; padding: 0 14px; }
+.tabv > .tabbar { flex-direction: column; flex: none; border-right: 1px solid var(--acc); padding-right: 4px; }
+.tabv > .tabbar button { border-radius: 3px 0 0 3px; text-align: left; }
+.tabbody { flex: 1; min-width: 0; padding-top: 6px; }
+.tabbody > .cbody { padding: 0; }
+.tabnest { margin-top: 8px; border-top: 1px dotted var(--line); padding-top: 6px; }
+.tabnest .tabh, .tabnest .tabv { padding: 0; }
+/* линза ⊛ процесс: таблица ситуаций */
+.pwrap { padding: 0 14px; overflow-x: auto; }
+.ptab { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ptab th { text-align: left; padding: 4px 8px; border-bottom: 2px solid var(--line); color: var(--dim); font-weight: 400; }
+.ptab td { padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.ptab a { color: var(--acc); text-decoration: none; }
+.pnum { color: var(--dim); }
+.ptrig { cursor: pointer; font-size: 10px; color: var(--dim); }
+.ptrig:hover { color: var(--fg); }
+/* словари в контенте: термин и подсказка с определением */
+.dterm { text-decoration: underline dotted var(--acc); text-underline-offset: 3px; cursor: help; }
+.dtdef { margin: 4px 0; white-space: pre-wrap; }
+.dtdict { color: rgba(245, 242, 236, 0.7); text-decoration: none; font-size: 11px; }
+/* линза ⊞ слоты: строка «параметр значение ✓», обратный список, тело фрейма */
+.crow { display: flex; gap: 6px; align-items: center; padding: 2px 14px; flex-wrap: wrap; }
+.ckey { width: 9ch; color: var(--dim); font-size: 13px; }
+input.ckey { width: 9ch; padding: 2px 4px; flex: none; }
+.crow input.ckey { background: var(--g1); border: 1px solid var(--line); color: var(--fg); font: 13px inherit; font-family: inherit; }
+.cval { flex: 1; min-width: 10ch; font: 13px inherit; font-family: inherit; padding: 2px 4px; background: var(--g1); border: 1px solid var(--line); color: var(--fg); }
+.cinv { width: 100%; padding-left: calc(9ch + 6px); color: var(--dim); font-size: 12px; }
+.cbodyline { padding: 2px 14px; font-size: 13px; color: var(--fg); white-space: pre-wrap; }
+/* карточка темы: темы и фильтр */
+.thlist { padding: 4px 0; }
+.throw { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-bottom: 1px dotted var(--line); flex-wrap: wrap; }
+.throw.on { background: var(--g2); }
+.thmeta { color: var(--dim); font-size: 12px; margin-left: auto; }
+.thfilter { display: flex; align-items: center; gap: 8px; padding: 8px 14px 0; }
+/* списки концептов: тема, qwest, поиск внутри концепта */
+.qlist { padding: 4px 0; }
+.qrow { padding: 2px 14px; border-bottom: 1px dotted var(--line); }
+.qrow .cicon { width: 20px; height: 20px; }
+.qtop { display: flex; align-items: center; gap: 6px; }
+.qname { color: var(--acc); font-weight: 700; text-decoration: none; }
+.qtype { margin-left: auto; color: var(--dim); font-size: 12px; }
+.qex { color: var(--fg); font-size: 13px; margin: 0 0 2px 40px; }
+/* фон дня недели (как в ПИ и ТЕМП): понедельник — клетка, среда — линейка, суббота — белый, остальные — сетка своего цвета */
+body.day-monday { background-color: #fff; background-image: linear-gradient(#e1e8ed 1px, transparent 1px), linear-gradient(90deg, #e1e8ed 1px, transparent 1px); background-size: 20px 20px; }
+body.day-wednesday { background-color: #fdfae6; background-image: repeating-linear-gradient(transparent, transparent 24px, #a4b0be 25px); background-attachment: local; }
+body.day-saturday { background-color: #fff; }
+body.day-tuesday { --day-color-rgb: 70, 130, 180; }
+body.day-thursday { --day-color-rgb: 80, 160, 100; }
+body.day-friday { --day-color-rgb: 180, 80, 100; }
+body.day-sunday { --day-color-rgb: 224, 150, 90; }
+body.day-tuesday, body.day-thursday, body.day-friday, body.day-sunday { background-color: #fefdfa; background-image: repeating-linear-gradient(rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.7) 0 2px, transparent 2px 200px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.5) 0 1px, transparent 1px 40px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.3) 0 1px, transparent 1px 20px), repeating-linear-gradient(rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(var(--day-color-rgb), 0.2) 0 1px, transparent 1px 4px); background-attachment: local; }
+/* понедельник, среда, суббота — лист тетради: линия полей в 90px от правого края ленты (как в ПИ) */
+body.day-monday::after, body.day-wednesday::after, body.day-saturday::after { content: ""; position: fixed; top: 0; bottom: 0; right: 90px; width: 4px; border-left: 1px solid rgba(255, 100, 100, 0.5); border-right: 1px solid rgba(255, 100, 100, 0.5); pointer-events: none; z-index: 50; }
+body:has(#card:not([hidden]))::after { right: calc(50% + 90px); }
+/* узкий экран: карточка над лентой, линия полей — у правого края */
+@media (max-width: 800px) {
+#work { flex-direction: column; }
+#card { order: -1; width: auto; max-height: 55vh; border-left: 0; border-bottom: 1px solid var(--barline); }
+body:has(#card:not([hidden]))::after { right: 90px; } }
