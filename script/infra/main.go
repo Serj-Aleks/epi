@@ -1,7 +1,7 @@
 // epi/script/infra/main.go
 // script — интерфейс среды: строка предикаций в браузере, ответ диспетчера — следующей строкой диалога
 // данные в папке script: lexic — системный лексикон, thema — темы автора (концепты и протокол prtcl)
-// запуск из папки script: go run ./infra [-addr localhost:1944]
+// запуск из папки script: go run ./infra [-addr localhost:5832]
 package main
 import ("encoding/json"; "flag"; "fmt"; "log"; "net/http"; "os"; "path/filepath"; "sort"; "strings"; "time"; "epi/script/disp"; "epi/script/format")
 // open: среда — фреймы-интерпретаторы lexic/preposit, транслятор trans, препозиции без вычисления операнда
@@ -218,7 +218,7 @@ default:
 	http.NotFound(w, req)} }
 // main: сервер панели — из папки script
 func main() {
-addr := flag.String("addr", "localhost:1944", "адрес")
+addr := flag.String("addr", "localhost:5832", "адрес")
 flag.Parse()
 dir, err := os.Getwd()
 if err != nil {log.Fatal(err)}
