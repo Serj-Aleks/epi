@@ -96,11 +96,25 @@ k, _, _ := strings.Cut(line, " "); return k }
 func (q *Script) writeConcept(frame, param string, pred []format.Value) error {
 if q.theme == "" {return nil}
 if root, ok := q.linkRoot(param); ok {return q.writeLink(frame, param, pred, root, false)}
+if format.SameTerm(param, "Rank") {return q.writeRank(frame, pred)}
 if !format.SameTerm(param, "Alias") {q.known(q.conceptFile(frame)); return writeParam(q.conceptFile(frame), param, pred)}
 path := q.conceptFile(frame)
 old, _ := readLink(path, "Alias")
 if err := writeParam(path, "Alias", pred); err != nil {return err}
 q.cidx[strings.ToLower(frame)] = path; return q.syncAlias(frame, old, names(pred)) }
+// writeRank: ранг концепта; пустой ранг (Rank : []) — концепт больше не таксон, он убирается из Taxon всех дочерних
+func (q *Script) writeRank(frame string, pred []format.Value) error {
+path := q.conceptFile(frame); q.known(path)
+was := setting(path, "Rank") != ""
+if err := writeParam(path, "Rank", pred); err != nil || !was || setting(path, "Rank") != "" {return err}
+_, kids := readLink(path, "Taxon")
+root, _ := q.linkRoot("Taxon")
+for _, k := range kids {
+	kp := q.conceptPath(k); if kp == "" {continue}
+	d, _ := readLink(kp, "Taxon")
+	var ns []format.Value
+	for _, n := range d {if !format.SameTerm(n, frame) {ns = append(ns, format.Value{Kind: format.Term, Text: n})}}
+	if err := q.writeLink(conceptName(kp, ""), "Taxon", ns, root, false); err != nil {return err}}; return nil }
 // writeParam: строка «Параметр : предикация» в файле концепта path; новый параметр — перед телом фрейма
 func writeParam(path, param string, pred []format.Value) error {
 var lines []string
