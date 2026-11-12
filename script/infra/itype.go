@@ -15,15 +15,16 @@ type Reply struct {
 	Turns    []Turn `json:"turns,omitempty"`
 	Question string   `json:"question,omitempty"`
 	Options  []string `json:"options,omitempty"`} // варианты ответа на вопрос с выбором
-// Seans — сеанс протокола
-type Seans struct {
+// SeansRow — сеанс в списке сеансов: имя, закрыт ли
+type SeansRow struct {
 	Name   string `json:"name"`
 	Closed bool   `json:"closed"`}
 // ask — вопрос диспетчера или транслятора; Options пусто — вопрос «да / нет»
 type ask struct {
 	Text    string
 	Options []string}
-type run struct {
+// job: интерпретация в отдельной горутине — вопросы в браузер, ответы, итог
+type job struct {
 	questions chan ask
 	answers   chan string // «y», «n» или выбранный вариант
 	done      chan []Turn}
@@ -37,7 +38,7 @@ type Script struct {
 	closed  bool
 	env     *disp.Env
 	turns   []Turn
-	pending *run
+	pending *job
 	pPred   string // предикация, по которой ждёт ответа вопрос
 	pQuest  string
 	pOpts   []string
@@ -52,8 +53,8 @@ var qwestTypes = []string{"md", "html", "json", "xml", "txt"}
 var reTags, reMarks, reSpace = regexp.MustCompile(`<[^>]*>`), regexp.MustCompile("[#*_`\\[\\]{}|>]+"), regexp.MustCompile(`\s+`)
 // satTypes: типы спутников концепта
 var satTypes = []string{"md", "json", "svg", "css", "xml", "html", "txt"}
-// reLink: ссылка [[Имя]] в контенте (вне блоков кода)
-var reLink, reFence = regexp.MustCompile(`\[\[([^\]]+)\]\]`), regexp.MustCompile("(?s)```.*?```")
+// reRefs: ссылки [[Имя]] в контенте (вне блоков кода)
+var reRefs, reFence = regexp.MustCompile(`\[\[([^\]]+)\]\]`), regexp.MustCompile("(?s)```.*?```")
 // reIncl: трансклюзия {{Имя}} в контенте (вне блоков кода)
 var reIncl = regexp.MustCompile(`\{\{([^{}]+)\}\}`)
 // refKeys: параметры концепта, в значениях которых — имена концептов

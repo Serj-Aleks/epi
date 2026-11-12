@@ -31,7 +31,7 @@ text = ""
 for _, t := range []string{"md", "html"} {if b, err := os.ReadFile(q.satFile(name, t)); err == nil {text += string(b) + "\n"}}
 seen := map[string]bool{}
 var ns []string
-for _, m := range reLink.FindAllStringSubmatch(reFence.ReplaceAllString(text, ""), -1) {
+for _, m := range reRefs.FindAllStringSubmatch(reFence.ReplaceAllString(text, ""), -1) {
 	n := strings.TrimSpace(m[1])
 	if k := strings.ToLower(n); n != "" && !seen[k] {seen[k] = true; ns = append(ns, n)}}
 sort.Strings(ns)

@@ -45,13 +45,13 @@ for (const turn of st.turns || []) { const t = addPred(turn.pred); addAnswer(t, 
 if (card.hidden) { const n = (st.turns || []).filter(t => !t.error && /^nexus \S+$/.test(t.pred)).pop(); if (n) cardShow(n.pred.slice(6)); }
 hpos = hist.length;
 inp.disabled = !writable;
-if (st.pending && st.pending.question) { inp.disabled = true; handle(addPred(st.pending.pred), { question: st.pending.question, options: st.pending.options }); }
+if (st.pending && st.pending.question) { inp.disabled = true; respond(addPred(st.pending.pred), { question: st.pending.question, options: st.pending.options }); }
 else if (writable) inp.focus(); }
 // act: действие на сервере и новое состояние
 async function act(path, body) { try { show(await api(path, body)); } catch (e) { note.textContent = e.message; } }
-// handle: ответ сервера — ответы на предикации строки, вопрос trans с выбором словаря или вопрос ✓ ✕
+// respond: ответ сервера — ответы на предикации строки, вопрос trans с выбором словаря или вопрос ✓ ✕
 // при выборе темы или atrbt имя концепта можно поправить (форма слова — синоним)
-function handle(t, rep) {
+function respond(t, rep) {
 if (rep.turns) {
   rep.turns.forEach((turn, i) => { const tt = i === 0 ? t : addPred(turn.pred); if (i === 0) tt.querySelector(".pred").textContent = turn.pred; addAnswer(tt, turn); });
   if (!rep.turns.length) t.remove();
@@ -62,7 +62,7 @@ if (rep.options) {
   const choose = async (c, label) => {
     q.querySelectorAll("button").forEach(b => b.remove()); q.append(el("f", label));
     mode = null; inp.placeholder = ""; inp.value = ""; inp.disabled = true;
-    handle(t, await api("/api/answer", { choice: c })); };
+    respond(t, await api("/api/answer", { choice: c })); };
   rep.options.forEach(o => {
     const b = document.createElement("button"); b.textContent = o; q.append(b);
     b.onclick = () => {
@@ -76,7 +76,7 @@ const q = el("q", rep.question);
 const yes = document.createElement("button"); yes.textContent = "✓"; yes.title = "yes (y)";
 const no = document.createElement("button"); no.textContent = "✕"; no.title = "no (n)";
 q.append(yes, no); t.append(q); scroll(); yes.focus();
-const answer = async (v) => { document.removeEventListener("keydown", key); yes.remove(); no.remove(); q.append(el("f", v ? "✓" : "✕")); handle(t, await api("/api/answer", { answer: v })); };
+const answer = async (v) => { document.removeEventListener("keydown", key); yes.remove(); no.remove(); q.append(el("f", v ? "✓" : "✕")); respond(t, await api("/api/answer", { answer: v })); };
 const key = (e) => { if (e.key === "y") answer(true); if (e.key === "n") answer(false); };
 yes.onclick = () => answer(true); no.onclick = () => answer(false);
 document.addEventListener("keydown", key); }
@@ -85,7 +85,7 @@ async function runPred(text) {
 if (!writable) { note.textContent = "сеанс закрыт — откройте сеанс ＋"; inp.value = text; return false; }
 hist.push(text); hpos = hist.length; inp.disabled = true;
 const t = addPred(text);
-try { handle(t, await api("/api/eval", { text })); return true; }
+try { respond(t, await api("/api/eval", { text })); return true; }
 catch (err) { addAnswer(t, { answer: String(err.message), error: true }); inp.disabled = !writable; inp.focus(); return false; } }
 // askName: строка ввода ждёт имя — темы, клона или нового концепта
 function askName(m) {

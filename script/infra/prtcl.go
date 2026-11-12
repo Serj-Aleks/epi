@@ -6,18 +6,18 @@ import ("fmt"; "log"; "os"; "path/filepath"; "sort"; "strings"; "time"; "epi/scr
 func (q *Script) ignor() string            { return filepath.Join(q.themaDir(), "prtcl", "ignor.uic") }
 func (q *Script) seans(name string) string { return filepath.Join(q.themaDir(), "prtcl", name) }
 // list: сеансы протокола, новые первыми; закрытый — файл только для чтения
-func (q *Script) list() ([]Seans, error) {
+func (q *Script) list() ([]SeansRow, error) {
 if q.theme == "" {return nil, nil}
 es, err := os.ReadDir(filepath.Join(q.themaDir(), "prtcl"))
 if os.IsNotExist(err) {return nil, nil}
 if err != nil {return nil, err}
-var ss []Seans
+var ss []SeansRow
 for _, e := range es {
 	n := e.Name()
 	if !strings.HasPrefix(n, "seans-") || !strings.HasSuffix(n, ".uic") {continue}
 	st, err := e.Info()
 	if err != nil {return nil, err}
-	ss = append(ss, Seans{Name: n, Closed: st.Mode().Perm()&0200 == 0})}
+	ss = append(ss, SeansRow{Name: n, Closed: st.Mode().Perm()&0200 == 0})}
 sort.Slice(ss, func(i, j int) bool { return ss[i].Name > ss[j].Name }); return ss, nil }
 // switchTo: сделать сеанс текущим; строки сеанса — модели «[ предикация ] -> интерпретация», диалог показывается
 // каким был, заново не выполняется; ошибка отмечена «-> !»
@@ -63,8 +63,8 @@ if _, err := f.WriteString(text); err != nil {f.Close(); return err}; return f.C
 // start: интерпретация в отдельной горутине — вопросы диспетчера уходят в браузер, ответы возвращаются
 // на каждую предикацию строки свой ответ; непрочитанное — как нераспознанное (вопрос, не ошибка)
 // нераспознанное — в ignor.uic как есть, нечитаемое — строкой
-func (q *Script) start(text string) *run {
-r := &run{questions: make(chan ask), answers: make(chan string), done: make(chan []Turn, 1)}
+func (q *Script) start(text string) *job {
+r := &job{questions: make(chan ask), answers: make(chan string), done: make(chan []Turn, 1)}
 known := len(q.in.Unknown)
 q.in.Ask = func(question string) bool {r.questions <- ask{Text: question}; return <-r.answers == "y"}
 q.choose = func(text string, opts []string) string {r.questions <- ask{Text: text, Options: opts}; return <-r.answers}
@@ -85,7 +85,7 @@ go func() {
 		if e := appendFile(q.ignor(), line+"\n"); e != nil {log.Print(e)}}
 	r.done <- ts}(); return r }
 // wait: следующий вопрос или результат
-func (q *Script) wait(r *run) Reply {
+func (q *Script) wait(r *job) Reply {
 select {
 case a := <-r.questions:
 	q.pending, q.pQuest, q.pOpts = r, a.Text, a.Options; return Reply{Question: a.Text, Options: a.Options}

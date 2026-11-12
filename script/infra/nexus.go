@@ -30,7 +30,7 @@ for _, l := range lines {
 	if len(vs) > 0 {d = names(vs[:1])}
 	if len(vs) > 1 {i = names(vs[1:2])}; return d, i}; return nil, nil }
 // writeLists: строка связи «Param : [ прямой ] [ обратный ]»
-func writeLists(path, param string, d, i []string) error {return writeParam(path, param, []format.Value{block(d), block(i)}) }
+func writeLists(path, param string, d, i []string) error {return writeParam(path, param, []format.Value{listBlock(d), listBlock(i)}) }
 // has, without: имя в списке; список без имени
 func has(ns []string, n string) bool {for _, x := range ns {if format.SameTerm(x, n) {return true}}; return false }
 func without(ns []string, n string) []string {
@@ -129,7 +129,7 @@ add := func(n string) {if p := exist(n); p != "" && !has(group, conceptName(p, "
 for _, a := range now {add(a)}
 for _, a := range now {if exist(a) != "" {as, _ := readLink(exist(a), "Alias"); for _, x := range as {add(x)}}}
 put := func(n string, as []string) error {
-	v := block(as)
+	v := listBlock(as)
 	if err := writeParam(exist(n), "Alias", []format.Value{v}); err != nil || format.SameTerm(n, frame) {return err}
 	on := q.in.OnParam
 	q.in.OnParam = nil

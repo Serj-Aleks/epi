@@ -34,12 +34,12 @@ for {
 	r := p.peek()
 	if r == end && end != 0 {p.next(); return items, nil}
 	if strings.ContainsRune("])}", r) {return nil, p.errAt(p.line, p.col, "лишняя закрывающая скобка «%c»", r)}
-	v, err := p.value()
+	v, err := p.parseValue()
 	if err != nil {return nil, err}
 	v.End = p.line
 	items = append(items, v)} }
-// value: одно значение — блок, строка, тег или атом; определение пишется через пробел «Ключ :»
-func (p *parser) value() (Value, error) {
+// parseValue: одно значение — блок, строка, тег или атом; определение пишется через пробел «Ключ :»
+func (p *parser) parseValue() (Value, error) {
 line, col := p.line, p.col
 r := p.peek()
 switch r {

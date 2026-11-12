@@ -11,20 +11,20 @@ func open(dir string) (*Script, error) {
 q := &Script{dir: dir}
 q.in = disp.New(limit, func(string) bool { return false })
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
-q.in.Frame("trans").Kernel["trans"] = q.trans
+q.in.FrameOf("trans").Kernel["trans"] = q.trans
 q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus, "qwest": q.qwest, "clone": q.clone, "rename": q.rename, "qwizt": q.qwizt, "import": q.importC, "union": q.union}
 q.in.OnParam = func(frame, param string, pred []format.Value) {if err := q.writeConcept(frame, param, pred); err != nil {log.Print(err)}}
 q.in.OnFrame = func(name string, body []format.Value) {if err := q.writeBody(name, body); err != nil {log.Print(err)}}
 q.in.OnAlias = func(name, target string) {
-	if q.in.Frame(name) != nil {return}
+	if q.in.FrameOf(name) != nil {return}
 	if err := writeLines(q.frameFile("preposit", name), []string{name + " : " + target}); err != nil {log.Print(err)}}
 q.env = disp.NewEnv(nil)
 if err := q.loadAliases(); err != nil {return nil, err}
 if err := q.startTheme(); err != nil {return nil, err}; return q, nil }
-// handle: запросы панели /api/…; Choice — ответ на вопрос с выбором, Ext — тип спутника
+// serve: запросы панели /api/…; Choice — ответ на вопрос с выбором, Ext — тип спутника
 // situation: Text — «объект препозиция объект»; sat: GET читает спутник, POST пишет; img — <папка концепта>/img/<файл>, без name — <тема>/img/<файл>
 // icon с theme — концепт другой темы (qwizt); в новой теме сразу открывается сеанс; закрытый сеанс — файл только для чтения
-func (q *Script) handle(w http.ResponseWriter, req *http.Request) {
+func (q *Script) serve(w http.ResponseWriter, req *http.Request) {
 w.Header().Set("Content-Type", "application/json")
 q.mu.Lock()
 defer q.mu.Unlock()
@@ -40,7 +40,7 @@ fail := func(code int, msg string) { http.Error(w, msg, code) }
 if req.URL.Path == "/api/nexus" {json.NewEncoder(w).Encode(q.nexusGraph(req.URL.Query().Get("name"))); return}
 if req.URL.Path == "/api/card" {json.NewEncoder(w).Encode(q.card(req.URL.Query().Get("name"))); return}
 if req.URL.Path == "/api/qwest" {json.NewEncoder(w).Encode(q.qwestFind(req.URL.Query().Get("q"))); return}
-if req.URL.Path == "/api/find" {json.NewEncoder(w).Encode(q.find(req.URL.Query().Get("name"), req.URL.Query().Get("q"))); return}
+if req.URL.Path == "/api/find" {json.NewEncoder(w).Encode(q.findIn(req.URL.Query().Get("name"), req.URL.Query().Get("q"))); return}
 if req.URL.Path == "/api/qwizt" {json.NewEncoder(w).Encode(q.qwizFind(req.URL.Query().Get("q"))); return}
 if req.URL.Path == "/api/taxa" {json.NewEncoder(w).Encode(q.taxa()); return}
 if req.URL.Path == "/api/dict" {json.NewEncoder(w).Encode(q.dict(req.URL.Query().Get("name"))); return}
@@ -125,7 +125,7 @@ if err != nil {log.Fatal(err)}
 if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {log.Fatal("запуск — из папки script: go run ./infra")}
 q, err := open(dir)
 if err != nil {log.Fatal(err)}
-http.HandleFunc("/api/", q.handle)
+http.HandleFunc("/api/", q.serve)
 http.Handle("/", noCache(http.FileServer(http.FS(page))))
 log.Printf("script: http://%s (данные: %s)", *addr, dir)
 log.Fatal(http.ListenAndServe(*addr, nil)) }

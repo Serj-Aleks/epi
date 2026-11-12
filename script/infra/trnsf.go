@@ -161,13 +161,13 @@ for _, dp := range paths[1:] {
 			rd, ri := readLink(dp, k)
 			for _, n := range rd {if !has(md, n) {md = append(md, n)}}
 			for _, n := range ri {if !has(mi, n) {mi = append(mi, n)}}
-			if k == "Alias" {writeParam(main, k, []format.Value{block(md)})} else {writeLists(main, k, md, mi)}
+			if k == "Alias" {writeParam(main, k, []format.Value{listBlock(md)})} else {writeLists(main, k, md, mi)}
 			nb, _ := os.ReadFile(main); mlines, _ = conceptLines(nb); continue}
 		if k == "Rank" {a, _ := strconv.Atoi(setting(main, k)); r, _ := strconv.Atoi(setting(dp, k)); if r > a {mlines[indexOf(mlines, cur)] = l}; continue}
 		if has(refKeys, k) {
 			ts := settingList(main, k)
 			for _, n := range settingList(dp, k) {if !has(ts, n) {ts = append(ts, n)}}
-			mlines[indexOf(mlines, cur)] = k + " : " + format.Format([]format.Value{block(ts)})}}
+			mlines[indexOf(mlines, cur)] = k + " : " + format.Format([]format.Value{listBlock(ts)})}}
 	if err := writeLines(main, mlines); err != nil {q.in.RawErr = err; return format.Value{}, false}
 	if err := mergeSats(main, dp); err != nil {q.in.RawErr = err; return format.Value{}, false}
 	for _, f := range conceptFiles(dp, dp) {os.Remove(f[0])}
@@ -179,8 +179,8 @@ q.env = disp.NewEnv(nil)
 if q.loadAliases() != nil || q.loadConcepts() != nil {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: mname}, true }
 // indexOf: место строки s в ls, нет — -1
 func indexOf(ls []string, s string) int {for i, l := range ls {if l == s {return i}}; return -1 }
-// block: блок имён «[ A B ]»
-func block(ns []string) format.Value {
+// listBlock: блок имён «[ A B ]»
+func listBlock(ns []string) format.Value {
 v := format.Value{Kind: format.Array}
 for _, n := range ns {v.Items = append(v.Items, format.Value{Kind: format.Term, Text: n})}; return v }
 // selfClean: у главного после слияния — без ссылок на себя и повторов в значениях связей и refKeys
@@ -192,7 +192,7 @@ for _, l := range lines {
 	k := lineKey(l)
 	uniq := func(ns []string) []string {var o []string; for _, n := range ns {if !format.SameTerm(n, name) && !has(o, n) {o = append(o, n)}}; return o}
 	if has([]string{"Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix"}, k) {d, i := readLink(path, k); writeLists(path, k, uniq(d), uniq(i)); continue}
-	writeParam(path, k, []format.Value{block(uniq(settingList(path, k)))})} }
+	writeParam(path, k, []format.Value{listBlock(uniq(settingList(path, k)))})} }
 // dedupe: строка параметра — без повторов имён в каждом блоке (после замены имени, union)
 func dedupe(l string) string {
 k := strings.Index(l, ":")

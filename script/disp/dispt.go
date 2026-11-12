@@ -6,11 +6,11 @@ package disp
 import ("fmt"; "math"; "sort"; "strconv"; "strings"; "unicode"; "epi/script/format")
 // Error: текст остановки по лимиту
 func (s Stopped) Error() string {return fmt.Sprintf("остановлено пользователем после %d шагов", s.Steps) }
-// Frame: фрейм-интерпретатор по имени
-func (in *Interp) Frame(name string) *Frame {
+// FrameOf: фрейм-интерпретатор по имени
+func (in *Interp) FrameOf(name string) *Frame {
 for _, f := range in.Frames {if f.Name == name {return f}}; return nil }
-// prep: интерпретатор символа препозиции и его фрейм
-func (in *Interp) prep(sym string) (Prep, *Frame) {
+// prepOf: интерпретатор символа препозиции и его фрейм
+func (in *Interp) prepOf(sym string) (Prep, *Frame) {
 for _, f := range in.Frames {if p, ok := f.Kernel[sym]; ok {return p, f}}; return nil, nil }
 // use: фрейм в списке интерпретировавших
 func (in *Interp) use(f *Frame) {
@@ -36,20 +36,20 @@ case format.Term: return format.IsPrepTerm(v.Text)}; return false }
 func isModel(v format.Value) bool { return v.Kind == format.Op && v.Text == "->" }
 // isPrep: токен i — препозиция
 func (r reader) isPrep(i int) bool { return i < len(r.vs) && isPrepTok(r.vs[i]) }
-// operand: операнд с позиции i — значение или «Терм { аргументы }»
-func (r reader) operand(i int) ([]format.Value, int, bool) {
+// readOperand: операнд с позиции i — значение или «Терм { аргументы }»
+func (r reader) readOperand(i int) ([]format.Value, int, bool) {
 vs := r.vs
 if i >= len(vs) || vs[i].Kind == format.Op || r.isPrep(i) || format.IsDef(vs, i) {return nil, i, false}
 if vs[i].Kind == format.Term && i+1 < len(vs) && vs[i+1].Kind == format.Object {return vs[i : i+2], i + 2, true}; return vs[i : i+1], i + 1, true }
-// slot: слот с позиции i — определение (значение с препозиции — алиас препозиции), препозиция в начале или между операндами
+// readSlot: слот с позиции i — определение (значение с препозиции — алиас препозиции), препозиция в начале или между операндами
 // у Raw-препозиции слово со строчной — операнд (qwest numer); в слоте одна препозиция; «Ключ :» в конце — пустое значение
-func (r reader) slot(i int) (*slot, int) {
+func (r reader) readSlot(i int) (*slot, int) {
 vs := r.vs
 if format.IsDef(vs, i) {
 	key := vs[i]
 	if i+2 >= len(vs) {return &slot{def: &key, ok: true}, i + 2}
 	if r.isPrep(i + 2) {return &slot{def: &key, a: vs[i+2 : i+3], alias: true, ok: true}, i + 3}
-	inner, j := r.slot(i + 2)
+	inner, j := r.readSlot(i + 2)
 	inner.def = &key; return inner, j}
 s := &slot{}
 if r.isPrep(i) {
@@ -57,14 +57,14 @@ if r.isPrep(i) {
 	s.prefix = &p
 	i++
 	if p.Kind == format.Term && r.raw[p.Text] && i+1 == len(vs) && vs[i].Kind == format.Term {s.a, s.ok = vs[i:i+1], true; return s, i + 1}}
-a, j, ok := r.operand(i)
+a, j, ok := r.readOperand(i)
 if !ok {return s, j}
 s.a, i = a, j
 if r.isPrep(i) {
 	if s.prefix != nil {return s, i + 1}
 	o := vs[i]
 	s.op = &o
-	b, j, ok := r.operand(i + 1)
+	b, j, ok := r.readOperand(i + 1)
 	if !ok {return s, j}
 	s.b, i = b, j
 	if r.isPrep(i) {return s, i + 1}}
@@ -94,10 +94,10 @@ func readPred(seg []format.Value, raw map[string]bool) pred {
 r := reader{vs: seg, raw: raw}
 p := pred{toks: seg}
 var i int
-p.left, i = r.slot(0)
+p.left, i = r.readSlot(0)
 p.ok = p.left.ok
 if p.ok && i < len(seg) && isModel(seg[i]) {
-	p.right, i = r.slot(i + 1)
+	p.right, i = r.readSlot(i + 1)
 	p.ok = p.right.ok}
 if i != len(seg) {p.ok = false}; return p }
 // Run: прочитать текст и интерпретировать в контексте env (лимит шагов — на одну интерпретацию)
@@ -118,14 +118,14 @@ for _, seg := range segments(vs) {
 		in.unknown(p.toks, "не распознана"+caseHint(p.toks, env))
 		res = none; continue}
 	if p.right == nil {
-		v, err := in.slot(p.left, env, false)
+		v, err := in.evalSlot(p.left, env, false)
 		if err != nil {return none, false, err}
 		res = v; continue}
-	f, err := in.slot(p.left, env, false)
+	f, err := in.evalSlot(p.left, env, false)
 	if err != nil {return none, false, err}
 	switch f.Text {
 	case "@true":
-		v, err := in.slot(p.right, env, true); return v, true, err
+		v, err := in.evalSlot(p.right, env, true); return v, true, err
 	case "@false":
 		res = none
 	default: return none, false, fmt.Errorf("строка %d: левый слот модели дал не флаг: %s", p.toks[0].Line, f)}}; return res, false, nil }
@@ -152,10 +152,10 @@ for depth := 0; depth < 16; depth++ {
 	case isPrepTok(w):
 		v = w
 	default: return "", nil}}; return "", nil }
-// slot: интерпретация слота; right — правый слот модели, блок в нём интерпретируется
+// evalSlot: интерпретация слота; right — правый слот модели, блок в нём интерпретируется
 // определение: Фрейм.Параметр : значение, ( ) — вычислить сейчас, параметры фрейма сохраняются
 // recur — цикл, Raw — операнд без вычисления, препозиция-фрейм — только в начале, аргументы — объектный блок
-func (in *Interp) slot(s *slot, env *Env, right bool) (format.Value, error) {
+func (in *Interp) evalSlot(s *slot, env *Env, right bool) (format.Value, error) {
 if s.def != nil {
 	d := *s
 	d.def = nil
@@ -164,7 +164,7 @@ if s.def != nil {
 	if s.def.Kind == format.Field {return in.defParam(s, toks, env)}
 	if !format.IsPrepTerm(s.def.Text) && !(len(toks) == 1 && toks[0].Kind == format.Array) {in.unknown(s.toks(), fmt.Sprintf("— «%s» с прописной буквы — фрейм; значение получает параметр фрейма: «%s.A : …»", s.def.Text, s.def.Text)); return none, nil}
 	if len(toks) == 1 && toks[0].Kind == format.Expr {
-		v, err := in.operand(toks, env, false)
+		v, err := in.evalOperand(toks, env, false)
 		if err != nil {return none, err}
 		toks = []format.Value{v}}
 	nb := &binding{pred: toks, env: env}
@@ -172,13 +172,13 @@ if s.def != nil {
 	env.set(s.def.Text, nb)
 	if in.OnFrame != nil && !format.IsPrepTerm(s.def.Text) && len(toks) == 1 && toks[0].Kind == format.Array {in.OnFrame(s.def.Text, toks[0].Items)}
 	if s.alias && in.OnAlias != nil {in.OnAlias(s.def.Text, format.Format(toks))}; return none, nil}
-if s.op == nil && s.prefix == nil {return in.operand(s.a, env, right)}
+if s.op == nil && s.prefix == nil {return in.evalOperand(s.a, env, right)}
 ptok := s.op
 if s.prefix != nil {ptok = s.prefix}
 sym, frame := resolve(*ptok, env)
 if frame == nil && sym == "recur" {return in.recur(s, env)}
 if r := in.Raw[sym]; frame == nil && r != nil {
-	_, fr := in.prep(sym)
+	_, fr := in.prepOf(sym)
 	if s.prefix == nil || s.op != nil || len(s.a) != 1 {in.unknown(s.toks(), "— «"+sym+"» пишется в начале с одним операндом"); return none, nil}
 	v, ok := r(s.a[0])
 	if err := in.RawErr; !ok && err != nil {in.RawErr = nil; return none, err}
@@ -186,14 +186,14 @@ if r := in.Raw[sym]; frame == nil && r != nil {
 	if fr != nil {in.use(fr)}; return v, nil}
 if frame != nil {
 	if s.prefix == nil || s.a[0].Kind != format.Object {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(frame, s.a[0], env)}
-a, err := in.operand(s.a, env, false)
+a, err := in.evalOperand(s.a, env, false)
 if err != nil {return none, err}
 pa, pb := &a, (*format.Value)(nil)
 if s.prefix != nil {pa, pb = nil, &a} else {
-	b, err := in.operand(s.b, env, false)
+	b, err := in.evalOperand(s.b, env, false)
 	if err != nil {return none, err}
 	pb = &b}
-f, fr := in.prep(sym)
+f, fr := in.prepOf(sym)
 if f == nil {in.unknown(s.toks(), fmt.Sprintf("— нет интерпретатора препозиции «%s»", ptok.Text)); return none, nil}
 v, ok := f(pa, pb)
 if !ok {in.unknown(s.toks(), fmt.Sprintf("— «%s» (%s) не интерпретирует такие аргументы", ptok.Text, fr.Name)); return none, nil}
@@ -205,8 +205,8 @@ if s.def != nil {t = append(t, *s.def, format.Value{Kind: format.Op, Text: ":"})
 if s.prefix != nil {t = append(t, *s.prefix)}
 t = append(t, s.a...)
 if s.op != nil {t = append(append(t, *s.op), s.b...)}; return t }
-// operand: значение операнда — ( ) вычисляется, [ ] справа — блок, 'терм, :терм, терм — аппликация, поле — параметр
-func (in *Interp) operand(a []format.Value, env *Env, right bool) (format.Value, error) {
+// evalOperand: значение операнда — ( ) вычисляется, [ ] справа — блок, 'терм, :терм, терм — аппликация, поле — параметр
+func (in *Interp) evalOperand(a []format.Value, env *Env, right bool) (format.Value, error) {
 v := a[0]
 switch v.Kind {
 case format.Expr:
@@ -330,7 +330,7 @@ func (in *Interp) defParam(s *slot, toks []format.Value, env *Env) (format.Value
 frame, param, ok := splitField(s.def.Text)
 if !ok {in.unknown(s.toks(), "— параметр пишется «Фрейм.Параметр», оба с прописной буквы"); return none, nil}
 if len(toks) == 1 && toks[0].Kind == format.Expr {
-	v, err := in.operand(toks, env, false)
+	v, err := in.evalOperand(toks, env, false)
 	if err != nil {return none, err}
 	toks = []format.Value{v}}
 fb, real := env.findFrame(frame)
@@ -392,7 +392,7 @@ for _, e := range s.a[0].Entries() {
 	case "As": as = e.Value
 	case "Corpus": corpus = e.Value}}
 if src == nil || len(as) != 1 || as[0].Kind != format.Field || len(corpus) != 1 || corpus[0].Kind != format.Array {return fail("— нужны In, As (Фрейм.Параметр) и Corpus ([ … ])")}
-items, err := in.operand(src, env, false)
+items, err := in.evalOperand(src, env, false)
 if err != nil {return none, err}
 if items.Kind != format.Array {return fail("— In должен быть блоком [ … ]")}
 r := none
@@ -400,7 +400,7 @@ for _, it := range items.Items {
 	if _, err := in.defParam(&slot{def: &as[0]}, []format.Value{it}, env); err != nil {return none, err}
 	if err := in.step(); err != nil {return none, err}
 	if r, _, err = in.block(corpus[0].Items, env); err != nil {return none, err}}
-in.use(in.Frame("zycle")); return r, nil }
+in.use(in.FrameOf("zycle")); return r, nil }
 // rawNames: имена препозиций Raw для чтения предикации
 func (in *Interp) rawNames() map[string]bool {
 m := map[string]bool{}

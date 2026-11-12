@@ -67,9 +67,9 @@ if p == "" {return ""}
 base := strings.TrimSuffix(p, ".uic")
 if exists(base + ".svg") {return base + ".svg"}
 for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if f := filepath.Join(filepath.Dir(p), "img", filepath.Base(base)+"."+e); exists(f) {return f}}; return "" }
-// find: поиск внутри концепта — в имени и спутниках md, html, json, xml, txt концепта и синонимов
+// findIn: поиск внутри концепта — в имени и спутниках md, html, json, xml, txt концепта и синонимов
 // каждое слово запроса (& — и) в одном месте; ответ — концепт, тип спутника, отрывок
-func (q *Script) find(name, query string) []map[string]string {
+func (q *Script) findIn(name, query string) []map[string]string {
 p := q.conceptPath(name)
 out := []map[string]string{}
 ts := qterms(query)
