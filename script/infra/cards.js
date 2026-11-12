@@ -73,7 +73,8 @@ async function cardOpen(name) {
 const gen = ++cardGen, root = document.createElement("div");
 let c;
 try { c = await api("/api/card?name=" + encodeURIComponent(name)); } catch (e) { note.textContent = "ошибка: " + e.message; return; }
-if (!c.found || !cardName || name.toLowerCase() !== cardName.toLowerCase()) return;
+if (!c.found) { note.textContent = "нет концепта " + name; return; }
+if (!cardName || name.toLowerCase() !== cardName.toLowerCase()) return;
 cardName = c.name;
 const keep = card.dataset.name === c.name ? card.scrollTop : 0; card.dataset.name = c.name;
 const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
