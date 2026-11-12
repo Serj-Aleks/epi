@@ -5,8 +5,6 @@ const tsel = document.getElementById("thema"), card = document.getElementById("c
 // граф nexus: размеры узлов и промежутков
 const NXG = { padding: 24, nodeW: 80, nodeH: 40, vSpacing: 10, hSpacing: 32, groupGap: 24, collectorGap: 24 };
 const SVGNS = "http://www.w3.org/2000/svg";
-// типы спутников для редактора контента — от сервера (satTypes в Go), в show
-let satTypes = [];
 // связи с прямым и обратным списком (линза ⊞)
 const linkKeys = ["Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix"];
 // лента: история ввода, сеанс открыт для записи, последнее состояние сервера

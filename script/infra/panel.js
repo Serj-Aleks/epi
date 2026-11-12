@@ -25,7 +25,7 @@ return r.json(); }
 // show: состояние сервера — темы, сеансы, лента текущего сеанса; другая тема или сеанс закрывает панель, без панели — карточка последнего nexus
 function show(st) {
 if (!last || last.theme !== st.theme || last.current !== st.current) cardHide();
-last = st; mode = null; inp.placeholder = ""; satTypes = st.satTypes || satTypes;
+last = st; mode = null; inp.placeholder = "";
 note.textContent = "";
 tsel.innerHTML = "";
 if (!st.theme) { const o = document.createElement("option"); o.textContent = "—"; o.value = ""; tsel.append(o); }

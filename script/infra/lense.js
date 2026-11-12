@@ -6,7 +6,7 @@ const view = async () => { bar.innerHTML = ""; const b = document.createElement(
   const f = cardFind && cardFind.name.toLowerCase() === c.name.toLowerCase() ? cardFind : null;
   const h = await cardRender(c.name, f && f.ext || c.content, []).catch(() => null); body.innerHTML = h ? h : '<div class="cempty">—</div>'; cardLinks(body); await dictMark(body, c.name); if (f) findMark(body, f.q); };
 const edit = async () => { bar.innerHTML = "";
-  const s = document.createElement("select"); satTypes.forEach(t => { const o = document.createElement("option"); o.value = o.textContent = t + (c.sats.includes(t) ? "" : " ·"); o.value = t; o.selected = t === c.content; s.append(o); });
+  const s = document.createElement("select"); (last.satTypes || []).forEach(t => { const o = document.createElement("option"); o.value = o.textContent = t + (c.sats.includes(t) ? "" : " ·"); o.value = t; o.selected = t === c.content; s.append(o); });
   const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "record";
   const no = document.createElement("button"); no.textContent = "✕"; no.title = "cancel"; no.onclick = view;
   bar.append(s, ok, no);
