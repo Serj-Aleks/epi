@@ -15,14 +15,14 @@ pos := strings.Index(low, t)
 rs, rp := []rune(text), utf8.RuneCountInString(low[:pos])
 a, b := max(rp-80, 0), min(rp+utf8.RuneCountInString(t)+80, len(rs)); return "…" + string(rs[a:b]) + "…" }
 // qwestFind: найденные концепты текущей темы по запросу q
-func (q *Script) qwestFind(query string) []map[string]string {return q.qwestIn(q.cidx, q.theme, query) }
+func (q *Medium) qwestFind(query string) []map[string]string {return q.qwestIn(q.cidx, q.theme, query) }
 // qwizFind: найденные концепты всех тем (qwizt), в каждой строке её тема; нет — пустой список
-func (q *Script) qwizFind(query string) []map[string]string {
+func (q *Medium) qwizFind(query string) []map[string]string {
 ts, _ := q.themes()
 out := []map[string]string{}
 for _, t := range ts {idx := q.cidx; if t != q.theme {idx = themeIndex(filepath.Join(q.themaRoot(), t))}; out = append(out, q.qwestIn(idx, t, query)...)}; return out }
 // qwestIn: найденные концепты указателя idx темы theme — taxon и rank (концепт с Rank), число параметров, спутники; нет — пустой список
-func (q *Script) qwestIn(idx map[string]string, theme, query string) []map[string]string {
+func (q *Medium) qwestIn(idx map[string]string, theme, query string) []map[string]string {
 ts := qterms(query)
 out := []map[string]string{}
 for k, p := range idx {
@@ -52,15 +52,15 @@ for k, p := range idx {
 	out = append(out, r)}
 sort.Slice(out, func(i, j int) bool {return aLess(out[i]["name"], out[j]["name"])}); return out }
 // qwest: препозиция поиска — операнд не вычисляется (слово, строка, число); ответ — число найденных
-func (q *Script) qwest(arg format.Value) (format.Value, bool) {
+func (q *Medium) qwest(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Term && arg.Kind != format.String && arg.Kind != format.Integer && arg.Kind != format.Decimal {return format.Value{}, false}
 return format.Value{Kind: format.Integer, Text: strconv.Itoa(len(q.qwestFind(arg.Text)))}, true }
 // qwizt: поиск во всех темах, как qwest; ответ — число найденных
-func (q *Script) qwizt(arg format.Value) (format.Value, bool) {
+func (q *Medium) qwizt(arg format.Value) (format.Value, bool) {
 if arg.Kind != format.Term && arg.Kind != format.String && arg.Kind != format.Integer && arg.Kind != format.Decimal {return format.Value{}, false}
 return format.Value{Kind: format.Integer, Text: strconv.Itoa(len(q.qwizFind(arg.Text)))}, true }
 // iconOther: картинка концепта другой темы — <папка концепта>/<имя>.svg или img/<имя>.*
-func (q *Script) iconOther(theme, name string) string {
+func (q *Medium) iconOther(theme, name string) string {
 if _, ok := q.themeExists(theme); !ok || strings.ContainsAny(name, "/\\") {return ""}
 p := themeIndex(filepath.Join(q.themaRoot(), theme))[strings.ToLower(name)]
 if p == "" {return ""}
@@ -69,7 +69,7 @@ if exists(base + ".svg") {return base + ".svg"}
 for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if f := filepath.Join(filepath.Dir(p), "img", filepath.Base(base)+"."+e); exists(f) {return f}}; return "" }
 // findIn: поиск внутри концепта — в имени и спутниках md, html, json, xml, txt концепта и синонимов
 // каждое слово запроса (& — и) в одном месте; ответ — концепт, тип спутника, отрывок
-func (q *Script) findIn(name, query string) []map[string]string {
+func (q *Medium) findIn(name, query string) []map[string]string {
 p := q.conceptPath(name)
 out := []map[string]string{}
 ts := qterms(query)

@@ -28,8 +28,8 @@ type job struct {
 	questions chan ask
 	answers   chan string // «y», «n» или выбранный вариант
 	done      chan []Turn}
-// Script — состояние: фреймы-интерпретаторы общие, контекст — у сеанса
-type Script struct {
+// Medium — среда интерпретатора, состояние: фреймы-интерпретаторы общие, контекст — у сеанса
+type Medium struct {
 	mu      sync.Mutex
 	in      *disp.Interp
 	dir     string

@@ -4,7 +4,7 @@ import ("fmt"; "os"; "path/filepath"; "strconv"; "strings"; "epi/script/disp"; "
 // трансформации концептов: clone, rename, import, union — файлы, спутники и связи
 // clone: clone [ Исходный Новый ] — файл, спутники и img/<имя>.* под новым именем в папку исходного
 // прямые списки — те же, у целей клон в обратных, обратные клона пусты; ответ — имя клона
-func (q *Script) clone(arg format.Value) (format.Value, bool) {
+func (q *Medium) clone(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
 src, name := q.cidx[strings.ToLower(arg.Items[0].Text)], capital(arg.Items[1].Text)
 if src == "" {q.in.RawErr = fmt.Errorf("концепта %s в теме нет", arg.Items[0].Text); return format.Value{}, false}
@@ -17,7 +17,7 @@ for _, f := range files {if err := copyFile(f[0], f[1]); err != nil {return form
 q.adopt(name, dst); return format.Value{Kind: format.Term, Text: name}, true }
 // replaceRefs: имя old → name во всех концептах темы и лексикона связей (prfix, sufix, radix) — в значениях refKeys,
 // ссылках и трансклюзиях текстовых спутников
-func (q *Script) replaceRefs(old, name string) error {
+func (q *Medium) replaceRefs(old, name string) error {
 swap := func(s string) string {return reToken.ReplaceAllStringFunc(s, func(t string) string {if format.SameTerm(t, old) {return name}; return t})}
 mark := func(s string) string {return reRefMark.ReplaceAllStringFunc(s, func(m string) string {
 	sub := reRefMark.FindStringSubmatch(m)
@@ -47,7 +47,7 @@ for _, r := range roots {
 	if err != nil {return err}}; return nil }
 // rename: rename [ Старое Новое ] — файлы концепта, спутников и img/<имя>.* под новым именем
 // в той же папке, имя заменяется во всех связях и в контенте, контекст темы заново; ответ — новое имя
-func (q *Script) rename(arg format.Value) (format.Value, bool) {
+func (q *Medium) rename(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
 src, name := q.cidx[strings.ToLower(arg.Items[0].Text)], capital(arg.Items[1].Text)
 if src == "" {q.in.RawErr = fmt.Errorf("концепта %s в теме нет", arg.Items[0].Text); return format.Value{}, false}
@@ -73,7 +73,7 @@ for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if exist
 // importC: import [ Тема Имя … ] — названные концепты, их синонимы, Taxon и Links (прямые
 // и обратные) и ещё уровень связей; имеющиеся в теме пропускаются; файлы по тому же пути
 // сначала все обратные списки пусты, потом прямые — у целей; ответ — число перенесённых
-func (q *Script) importC(arg format.Value) (format.Value, bool) {
+func (q *Medium) importC(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) < 2 || arg.Items[0].Kind != format.Term {return format.Value{}, false}
 src, ok := q.themeExists(arg.Items[0].Text)
 if !ok {q.in.RawErr = fmt.Errorf("темы %s нет", arg.Items[0].Text); return format.Value{}, false}
@@ -106,14 +106,14 @@ for _, k := range got {
 for _, d := range done {clearInverse(d[1])}
 for _, d := range done {q.relink(d[0], d[1])}; return format.Value{Kind: format.Integer, Text: strconv.Itoa(len(done))}, true }
 // adopt: скопированный концепт name (файл dst) — в указатель и контекст, обратные списки пусты, у целей — в обратных
-func (q *Script) adopt(name, dst string) {clearInverse(dst); q.relink(name, dst) }
+func (q *Medium) adopt(name, dst string) {clearInverse(dst); q.relink(name, dst) }
 // clearInverse: обратные списки связей концепта — пусты (на скопированный никто не ссылается)
 func clearInverse(dst string) {
 b, _ := os.ReadFile(dst)
 lines, _ := conceptLines(b)
-for _, l := range lines {if _, ok := (&Script{}).linkRoot(lineKey(l)); ok {d, _ := readLink(dst, lineKey(l)); writeLists(dst, lineKey(l), d, nil)}} }
+for _, l := range lines {if _, ok := (&Medium{}).linkRoot(lineKey(l)); ok {d, _ := readLink(dst, lineKey(l)); writeLists(dst, lineKey(l), d, nil)}} }
 // relink: у целей прямых списков концепт в обратных (свой обратный — как есть, прямой — заново); трансклюзии, контекст
-func (q *Script) relink(name, dst string) {
+func (q *Medium) relink(name, dst string) {
 q.cidx[strings.ToLower(name)] = dst
 b, _ := os.ReadFile(dst)
 lines, _ := conceptLines(b)
@@ -133,7 +133,7 @@ q.in.OnParam, q.in.OnFrame = on, of }
 // union: union [ Главный Дубль … ] — строки дублей в главный: связи — объединение, Rank — большее,
 // прочее — если у главного нет; json по ключам (занятый — «ключ-2»), md, html, txt, css дописываются, прочие — если нет
 // дубли удаляются, ссылки на них — на главный; ответ — имя главного
-func (q *Script) union(arg format.Value) (format.Value, bool) {
+func (q *Medium) union(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) < 2 {return format.Value{}, false}
 var paths []string
 for _, v := range arg.Items {

@@ -3,10 +3,10 @@ package main
 import ("fmt"; "log"; "os"; "path/filepath"; "sort"; "strings"; "time"; "epi/script/disp"; "epi/script/format")
 // протокол темы: сеансы, ignor, запись шагов диалога, интерпретация с вопросами в браузер, состояние
 // ignor, seans: файлы протокола темы
-func (q *Script) ignor() string            { return filepath.Join(q.themaDir(), "prtcl", "ignor.uic") }
-func (q *Script) seans(name string) string { return filepath.Join(q.themaDir(), "prtcl", name) }
+func (q *Medium) ignor() string            { return filepath.Join(q.themaDir(), "prtcl", "ignor.uic") }
+func (q *Medium) seans(name string) string { return filepath.Join(q.themaDir(), "prtcl", name) }
 // list: сеансы протокола, новые первыми; закрытый — файл только для чтения
-func (q *Script) list() ([]SeansRow, error) {
+func (q *Medium) list() ([]SeansRow, error) {
 if q.theme == "" {return nil, nil}
 es, err := os.ReadDir(filepath.Join(q.themaDir(), "prtcl"))
 if os.IsNotExist(err) {return nil, nil}
@@ -21,7 +21,7 @@ for _, e := range es {
 sort.Slice(ss, func(i, j int) bool { return ss[i].Name > ss[j].Name }); return ss, nil }
 // switchTo: сделать сеанс текущим; строки сеанса — модели «[ предикация ] -> интерпретация», диалог показывается
 // каким был, заново не выполняется; ошибка отмечена «-> !»
-func (q *Script) switchTo(name string) error {
+func (q *Medium) switchTo(name string) error {
 st, err := os.Stat(q.seans(name))
 if err != nil {return err}
 b, err := os.ReadFile(q.seans(name))
@@ -39,7 +39,7 @@ for i := 0; i+2 < len(vs); i += 3 {
 	turns = append(turns, t)}
 q.cur, q.closed, q.turns = name, st.Mode().Perm()&0200 == 0, turns; q.saveState(); return nil }
 // newSeans: открыть сеанс seans-<сегодня>.uic; в тот же день сеанс продолжается
-func (q *Script) newSeans() error {
+func (q *Medium) newSeans() error {
 name := "seans-" + time.Now().Format("2006-01-02") + ".uic"
 if st, err := os.Stat(q.seans(name)); err == nil {if st.Mode().Perm()&0200 == 0 {return fmt.Errorf("сеанс %s сегодня уже закрыт; его можно открыть для чтения", name)}} else if err := os.WriteFile(q.seans(name), nil, 0644); err != nil {return err}; return q.switchTo(name) }
 // record: шаг диалога строкой сеанса «[ предикация ] -> интерпретация»; нечитаемое и ошибка — строками, ошибка с «!»
@@ -63,7 +63,7 @@ if _, err := f.WriteString(text); err != nil {f.Close(); return err}; return f.C
 // start: интерпретация в отдельной горутине — вопросы диспетчера уходят в браузер, ответы возвращаются
 // на каждую предикацию строки свой ответ; непрочитанное — как нераспознанное (вопрос, не ошибка)
 // нераспознанное — в ignor.uic как есть, нечитаемое — строкой
-func (q *Script) start(text string) *job {
+func (q *Medium) start(text string) *job {
 r := &job{questions: make(chan ask), answers: make(chan string), done: make(chan []Turn, 1)}
 known := len(q.in.Unknown)
 q.in.Ask = func(question string) bool {r.questions <- ask{Text: question}; return <-r.answers == "y"}
@@ -85,7 +85,7 @@ go func() {
 		if e := appendFile(q.ignor(), line+"\n"); e != nil {log.Print(e)}}
 	r.done <- ts}(); return r }
 // wait: следующий вопрос или результат
-func (q *Script) wait(r *job) Reply {
+func (q *Medium) wait(r *job) Reply {
 select {
 case a := <-r.questions:
 	q.pending, q.pQuest, q.pOpts = r, a.Text, a.Options; return Reply{Question: a.Text, Options: a.Options}
@@ -95,7 +95,7 @@ case ts := <-r.done:
 		q.turns = append(q.turns, t)
 		if err := appendFile(q.seans(q.cur), record(t)); err != nil {log.Print(err)}}; return Reply{Turns: ts}} }
 // state: темы, сеансы, диалог и ожидающий вопрос (страницу можно перезагрузить, не потеряв его)
-func (q *Script) state() map[string]any {
+func (q *Medium) state() map[string]any {
 ss, err := q.list()
 if err != nil {log.Print(err)}
 ts, err := q.themes()

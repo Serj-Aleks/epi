@@ -3,7 +3,7 @@ package main
 import ("encoding/json"; "fmt"; "os"; "sort"; "strconv"; "strings")
 // данные линз карточки: таксоны, дочерние, процесс и ситуации, словари, алфавит темы
 // taxa: таксоны темы — концепты с параметром Rank, имя, цвет, картинка, в алфавите темы
-func (q *Script) taxa() []map[string]string {
+func (q *Medium) taxa() []map[string]string {
 out := []map[string]string{}
 for _, p := range q.cidx {
 	if setting(p, "Rank") == "" {continue}
@@ -13,7 +13,7 @@ for _, p := range q.cidx {
 	out = append(out, t)}
 sort.Slice(out, func(i, j int) bool {return aLess(out[i]["name"], out[j]["name"])}); return out }
 // children: дочерние концепта — обратный список Taxon, только существующие; taxon — дочерний сам таксон (задан Rank)
-func (q *Script) children(name string) []map[string]any {
+func (q *Medium) children(name string) []map[string]any {
 p := q.conceptPath(name)
 if p == "" {return []map[string]any{}}
 _, inv := readLink(p, "Taxon")
@@ -22,7 +22,7 @@ for _, n := range inv {if c := q.conceptPath(n); c != "" {out = append(out, map[
 sort.SliceStable(out, func(i, j int) bool {return aLess(out[i]["name"].(string), out[j]["name"].(string))}); return out }
 // process: ситуации процесса — тройки «объект препозиция объект» из json-спутника концепта
 // и концептов I-process; строка — номер, три имени, есть ли концепт, его синонимы; по номеру ситуации
-func (q *Script) process(name string) []map[string]any {
+func (q *Medium) process(name string) []map[string]any {
 p := q.cidx[strings.ToLower(name)]
 out := []map[string]any{}
 if p == "" || setting(p, "Process") == "" && len(settingList(p, "Process")) == 0 {return out}
@@ -59,7 +59,7 @@ for i := 0; i < len(ra) && i < len(rb); i++ {
 	if oa != ob {return oa < ob}}; return len(ra) < len(rb) }
 // dict: словари концепта — концепты из его Defs, словарь — json-спутник «термин : определение»
 // Deep — первые литеры слова для нечёткого поиска (по умолчанию 3); длинные термины раньше
-func (q *Script) dict(name string) map[string]any {
+func (q *Medium) dict(name string) map[string]any {
 p := q.conceptPath(name)
 out := map[string]any{"deep": 3, "terms": []map[string]string{}}
 if p == "" {return out}
@@ -76,7 +76,7 @@ for _, n := range settingList(p, "Defs") {
 sort.Slice(terms, func(i, j int) bool {return len(terms[i]["term"]) > len(terms[j]["term"])})
 if terms != nil {out["terms"] = terms}; return out }
 // situation: новая ситуация «a p b» в json концепта name — номер на единицу больше наибольшего в теме
-func (q *Script) situation(name, a, p, b string) error {
+func (q *Medium) situation(name, a, p, b string) error {
 cp := q.cidx[strings.ToLower(name)]
 if cp == "" {return fmt.Errorf("концепта %s в теме нет", name)}
 if a == "" || p == "" || b == "" || strings.ContainsAny(a+p+b, " \t") {return fmt.Errorf("ситуация — три слова: объект, препозиция, объект")}

@@ -4,11 +4,11 @@ import ("encoding/json"; "fmt"; "io"; "os"; "path/filepath"; "sort"; "strings"; 
 // спутники концепта — файлы рядом с ним: то же имя, другое расширение (md, json, svg, css, xml, html, txt)
 // Content — тип спутника по умолчанию (md); карточка концепта, включения {{ }}, слияние спутников при union
 // satFile: файл спутника ext концепта name; "" — концепта нет или тип не спутника
-func (q *Script) satFile(name, ext string) string {
+func (q *Medium) satFile(name, ext string) string {
 p := q.conceptPath(name)
 if p == "" || !has(satTypes, ext) {return ""}; return strings.TrimSuffix(p, ".uic") + "." + ext }
 // card: карточка концепта — имя, картинка, цвет, тип по умолчанию, спутники (нет — пустой список), строки
-func (q *Script) card(name string) map[string]any {
+func (q *Medium) card(name string) map[string]any {
 p := q.conceptPath(name)
 if p == "" {return map[string]any{"found": false}}
 sats := []string{}
@@ -20,7 +20,7 @@ if b, err := os.ReadFile(p); err == nil {lines, _ = conceptLines(b)}
 c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color")}
 if q.iconFile(name) != "" {c["icon"] = "/api/icon?name=" + name}; return c }
 // writeSat: записать спутник; прямой список Links — ссылки [[ ]] спутников md и html вместе, обратные у целей ведёт writeLink
-func (q *Script) writeSat(name, ext, text string) error {
+func (q *Medium) writeSat(name, ext, text string) error {
 p := q.satFile(name, ext)
 if p == "" {return os.ErrNotExist}
 if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {return err}
@@ -47,11 +47,11 @@ for _, t := range []string{"md", "html", "json"} {
 	if err != nil {continue}
 	for _, m := range reIncl.FindAllStringSubmatch(reFence.ReplaceAllString(string(b), ""), -1) {if n := strings.TrimSpace(m[1]); n != "" && !has(ns, n) {ns = append(ns, n)}}}; return ns }
 // indexTranscl: указатель трансклюзий темы — вычисляемая связь, в файлы не пишется
-func (q *Script) indexTranscl() {
+func (q *Medium) indexTranscl() {
 q.tidx = map[string][]string{}
 for k, p := range q.cidx {if ns := transcl(p); len(ns) > 0 {q.tidx[k] = ns}} }
 // inclLists: прямой (кого включает) и обратный (кто включает) списки трансклюзий концепта
-func (q *Script) inclLists(name string) ([]string, []string) {
+func (q *Medium) inclLists(name string) ([]string, []string) {
 k := strings.ToLower(name)
 var inv []string
 for o, ns := range q.tidx {if o != k && has(ns, name) {inv = append(inv, conceptName(q.cidx[o], ""))}}

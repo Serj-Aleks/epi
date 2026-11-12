@@ -4,10 +4,10 @@ import ("fmt"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf
 // темы автора: тема — папка thema/<Имя> с протоколом prtcl и концептами (путь из букв имени, строки «Параметр : предикация»)
 // активная тема одна, системный лексикон lexic — общий
 // themaRoot, themaDir: папка тем и папка активной темы
-func (q *Script) themaRoot() string { return filepath.Join(q.dir, "thema") }
-func (q *Script) themaDir() string  { return filepath.Join(q.themaRoot(), q.theme) }
+func (q *Medium) themaRoot() string { return filepath.Join(q.dir, "thema") }
+func (q *Medium) themaDir() string  { return filepath.Join(q.themaRoot(), q.theme) }
 // themes: имена тем по алфавиту
-func (q *Script) themes() ([]string, error) {
+func (q *Medium) themes() ([]string, error) {
 es, err := os.ReadDir(q.themaRoot())
 if os.IsNotExist(err) {return nil, nil}
 if err != nil {return nil, err}
@@ -23,16 +23,16 @@ case !unicode.IsUpper(r): return fmt.Errorf("имя темы пишется с �
 case utf8.RuneCountInString(name) > 64: return fmt.Errorf("имя темы длиннее 64 знаков")
 case strings.ContainsAny(name, "/\\:*?\"<>|") || strings.IndexFunc(name, unicode.IsSpace) >= 0: return fmt.Errorf("в имени темы — пробел или недопустимый знак")}; return nil }
 // themeExists: имя занято (без учёта регистра)
-func (q *Script) themeExists(name string) (string, bool) {
+func (q *Medium) themeExists(name string) (string, bool) {
 ts, _ := q.themes()
 for _, t := range ts {if format.SameTerm(t, name) {return t, true}}; return "", false }
 // createTheme: новая тема с протоколом prtcl
-func (q *Script) createTheme(name string) error {
+func (q *Medium) createTheme(name string) error {
 if err := checkName(name); err != nil {return err}
 if t, ok := q.themeExists(name); ok {return fmt.Errorf("тема %s уже есть", t)}
 if err := os.MkdirAll(filepath.Join(q.themaRoot(), name, "prtcl"), 0755); err != nil {return err}; return q.switchTheme(name) }
 // renameTheme: переименование папки темы; ссылок на имя темы внутри нет
-func (q *Script) renameTheme(old, name string) error {
+func (q *Medium) renameTheme(old, name string) error {
 if err := checkName(name); err != nil {return err}
 cur, ok := q.themeExists(old)
 if !ok {return fmt.Errorf("темы %s нет", old)}
@@ -40,7 +40,7 @@ if t, ok := q.themeExists(name); ok && t != cur {return fmt.Errorf("тема %s 
 if err := os.Rename(filepath.Join(q.themaRoot(), cur), filepath.Join(q.themaRoot(), name)); err != nil {return err}
 if q.theme == cur {q.theme = name}; return nil }
 // switchTheme: тема активна — контекст заново (системные алиасы и концепты темы), база нераспознанных темы, последний открытый сеанс
-func (q *Script) switchTheme(name string) error {
+func (q *Medium) switchTheme(name string) error {
 q.theme, q.cur, q.closed, q.turns = name, "", false, nil
 q.indexConcepts()
 q.in.Unknown = nil
@@ -52,7 +52,7 @@ ss, err := q.list()
 if err != nil {return err}
 for _, s := range ss {if !s.Closed {return q.switchTo(s.Name)}}; q.saveState(); return nil }
 // startTheme: при запуске — тема и сеанс из state.uic, иначе тема последнего открытого сеанса, иначе первая; тем нет — ни одной
-func (q *Script) startTheme() error {
+func (q *Medium) startTheme() error {
 ts, err := q.themes()
 if err != nil || len(ts) == 0 {return err}
 if t, s := q.loadState(); t != "" {
@@ -66,9 +66,9 @@ for _, t := range ts {
 	if err != nil {return err}
 	for _, s := range ss {if !s.Closed && s.Name > last {best, last = t, s.Name}}}; return q.switchTheme(best) }
 // statePath, saveState, loadState: state.uic — тема и сеанс, где автор остановился
-func (q *Script) statePath() string {return filepath.Join(q.dir, "state.uic") }
-func (q *Script) saveState() {writeLines(q.statePath(), []string{"Thema : " + q.theme, "Seans : " + q.cur}) }
-func (q *Script) loadState() (string, string) {
+func (q *Medium) statePath() string {return filepath.Join(q.dir, "state.uic") }
+func (q *Medium) saveState() {writeLines(q.statePath(), []string{"Thema : " + q.theme, "Seans : " + q.cur}) }
+func (q *Medium) loadState() (string, string) {
 t, s := "", ""
 b, err := os.ReadFile(q.statePath())
 if err != nil {return "", ""}
@@ -76,7 +76,7 @@ for _, l := range strings.Split(string(b), "\n") {
 	k, v, _ := strings.Cut(l, " : ")
 	if k == "Thema" {t = strings.TrimSpace(v)} else if k == "Seans" {s = strings.TrimSpace(v)}}; return t, s }
 // indexConcepts: указатель концептов темы
-func (q *Script) indexConcepts() {q.cidx = themeIndex(q.themaDir()); q.indexTranscl() }
+func (q *Medium) indexConcepts() {q.cidx = themeIndex(q.themaDir()); q.indexTranscl() }
 // themeIndex: указатель концептов темы в папке dir — имя (строчными) → файл
 func themeIndex(dir string) map[string]string {
 idx := map[string]string{}
@@ -85,7 +85,7 @@ filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
 	if !d.IsDir() && strings.HasSuffix(path, ".uic") {idx[strings.ToLower(strings.TrimSuffix(d.Name(), ".uic"))] = path}; return nil}); return idx }
 // loadIgnor: база нераспознанных темы — строка на предикацию, нечитаемое — строкой
-func (q *Script) loadIgnor() error {
+func (q *Medium) loadIgnor() error {
 b, err := os.ReadFile(q.ignor())
 if os.IsNotExist(err) {return nil}
 if err != nil {return err}
@@ -95,13 +95,13 @@ for _, l := range strings.Split(string(b), "\n") {
 	if vs, err := format.Parse(l); err == nil && len(vs) == 1 && vs[0].Kind == format.String {text = vs[0].Text}
 	q.in.Unknown = append(q.in.Unknown, text)}; return nil }
 // themeIcon: картинка темы — <тема>/<Тема>.svg или <тема>/img/<Тема>.png|…
-func (q *Script) themeIcon(name string) string {
+func (q *Medium) themeIcon(name string) string {
 dir := filepath.Join(q.themaRoot(), name)
 for _, n := range []string{name, strings.ToLower(name)} {
 	if p := filepath.Join(dir, n+".svg"); exists(p) {return p}
 	for _, e := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if p := filepath.Join(dir, "img", n+"."+e); exists(p) {return p}}}; return "" }
 // themesInfo: темы для карточки темы — имя, картинка, число концептов, таксонов, спутников и сеансов, последний сеанс
-func (q *Script) themesInfo() []map[string]any {
+func (q *Medium) themesInfo() []map[string]any {
 ts, _ := q.themes()
 out := []map[string]any{}
 for _, t := range ts {

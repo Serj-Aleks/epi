@@ -7,8 +7,8 @@ import ("encoding/json"; "flag"; "log"; "net/http"; "os"; "path/filepath"; "stri
 // open: среда — фреймы-интерпретаторы lexic/preposit, транслятор trans, препозиции без вычисления операнда
 // (nexus, qwest, qwizt, clone, rename, import, union); фреймы автора — в теме, алиасы препозиций — общие
 // для всех тем (имя интерпретатора не алиас); контекст — системные алиасы и концепты темы
-func open(dir string) (*Script, error) {
-q := &Script{dir: dir}
+func open(dir string) (*Medium, error) {
+q := &Medium{dir: dir}
 q.in = disp.New(limit, func(string) bool { return false })
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 q.in.FrameOf("trans").Kernel["trans"] = q.trans
@@ -24,7 +24,7 @@ if err := q.startTheme(); err != nil {return nil, err}; return q, nil }
 // serve: запросы панели /api/…; Choice — ответ на вопрос с выбором, Ext — тип спутника
 // situation: Text — «объект препозиция объект»; sat: GET читает спутник, POST пишет; img — <папка концепта>/img/<файл>, без name — <тема>/img/<файл>
 // icon с theme — концепт другой темы (qwizt); в новой теме сразу открывается сеанс; закрытый сеанс — файл только для чтения
-func (q *Script) serve(w http.ResponseWriter, req *http.Request) {
+func (q *Medium) serve(w http.ResponseWriter, req *http.Request) {
 w.Header().Set("Content-Type", "application/json")
 q.mu.Lock()
 defer q.mu.Unlock()

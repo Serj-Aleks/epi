@@ -4,12 +4,12 @@ import ("os"; "path/filepath"; "sort"; "strconv"; "strings"; "epi/script/format"
 // связи концептов — Taxon, Links, Attrib, Preposit, Prfix, Sufix, Radix; в файле два списка «[ прямой ] [ обратный ]»
 // автор пишет прямой (Жёлтый.Taxon : [ Цвет ]), обратный script ведёт сам (Цвет: Taxon : [ ] [ Жёлтый ])
 // linkRoot: где цели связи — Taxon, Links, Attrib, Preposit в теме; Prfix, Sufix, Radix — в теме, если есть, иначе в lexic
-func (q *Script) linkRoot(param string) (string, bool) {
+func (q *Medium) linkRoot(param string) (string, bool) {
 switch format.Key(param) {
 case "Taxon", "Links", "Attrib", "Preposit": return q.themaDir(), true
 case "Prfix", "Sufix", "Radix": return filepath.Join(q.dir, "lexic", strings.ToLower(param)), true}; return "", false }
 // targetPath: файл цели t связи: концепт темы, если он есть, иначе — в root
-func (q *Script) targetPath(root, t string) string {
+func (q *Medium) targetPath(root, t string) string {
 if p := q.conceptFile(t); exists(p) {return p}; return letterPath(root, t) }
 // names: имена из предикации — блок [ A B ] или термы
 func names(vs []format.Value) []string {
@@ -38,7 +38,7 @@ var out []string
 for _, x := range ns {if !format.SameTerm(x, n) {out = append(out, x)}}; return out }
 // writeLink: прямой список связи у frame, у целей обратный — добавленные получают frame, убранные теряют
 // strict — только у существующих целей (ссылки контента)
-func (q *Script) writeLink(frame, param string, pred []format.Value, root string, strict bool) error {
+func (q *Medium) writeLink(frame, param string, pred []format.Value, root string, strict bool) error {
 path := q.conceptFile(frame)
 old, inv := readLink(path, param)
 d := names(pred)
@@ -63,7 +63,7 @@ func directOnly(l string) string {
 vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 if err != nil || len(vs) < 2 {return l}; return lineKey(l) + " : " + format.Format(vs[:1]) }
 // nexusData: синонимы и связи концепта name (прямой и обратный списки) по файлам темы и лексикона; найден ли концепт
-func (q *Script) nexusData(name string) ([]string, map[string][2][]string, bool) {
+func (q *Medium) nexusData(name string) ([]string, map[string][2][]string, bool) {
 paths := []string{q.conceptFile(name)}
 for _, c := range []string{"prfix", "sufix", "radix"} {paths = append(paths, letterPath(filepath.Join(q.dir, "lexic", c), name))}
 found := false
@@ -75,7 +75,7 @@ for _, l := range linkOrder {
 	for _, p := range paths {pd, pi := readLink(p, l); d, i = append(d, pd...), append(i, pi...)}
 	if len(d)+len(i) > 0 {links[l] = [2][]string{d, i}}}; return alias, links, found }
 // nexus: nexus Имя — ответ имя концепта, контекст показывает панель (граф и список)
-func (q *Script) nexus(arg format.Value) (format.Value, bool) {
+func (q *Medium) nexus(arg format.Value) (format.Value, bool) {
 if arg.Kind != format.Term || q.theme == "" {return format.Value{}, false}
 p := q.conceptPath(arg.Text)
 if p == "" {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: conceptName(p, "")}, true }
@@ -84,7 +84,7 @@ func graphType(v string) string {for _, t := range graphTypes {if strings.EqualF
 // nexusGraph: граф — оси nw, wt, sw, nr: Prfix, Attrib, Sufix, Preposit или по N-west, West, S-west, Nord
 // слева и сверху обратные списки, справа и снизу прямые, остальное — extra; узлы — только существующие концепты
 // соседи узла по той же связи — у входящего его прямой список, у исходящего обратный (в обоих есть центр), у центра — синонимы; Transcl вычисляется; Nord : Themes — ось тем
-func (q *Script) nexusGraph(name string) map[string]any {
+func (q *Medium) nexusGraph(name string) map[string]any {
 path := q.conceptPath(name)
 if path == "" {return map[string]any{"found": false}}
 mk := func(n string) (gnode, string, bool) {
@@ -122,7 +122,7 @@ for _, t := range graphTypes {
 out["extra"] = extra; return out }
 // syncAlias: группа синонимов — у каждого в Alias все остальные, выбывший теряет frame
 // имена, которые не концепты темы, остаются; контекст участников заново, у frame его задаёт текущая предикация
-func (q *Script) syncAlias(frame string, old, now []string) error {
+func (q *Medium) syncAlias(frame string, old, now []string) error {
 exist := func(n string) string {return q.cidx[strings.ToLower(n)]}
 group := []string{conceptName(q.conceptFile(frame), "")}
 add := func(n string) {if p := exist(n); p != "" && !has(group, conceptName(p, "")) {group = append(group, conceptName(p, ""))}}
@@ -160,7 +160,7 @@ as, _ := readLink(p, "Alias")
 for _, a := range as {out = append(out, tokens(a))}; return out }
 // themeNodes: темы на оси север–юг — север: слово названия совпадает со словом имени концепта
 // юг: в теме концепты с совпадающими именами (соседи темы); глубина Deep (3), своя тема — нет
-func (q *Script) themeNodes(path string) ([]gnode, []gnode) {
+func (q *Medium) themeNodes(path string) ([]gnode, []gnode) {
 deep := 3
 if d, err := strconv.Atoi(setting(path, "Deep")); err == nil && d > 0 {deep = d}
 me := nameTokens(path)

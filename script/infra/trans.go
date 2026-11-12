@@ -18,7 +18,7 @@ flush()
 var out []string
 for _, t := range ts {if t != "" {out = append(out, t)}}; return out }
 // dictFile: слово в словаре класса lexic/<класс> — путь из букв, как у концептов
-func (q *Script) dictFile(class, word string) string { return letterPath(filepath.Join(q.dir, "lexic", class), word) }
+func (q *Medium) dictFile(class, word string) string { return letterPath(filepath.Join(q.dir, "lexic", class), word) }
 // conceptIndex: слово → имя концепта в папке root (имя — из файла, синонимы — Alias)
 func conceptIndex(root string) map[string]string {
 idx := map[string]string{}
@@ -37,7 +37,7 @@ filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		for _, v := range vs {
 			if v.Kind == format.Array {for _, it := range v.Items {idx[strings.ToLower(it.Text)] = name}} else {idx[strings.ToLower(v.Text)] = name}}}; return nil}); return idx }
 // classify: класс слова по словарям; для объекта и атрибута — имя концепта
-func (q *Script) classify(w string, d dicts) (string, string) {
+func (q *Medium) classify(w string, d dicts) (string, string) {
 if w == "—" {return "defnt", ""}
 if r, _ := utf8.DecodeRuneInString(w); unicode.IsDigit(r) {return "number", ""}
 for _, c := range []string{"xdict", "defnt", "preposit"} {if exists(q.dictFile(c, w)) {return c, ""}}
@@ -57,7 +57,7 @@ al = append(al, format.Value{Kind: format.Term, Text: w})
 if err := writeParam(path, "Alias", []format.Value{{Kind: format.Array, Items: al}}); err != nil {return false}
 idx[w], idx[strings.ToLower(name)] = name, name; return true }
 // learn: ответ пополняет словарь — preposit, xdict, defnt: слово в словарь; thema:Имя — объект; atrbt:Имя — атрибут
-func (q *Script) learn(w, answer string, d dicts) (string, string) {
+func (q *Medium) learn(w, answer string, d dicts) (string, string) {
 switch answer {
 case "preposit", "xdict", "defnt":
 	if err := writeLines(q.dictFile(answer, w), nil); err != nil {return "", ""}; return answer, ""}
@@ -69,7 +69,7 @@ if name, ok := strings.CutPrefix(answer, "atrbt:"); ok {
 	if learnName(filepath.Join(q.dir, "lexic", "atrbt"), w, name, d.atr) {return "atrbt", name}}; return "", "" }
 // trans: ядро интерпретатора trans "текст" → [ предикация ]; атрибут — параметр следующего объекта, иначе предыдущего
 // («прямыми углами» → Угол.Прямой)
-func (q *Script) trans(a, b *format.Value) (format.Value, bool) {
+func (q *Medium) trans(a, b *format.Value) (format.Value, bool) {
 if a != nil || b == nil || b.Kind != format.String || q.choose == nil {return format.Value{}, false}
 d := dicts{obj: conceptIndex(q.themaDir()), atr: conceptIndex(filepath.Join(q.dir, "lexic", "atrbt"))}
 opts := []string{"preposit", q.theme, "atrbt", "defnt", "xdict", "✕"}
