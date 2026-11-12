@@ -133,8 +133,8 @@ for i := 0; i < len(v.Items); i++ {
 	if IsDef(v.Items, i) {
 		es = append(es, Entry{Key: v.Items[i]})
 		i++} else if len(es) > 0 {es[len(es)-1].Value = append(es[len(es)-1].Value, v.Items[i])}}; return es }
-// Format: значения в канонический текст; перевод строки между значениями сохраняется (отделяет предикации)
-func Format(vs []Value) string {
+// Canon: значения в канонический текст; перевод строки между значениями сохраняется (отделяет предикации)
+func Canon(vs []Value) string {
 var b strings.Builder
 for i, v := range vs {
 	if i > 0 {
@@ -145,7 +145,7 @@ func (v Value) String() string {
 switch v.Kind {
 case Array, Object, Expr:
 	open := map[Kind]string{Array: "[", Object: "{", Expr: "("}[v.Kind]
-	if len(v.Items) == 0 {return open + string(closing(v.Kind))}; return open + " " + Format(v.Items) + " " + string(closing(v.Kind))
+	if len(v.Items) == 0 {return open + string(closing(v.Kind))}; return open + " " + Canon(v.Items) + " " + string(closing(v.Kind))
 case String:
 	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`, "\t", `\t`); return `"` + r.Replace(v.Text) + `"`
 case LongString: return "''" + v.Text + "''"

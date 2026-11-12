@@ -167,7 +167,7 @@ for _, dp := range paths[1:] {
 		if has(refKeys, k) {
 			ts := settingList(main, k)
 			for _, n := range settingList(dp, k) {if !has(ts, n) {ts = append(ts, n)}}
-			mlines[indexOf(mlines, cur)] = k + " : " + format.Format([]format.Value{listBlock(ts)})}}
+			mlines[indexOf(mlines, cur)] = k + " : " + format.Canon([]format.Value{listBlock(ts)})}}
 	if err := writeLines(main, mlines); err != nil {q.in.RawErr = err; return format.Value{}, false}
 	if err := mergeSats(main, dp); err != nil {q.in.RawErr = err; return format.Value{}, false}
 	for _, f := range conceptFiles(dp, dp) {os.Remove(f[0])}
@@ -205,4 +205,4 @@ for i, v := range vs {
 		dup := false
 		for _, y := range items {if x.Kind == format.Term && y.Kind == format.Term && format.SameTerm(x.Text, y.Text) {dup = true}}
 		if !dup {items = append(items, x)}}
-	vs[i].Items = items}; return lineKey(l) + " : " + format.Format(vs) }
+	vs[i].Items = items}; return lineKey(l) + " : " + format.Canon(vs) }

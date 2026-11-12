@@ -88,7 +88,7 @@ func Split(text string) ([]string, error) {
 vs, err := format.Parse(text)
 if err != nil {return nil, err}
 var out []string
-for _, seg := range segments(vs) {out = append(out, format.Format(seg))}; return out, nil }
+for _, seg := range segments(vs) {out = append(out, format.Canon(seg))}; return out, nil }
 // readPred: предикация из части seg — ровно одна, иначе не распознана
 func readPred(seg []format.Value, raw map[string]bool) pred {
 r := reader{vs: seg, raw: raw}
@@ -135,7 +135,7 @@ in.steps++
 if in.Limit > 0 && in.steps > in.allowed {if in.Ask != nil && in.Ask(fmt.Sprintf("исчерпан лимит %d шагов. Продолжать?", in.Limit)) {in.allowed += in.Limit; return nil}; return Stopped{in.steps - 1}}; return nil }
 // unknown: нераспознанная предикация — вопрос «записать?» и запись в базу
 func (in *Interp) unknown(toks []format.Value, why string) {
-text := format.Format(toks)
+text := format.Canon(toks)
 if in.Ask != nil && in.Ask(fmt.Sprintf("предикация «%s» %s. Записать её?", text, why)) {in.Unknown = append(in.Unknown, text)} }
 // Unreadable: текст не прочитан — тоже предикация без обработчика: вопрос «записать?» и запись в базу
 func (in *Interp) Unreadable(text string, err error) {
@@ -171,7 +171,7 @@ if s.def != nil {
 	if old, _ := env.find(s.def.Text); old != nil && !format.IsPrepTerm(s.def.Text) {nb.params = old.params}
 	env.set(s.def.Text, nb)
 	if in.OnFrame != nil && !format.IsPrepTerm(s.def.Text) && len(toks) == 1 && toks[0].Kind == format.Array {in.OnFrame(s.def.Text, toks[0].Items)}
-	if s.alias && in.OnAlias != nil {in.OnAlias(s.def.Text, format.Format(toks))}; return none, nil}
+	if s.alias && in.OnAlias != nil {in.OnAlias(s.def.Text, format.Canon(toks))}; return none, nil}
 if s.op == nil && s.prefix == nil {return in.evalOperand(s.a, env, right)}
 ptok := s.op
 if s.prefix != nil {ptok = s.prefix}

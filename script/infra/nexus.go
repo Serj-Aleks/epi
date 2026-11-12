@@ -61,7 +61,7 @@ for _, t := range d {
 // directOnly: строка связи без обратного списка (для контекста фрейма)
 func directOnly(l string) string {
 vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
-if err != nil || len(vs) < 2 {return l}; return lineKey(l) + " : " + format.Format(vs[:1]) }
+if err != nil || len(vs) < 2 {return l}; return lineKey(l) + " : " + format.Canon(vs[:1]) }
 // nexusData: синонимы и связи концепта name (прямой и обратный списки) по файлам темы и лексикона; найден ли концепт
 func (q *Medium) nexusData(name string) ([]string, map[string][2][]string, bool) {
 paths := []string{q.conceptFile(name)}
@@ -134,7 +134,7 @@ put := func(n string, as []string) error {
 	on := q.in.OnParam
 	q.in.OnParam = nil
 	defer func() {q.in.OnParam = on}()
-	_, err := q.in.Run(n+".Alias : "+format.Format([]format.Value{v}), q.env); return err}
+	_, err := q.in.Run(n+".Alias : "+format.Canon([]format.Value{v}), q.env); return err}
 for _, a := range old {
 	if exist(a) == "" || has(group, a) {continue}
 	as, _ := readLink(exist(a), "Alias")

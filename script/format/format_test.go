@@ -36,11 +36,11 @@ func TestExamplesParseAndRoundTrip(t *testing.T) {
 for _, src := range append(authorExamples, epiExamples...) {
 	v, err := Parse(src)
 	if err != nil {t.Errorf("%q: %v", src, err); continue}
-	canon := Format(v)
+	canon := Canon(v)
 	v2, err := Parse(canon)
 	if err != nil {t.Errorf("канонический текст не читается: %q: %v", canon, err); continue}
 	if !same(v, v2) {t.Errorf("обход меняет дерево: %q → %q", src, canon)}
-	if Format(v2) != canon {t.Errorf("канонический текст меняется при повторном обходе: %q", canon)}} }
+	if Canon(v2) != canon {t.Errorf("канонический текст меняется при повторном обходе: %q", canon)}} }
 func same(a, b []Value) bool {
 if len(a) != len(b) {return false}
 for i := range a {if a[i].Kind != b[i].Kind || a[i].Text != b[i].Text || !same(a[i].Items, b[i].Items) {return false}}; return true }
@@ -73,7 +73,7 @@ func TestObjectEntries(t *testing.T) {
 v, err := Parse(`{ start-time : 10:30 stop-time : start-time + 3:00 }`)
 if err != nil {t.Fatal(err)}
 es := v[0].Entries()
-if len(es) != 2 || es[1].Key.Text != "stop-time" || Format(es[1].Value) != "start-time + 3:00" {t.Fatalf("значение до следующего терма-определения: %+v", es)} }
+if len(es) != 2 || es[1].Key.Text != "stop-time" || Canon(es[1].Value) != "start-time + 3:00" {t.Fatalf("значение до следующего терма-определения: %+v", es)} }
 // Регистр значим по первой букве: строчная — препозиция,
 // прописная — объект; остальные буквы — без учёта регистра
 func TestTermCase(t *testing.T) {
@@ -121,8 +121,8 @@ func TestLinesKept(t *testing.T) {
 src := "A : 1\nB : [ X : 2\n  Y : 3 ] C\nD"
 v, err := Parse(src)
 if err != nil {t.Fatal(err)}
-got := Format(v)
+got := Canon(v)
 want := "A : 1\nB : [ X : 2\nY : 3 ] C\nD"
 if got != want {t.Fatalf("канонический текст:\n%q\nожидалось\n%q", got, want)}
 v2, _ := Parse(got)
-if Format(v2) != got {t.Fatal("повторный обход меняет текст")} }
+if Canon(v2) != got {t.Fatal("повторный обход меняет текст")} }

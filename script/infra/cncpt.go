@@ -53,7 +53,7 @@ for _, k := range kids {
 func writeParam(path, param string, pred []format.Value) error {
 var lines []string
 if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
-text := strings.TrimRight(param + " : " + strings.ReplaceAll(format.Format(pred), "\n", " . "), " ")
+text := strings.TrimRight(param + " : " + strings.ReplaceAll(format.Canon(pred), "\n", " . "), " ")
 found := false
 out := lines[:0]
 for _, l := range lines {if isParam(l) && format.SameTerm(lineKey(l), param) {if found {continue}; l, found = text, true}; out = append(out, l)}
@@ -75,7 +75,7 @@ var lines []string
 if b, err := os.ReadFile(path); err == nil {if lines, err = conceptLines(b); err != nil {return fmt.Errorf("%s: %w", path, err)}} else if !os.IsNotExist(err) {return err}
 var out []string
 for _, l := range lines {if isParam(l) {out = append(out, l)}}
-preds, err := disp.Split(format.Format(body))
+preds, err := disp.Split(format.Canon(body))
 if err != nil {return err}
 q.known(path); return writeLines(path, append(out, preds...)) }
 // loadConcepts: системные концепты (lexic/constans) и концепты темы в контекст; концепт темы дополняет и переопределяет системный

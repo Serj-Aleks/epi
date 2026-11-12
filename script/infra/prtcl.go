@@ -33,7 +33,7 @@ var turns []Turn
 for i := 0; i+2 < len(vs); i += 3 {
 	if vs[i+1].Kind != format.Op || vs[i+1].Text != "->" {return fmt.Errorf("%s: строка %d: ожидалась модель «[ … ] -> …»", name, vs[i].Line)}
 	t := Turn{Pred: vs[i].Text, Answer: vs[i+2].String()}
-	if vs[i].Kind == format.Array {t.Pred = format.Format(vs[i].Items)}
+	if vs[i].Kind == format.Array {t.Pred = format.Canon(vs[i].Items)}
 	if vs[i+2].Kind == format.String {t.Answer = vs[i+2].Text}
 	t.Error = errLines[vs[i+2].Line]
 	turns = append(turns, t)}

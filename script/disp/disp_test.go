@@ -177,7 +177,7 @@ func TestAliasParam(t *testing.T) {
 in := New(100, func(string) bool { return true })
 env := NewEnv(nil)
 var saved []string
-in.OnParam = func(frame, param string, pred []format.Value) {saved = append(saved, frame+"."+param+" : "+format.Format(pred))}
+in.OnParam = func(frame, param string, pred []format.Value) {saved = append(saved, frame+"."+param+" : "+format.Canon(pred))}
 for _, c := range []struct{ src, want string }{
 	{`X.A : 5 . X.Alias : [ Y Z ]`, "@none"},
 	{`Y.A * Z.A`, "25"},
@@ -193,7 +193,7 @@ if len(in.Unknown) != 1 {t.Errorf("W.A — не распознано: %v", in.Un
 func TestFrameKeepsParams(t *testing.T) {
 in := New(100, func(string) bool { return true })
 var body string
-in.OnFrame = func(name string, b []format.Value) {body = name + " : " + format.Format(b)}
+in.OnFrame = func(name string, b []format.Value) {body = name + " : " + format.Canon(b)}
 v, err := in.Run("F.A : 1 . F : [ F.A < 3 -> [ F.A : ( F.A + 1 ) . F ] ] . F . F.A", NewEnv(nil))
 if err != nil || v.String() != "3" {t.Fatalf("F.A = %v %v", v, err)}
 if body != "F : F.A < 3 -> [ F.A : ( F.A + 1 ) . F ]" {t.Fatalf("тело: %q", body)} }
