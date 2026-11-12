@@ -94,12 +94,12 @@ case ts := <-r.done:
 	for _, t := range ts {
 		q.turns = append(q.turns, t)
 		if err := appendFile(q.seans(q.cur), record(t)); err != nil {log.Print(err)}}; return Reply{Turns: ts}} }
-// state: темы, сеансы, диалог и ожидающий вопрос (страницу можно перезагрузить, не потеряв его)
+// state: темы, сеансы, диалог, ожидающий вопрос (страницу можно перезагрузить, не потеряв его) и типы спутников
 func (q *Medium) state() map[string]any {
 ss, err := q.list()
 if err != nil {log.Print(err)}
 ts, err := q.themes()
 if err != nil {log.Print(err)}; return map[string]any{
-	"themes": ts, "theme": q.theme,
+	"themes": ts, "theme": q.theme, "satTypes": satTypes,
 	"seanses": ss, "current": q.cur, "closed": q.closed, "turns": q.turns,
 	"pending": map[string]any{"pred": q.pPred, "question": q.pQuest, "options": q.pOpts},} }
