@@ -1,4 +1,4 @@
-// epi/script/infra/links.go
+// epi/script/infra/nexus.go
 package main
 import ("os"; "path/filepath"; "sort"; "strconv"; "strings"; "epi/script/format")
 // связи концептов — Taxon, Links, Attrib, Preposit, Prfix, Sufix, Radix; в файле два списка «[ прямой ] [ обратный ]»
