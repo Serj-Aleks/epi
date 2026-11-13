@@ -7,8 +7,8 @@ type Prep func(a, b *format.Value) (format.Value, bool)
 type Interp struct {
 	Frames []*Frame // фреймы-интерпретаторы препозиций
 	Used   []string // фреймы, интерпретировавшие последнюю Run
-	// OnParam: «Фрейм.Параметр : …» записано (фреймы автора сохраняются в теме)
-	OnParam func(frame, param string, pred []format.Value)
+	// OnParam: «Фрейм.Параметр : …» записано (фреймы автора сохраняются в теме); ошибка — ответ предикации
+	OnParam func(frame, param string, pred []format.Value) error
 	// OnAlias: «имя : препозиция» записано (алиасы — системный лексикон)
 	OnAlias func(name, target string)
 	// OnFrame: «Фрейм : [ … ]» — тело фрейма записано (импликации концепта)

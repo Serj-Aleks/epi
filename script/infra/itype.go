@@ -82,3 +82,5 @@ type gnode struct {
 	Neighbors []gnode `json:"neighbors,omitempty"`}
 // dicts: указатели словарей с формами слов — объекты темы и атрибуты (lexic/atrbt)
 type dicts struct{ obj, atr map[string]string }
+// reImg: картинка в контенте — md ![…](файл) или html <img src="файл">
+var reImg = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)\)|<img[^>]*\ssrc="([^"]+)"`)

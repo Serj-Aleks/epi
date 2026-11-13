@@ -31,12 +31,13 @@ func (q *Medium) writeConcept(frame, param string, pred []format.Value) error {
 if q.theme == "" {return nil}
 if root, ok := q.linkRoot(param); ok {return q.writeLink(frame, param, pred, root, false)}
 if format.SameTerm(param, "Rank") {return q.writeRank(frame, pred)}
+if format.SameTerm(param, "Locus") {return q.writeLocus(frame, pred)}
 if !format.SameTerm(param, "Alias") {q.known(q.conceptFile(frame)); return writeParam(q.conceptFile(frame), param, pred)}
 path := q.conceptFile(frame)
 old, _ := readLink(path, "Alias")
 if err := writeParam(path, "Alias", pred); err != nil {return err}
 q.cidx[strings.ToLower(frame)] = path; return q.syncAlias(frame, old, names(pred)) }
-// writeRank: ранг концепта; пустой ранг (Rank : []) — концепт больше не таксон, он убирается из Taxon всех дочерних
+// writeRank: ранг концепта; пустой ранг (Rank :) — концепт больше не таксон, он убирается из Taxon всех дочерних
 func (q *Medium) writeRank(frame string, pred []format.Value) error {
 path := q.conceptFile(frame); q.known(path)
 was := setting(path, "Rank") != ""
@@ -106,6 +107,35 @@ func conceptName(path, root string) string { return capital(strings.TrimSuffix(f
 // known: файл концепта темы в указатель (новый концепт виден сразу), файлы лексикона — нет
 func (q *Medium) known(path string) {
 if q.theme != "" && strings.HasPrefix(path, q.themaDir()+string(filepath.Separator)) {q.cidx[strings.ToLower(strings.TrimSuffix(filepath.Base(path), ".uic"))] = path} }
+// locus: место концепта темы — папка его файла от папки темы (N/U/M); у концепта лексикона — пусто
+func (q *Medium) locus(p string) string {
+rel, err := filepath.Rel(q.themaDir(), filepath.Dir(p))
+if q.theme == "" || err != nil || strings.HasPrefix(rel, "..") {return ""}; return filepath.ToSlash(rel) }
+// writeLocus: Концепт.Locus : путь — концепт со спутниками, img/<имя>.* и картинками контента переезжает в папку темы
+// путь — внутри темы, не в prtcl и img, файла с тем же именем там нет; Locus в файл не пишется, связи по имени не меняются
+// картинки контента: остались ли в старой папке другие концепты — копируются, нет — переезжают; пустые папки убираются
+func (q *Medium) writeLocus(frame string, pred []format.Value) error {
+src := q.conceptPath(frame)
+if src == "" || q.locus(src) == "" {return fmt.Errorf("Locus: нет концепта темы %s", frame)}
+loc := strings.Trim(strings.ReplaceAll(strings.Trim(format.Canon(pred), `" `), " ", ""), "/")
+parts := strings.Split(loc, "/")
+for _, s := range parts {if s == "" || s == "." || s == ".." || strings.EqualFold(s, "prtcl") || strings.EqualFold(s, "img") {return fmt.Errorf("Locus: путь %q не годится — внутри темы, без prtcl, img и ..", loc)}}
+dir := filepath.Join(append([]string{q.themaDir()}, parts...)...)
+dst := filepath.Join(dir, filepath.Base(src))
+if dst == src {return nil}
+if exists(dst) {return fmt.Errorf("Locus: в %s уже есть %s", loc, filepath.Base(src))}
+old := filepath.Dir(src)
+files := conceptFiles(src, dst)
+for _, t := range []string{"md", "html"} {if b, err := os.ReadFile(strings.TrimSuffix(src, ".uic") + "." + t); err == nil {for _, m := range reImg.FindAllStringSubmatch(string(b), -1) {f := m[1] + m[2]; if f == filepath.Base(f) && exists(filepath.Join(old, "img", f)) {files = append(files, [2]string{filepath.Join(old, "img", f), filepath.Join(dir, "img", f)})}}}}
+alone := true
+if es, err := os.ReadDir(old); err == nil {for _, e := range es {if strings.HasSuffix(e.Name(), ".uic") && e.Name() != filepath.Base(src) {alone = false}}}
+for i, f := range files {
+	if exists(f[1]) {continue}
+	if err := os.MkdirAll(filepath.Dir(f[1]), 0755); err != nil {return err}
+	if i > 0 && !alone && strings.Contains(f[0], string(filepath.Separator)+"img"+string(filepath.Separator)) && !strings.HasPrefix(filepath.Base(f[0]), strings.TrimSuffix(filepath.Base(src), ".uic")+".") {if err := copyFile(f[0], f[1]); err != nil {return err}; continue}
+	if err := os.Rename(f[0], f[1]); err != nil {return err}}
+for d := filepath.Join(old, "img"); ; d = filepath.Dir(d) {if d == q.themaDir() || os.Remove(d) != nil && d != filepath.Join(old, "img") {break}}
+q.cidx[strings.ToLower(strings.TrimSuffix(filepath.Base(dst), ".uic"))] = dst; return nil }
 // setting: значение настройки концепта (Nord : Links) без кавычек
 func setting(path, key string) string {
 b, err := os.ReadFile(path)

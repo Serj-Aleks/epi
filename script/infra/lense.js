@@ -131,7 +131,7 @@ inpT.onblur = () => setTimeout(() => drop.innerHTML = "", 200);
 const wrap = el("twrap"); wrap.append(inpT, drop);
 box.append(pills, wrap); }
 // lensSlots: ⊞ строки концепта — ✓ отправляет Концепт.Параметр : значение в строку ввода; пустое — «Концепт.Параметр :», у связи — [] (Rank : — не таксон)
-// у связи правится только прямой список, обратный ведёт script; первая строка — имя (rename), последняя — новый параметр
+// у связи правится только прямой список, обратный ведёт script; первая строка — имя (rename), вторая — место (Locus), последняя — новый параметр
 function lensSlots(box, c) {
 const send = (k, v) => { k = k.trim(); v = v.trim(); if (!k) return; inp.value = c.name + "." + k + " :" + (v ? " " + v : linkKeys.includes(k) ? " []" : ""); document.getElementById("f").requestSubmit(); };
 const row = (key, val, inv) => { const r = el("crow");
@@ -142,6 +142,9 @@ const row = (key, val, inv) => { const r = el("crow");
   r.append(k, v, ok); if (inv && inv !== "[]") r.append(el("cinv", "← " + inv)); box.append(r); };
 { const r = el("crow"), k = el("ckey", "имя"), v = document.createElement("input"); v.className = "cval"; v.value = c.name; v.spellcheck = false;
   const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "rename"; ok.onclick = () => { const n = v.value.trim(); if (n && n !== c.name) runPred("rename [ " + c.name + " " + n + " ]"); };
+  v.onkeydown = e => { if (e.key === "Enter") ok.click(); }; r.append(k, v, ok); box.append(r); }
+if (c.locus) { const r = el("crow"), k = el("ckey", "Locus"), v = document.createElement("input"); v.className = "cval"; v.value = c.locus; v.spellcheck = false;
+  const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "record"; ok.onclick = () => send("Locus", v.value);
   v.onkeydown = e => { if (e.key === "Enter") ok.click(); }; r.append(k, v, ok); box.append(r); }
 for (const l of c.lines || []) {
   const m = l.match(/^(\p{Lu}[^\s.]*) :(?: (.*))?$/u); if (m) m[2] = m[2] || "";

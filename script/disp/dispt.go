@@ -339,7 +339,7 @@ if fb == nil {
 	env.set(frame, fb)}
 if fb.params == nil {fb.params = map[string]*binding{}}
 fb.params[format.Key(param)] = &binding{pred: toks, env: env}
-if in.OnParam != nil {in.OnParam(real, param, toks)}; return none, nil }
+if in.OnParam != nil {if err := in.OnParam(real, param, toks); err != nil {return none, err}}; return none, nil }
 // param: значение «Фрейм.Параметр» — модель параметра интерпретируется при обращении
 func (in *Interp) param(a []format.Value, env *Env) (format.Value, error) {
 frame, param, ok := splitField(a[0].Text)

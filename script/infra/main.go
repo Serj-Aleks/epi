@@ -13,7 +13,7 @@ q.in = disp.New(limit, func(string) bool { return false })
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 q.in.FrameOf("trans").Kernel["trans"] = q.trans
 q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus, "qwest": q.qwest, "clone": q.clone, "rename": q.rename, "qwizt": q.qwizt, "import": q.importC, "union": q.union}
-q.in.OnParam = func(frame, param string, pred []format.Value) {if err := q.writeConcept(frame, param, pred); err != nil {log.Print(err)}}
+q.in.OnParam = q.writeConcept
 q.in.OnFrame = func(name string, body []format.Value) {if err := q.writeBody(name, body); err != nil {log.Print(err)}}
 q.in.OnAlias = func(name, target string) {
 	if q.in.FrameOf(name) != nil {return}

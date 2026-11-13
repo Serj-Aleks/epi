@@ -177,7 +177,7 @@ func TestAliasParam(t *testing.T) {
 in := New(100, func(string) bool { return true })
 env := NewEnv(nil)
 var saved []string
-in.OnParam = func(frame, param string, pred []format.Value) {saved = append(saved, frame+"."+param+" : "+format.Canon(pred))}
+in.OnParam = func(frame, param string, pred []format.Value) error {saved = append(saved, frame+"."+param+" : "+format.Canon(pred)); return nil}
 for _, c := range []struct{ src, want string }{
 	{`X.A : 5 . X.Alias : [ Y Z ]`, "@none"},
 	{`Y.A * Z.A`, "25"},
