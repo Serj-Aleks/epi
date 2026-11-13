@@ -3,14 +3,14 @@
 function el(cls, text) { const d = document.createElement("div"); d.className = cls; if (text !== undefined) d.textContent = text; return d; }
 // scroll: лента к последней записи
 function scroll() { log.scrollTop = log.scrollHeight; }
-// addPred: предикация в ленту
-function addPred(text) { const t = el("turn"); t.append(el("pred", text)); log.append(t); scroll(); return t; }
+// addPred: предикация в ленту (replay — лента заново, прокрутка одна в конце)
+function addPred(text, replay) { const t = el("turn"); t.append(el("pred", text)); log.append(t); if (!replay) scroll(); return t; }
 // addAnswer: ответ в ленту; после nexus, clone, rename, union, qwest, qwizt и правки — панель (replay — лента заново, без панели)
 function addAnswer(t, turn, replay) {
 const a = el("ans" + (turn.error ? " err" : ""));
 a.append(el("v", turn.answer));
 const f = el("f", (turn.frames || []).join(" ")); f.title = "interpres"; a.append(f);
-t.append(a); scroll();
+t.append(a); if (!replay) scroll();
 if (replay) return;
 if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice(6));
 else if (!turn.error && /^(clone|rename|union)\s/.test(turn.pred || "")) cardShow(turn.answer);
@@ -41,9 +41,9 @@ for (const s of st.seanses || []) { const o = document.createElement("option"); 
 writable = !!st.current && !st.closed;
 document.getElementById("close").disabled = !writable;
 log.innerHTML = ""; hist = [];
-for (const turn of st.turns || []) { const t = addPred(turn.pred); addAnswer(t, turn, true); hist.push(turn.pred); }
+for (const turn of st.turns || []) { const t = addPred(turn.pred, true); addAnswer(t, turn, true); hist.push(turn.pred); }
 if (card.hidden) { const n = (st.turns || []).filter(t => !t.error && /^nexus \S+$/.test(t.pred)).pop(); if (n) cardShow(n.pred.slice(6)); }
-hpos = hist.length;
+scroll(); hpos = hist.length;
 inp.disabled = !writable;
 if (st.pending && st.pending.question) { inp.disabled = true; respond(addPred(st.pending.pred), { question: st.pending.question, options: st.pending.options }); }
 else if (writable) inp.focus(); }
