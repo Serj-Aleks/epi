@@ -59,8 +59,8 @@ form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
 .cbody h1, .cbody h2, .cbody h3 { margin: 10px 0 6px; font-size: 1.1em; }
 .cbody p { margin: 4px 0; }
 .cbody ul, .cbody ol { margin: 4px 0; padding-left: 22px; }
-.cbody pre { white-space: pre-wrap; background: var(--g2); border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; font-size: 13px; }
-.cbody code { background: var(--g2); padding: 0 3px; border-radius: 2px; }
+.cbody pre { white-space: pre-wrap; background: #e4e8ee; border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; font-size: 13px; }
+.cbody code { background: #e4e8ee; padding: 0 3px; border-radius: 2px; }
 .cbody pre code { padding: 0; }
 .cbody table { border-collapse: collapse; }
 .cbody td, .cbody th { border: 1px solid var(--line); padding: 2px 6px; }
@@ -178,7 +178,7 @@ input.ckey { width: 9ch; padding: 2px 4px; flex: none; }
 /* фон дня недели: понедельник — клетка, среда — линейка, суббота — белый, остальные — сетка своего цвета */
 body.day-monday { background-color: #fff; background-image: linear-gradient(#e1e8ed 1px, transparent 1px), linear-gradient(90deg, #e1e8ed 1px, transparent 1px); background-size: 20px 20px; }
 body.day-wednesday { background-color: #fdfae6; background-image: repeating-linear-gradient(transparent, transparent 24px, #a4b0be 25px); background-attachment: local; }
-body.day-saturday { background-color: #fff; }
+body.day-saturday { background: #fff; }
 body.day-tuesday { --day-color-rgb: 70, 130, 180; }
 body.day-thursday { --day-color-rgb: 80, 160, 100; }
 body.day-friday { --day-color-rgb: 180, 80, 100; }
