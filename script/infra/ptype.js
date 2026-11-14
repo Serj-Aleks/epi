@@ -1,4 +1,5 @@
 // script/infra/ptype.js — элементы страницы, константы и состояние панели
+// элементы страницы: лента, строка ввода, сеансы, подсказка в шапке, темы, карточка (cardBox — место карточки справа)
 const log = document.getElementById("log"), inp = document.getElementById("i");
 const sel = document.getElementById("seans"), note = document.getElementById("note");
 const tsel = document.getElementById("thema"), cardBox = document.getElementById("card");
