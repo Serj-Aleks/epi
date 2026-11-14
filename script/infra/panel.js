@@ -42,7 +42,7 @@ writable = !!st.current && !st.closed;
 document.getElementById("close").disabled = !writable;
 log.innerHTML = ""; hist = [];
 for (const turn of st.turns || []) { const t = addPred(turn.pred, true); addAnswer(t, turn, true); hist.push(turn.pred); }
-if (card.hidden) { const n = (st.turns || []).filter(t => !t.error && /^nexus \S+$/.test(t.pred)).pop(); if (n) cardShow(n.pred.slice(6)); }
+if (cardBox.hidden) { const n = (st.turns || []).filter(t => !t.error && /^nexus \S+$/.test(t.pred)).pop(); if (n) cardShow(n.pred.slice(6)); }
 scroll(); hpos = hist.length;
 inp.disabled = !writable;
 if (st.pending && st.pending.question) { inp.disabled = true; respond(addPred(st.pending.pred), { question: st.pending.question, options: st.pending.options }); }

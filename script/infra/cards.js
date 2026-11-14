@@ -9,7 +9,7 @@ function pBackBtn() { const b = document.createElement("button"); b.textContent 
 // cardShow: открыть карточку концепта
 function cardShow(name, back) { if (!back) pPush({ k: "c", a: name }); cardName = name; qwestKey = null; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
 // cardHide: закрыть панель
-function cardHide() { cardName = null; qwestKey = null; pstack = []; card.hidden = true; card.innerHTML = ""; cardCss(""); favicon(""); }
+function cardHide() { cardName = null; qwestKey = null; pstack = []; cardBox.hidden = true; cardBox.innerHTML = ""; cardCss(""); favicon(""); }
 // favicon: картинка вкладки браузера — концепта открытой карточки
 function favicon(url) { let l = document.querySelector("link[rel=icon]"); if (!l) { l = document.createElement("link"); l.rel = "icon"; document.head.append(l); } l.href = url || "data:,"; }
 // cardCss: стиль концепта (спутник css) — body, html, :root относятся к карточке, остальное внутри неё
@@ -76,7 +76,7 @@ try { c = await api("/api/card?name=" + encodeURIComponent(name)); } catch (e) {
 if (!c.found) { note.textContent = "нет концепта " + name; return; }
 if (!cardName || name.toLowerCase() !== cardName.toLowerCase()) return;
 cardName = c.name;
-const keep = card.dataset.name === c.name ? card.scrollTop : 0; card.dataset.name = c.name;
+const keep = cardBox.dataset.name === c.name ? cardBox.scrollTop : 0; cardBox.dataset.name = c.name;
 const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
 head.append(pBackBtn(), ic, el("cname", c.name));
 if (c.color) { head.style.borderBottom = "3px solid " + c.color; head.querySelector(".cname").style.color = c.color; }
@@ -104,4 +104,4 @@ if (lens.rank && cardRank(c) > 0) { const box = el("clens"); root.append(box); a
 if (lens.tabs && cardSet(c, "Tabs")) { const box = el("clens"); root.append(box); await lensTabs(box, c); }
 if (lens.slots) { const box = el("clens"); lensSlots(box, c); root.append(box); }
 if (gen !== cardGen) return;
-cardCss(css); card.hidden = false; card.replaceChildren(...root.childNodes); card.scrollTop = keep; }
+cardCss(css); cardBox.hidden = false; cardBox.replaceChildren(...root.childNodes); cardBox.scrollTop = keep; }

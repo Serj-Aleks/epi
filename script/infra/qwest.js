@@ -10,13 +10,13 @@ async function qwestOpen(qs, all) {
 let rs;
 try { rs = await api((all ? "/api/qwizt?q=" : "/api/qwest?q=") + encodeURIComponent(qs)); } catch (e) { return; }
 if ((all ? "\u0001" : "") + qs !== qwestKey) return;
-rs = rs || []; card.hidden = false; card.innerHTML = ""; card.scrollTop = 0; card.dataset.name = ""; cardCss("");
+rs = rs || []; cardBox.hidden = false; cardBox.innerHTML = ""; cardBox.scrollTop = 0; cardBox.dataset.name = ""; cardCss("");
 const ts = qs.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
 const head = el("chead"), st = pstack[pstack.length - 1] || {}; head.append(pBackBtn(), el("cname", (all ? "qwizt " : "qwest ") + (qs ? "«" + qs + "»" : "—") + " · " + rs.length));
 const flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
 const tools = el("ctools"), x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
-head.append(flt, tools); card.append(head);
-const list = el("clens qlist"); card.append(list);
+head.append(flt, tools); cardBox.append(head);
+const list = el("clens qlist"); cardBox.append(list);
 const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
   const shown = rs.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
   if (!shown.length) { list.append(el("cempty", "—")); return; }
@@ -32,20 +32,20 @@ function themeShow(back) { if (!back) pPush({ k: "t", a: "", f: "" }); cardName 
 async function themeOpen() {
 const ts = await api("/api/themes").catch(() => []), rs = last && last.theme ? await api("/api/qwest?q=").catch(() => []) : [];
 if (qwestKey !== "\u0000t") return;
-card.hidden = false; card.innerHTML = ""; card.scrollTop = 0; card.dataset.name = ""; cardCss("");
+cardBox.hidden = false; cardBox.innerHTML = ""; cardBox.scrollTop = 0; cardBox.dataset.name = ""; cardCss("");
 const st = pstack[pstack.length - 1] || {}, head = el("chead"), ic = el("cicon"), cur = ts.find(t => t.name === (last && last.theme));
 if (cur) nxIcon(ic, cur.icon);
 head.append(pBackBtn(), ic, el("cname", (last && last.theme) || "—"));
-const tools = el("ctools"), x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x); head.append(tools); card.append(head);
+const tools = el("ctools"), x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x); head.append(tools); cardBox.append(head);
 const tl = el("clens thlist");
 ts.forEach(t => { const row = el("throw" + (t.name === (last && last.theme) ? " on" : "")), ti = el("cicon"); nxIcon(ti, t.icon);
   const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.textContent = t.name; a.onclick = async e => { e.preventDefault(); if (t.name !== last.theme) { await act("/api/thema/open", { name: t.name }); themeShow(); } };
   row.append(ti, a, el("thmeta", `концептов ${t.concepts} · таксонов ${t.taxa} · спутников ${t.sats} · сеансов ${t.seans}` + (t.last ? ` · последний ${t.last}` : ""))); tl.append(row); });
-card.append(tl);
+cardBox.append(tl);
 const fh = el("thfilter"), flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
 const qa = document.createElement("button"); qa.textContent = "∀"; qa.title = "qwizt"; qa.onclick = () => { const v = flt.value.trim(); if (v) runPred("qwizt \"" + v.replace(/"/g, "") + "\""); };
-fh.append(flt, qa, el("thmeta", String(rs.length))); card.append(fh);
-const list = el("clens qlist"); card.append(list);
+fh.append(flt, qa, el("thmeta", String(rs.length))); cardBox.append(fh);
+const list = el("clens qlist"); cardBox.append(list);
 const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
   const shown = rs.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
   if (!shown.length) { list.append(el("cempty", "—")); return; }

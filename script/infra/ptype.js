@@ -1,7 +1,7 @@
 // script/infra/ptype.js — элементы страницы, константы и состояние панели
 const log = document.getElementById("log"), inp = document.getElementById("i");
 const sel = document.getElementById("seans"), note = document.getElementById("note");
-const tsel = document.getElementById("thema"), card = document.getElementById("card");
+const tsel = document.getElementById("thema"), cardBox = document.getElementById("card");
 // граф nexus: размеры узлов и промежутков
 const NXG = { padding: 24, nodeW: 80, nodeH: 40, vSpacing: 10, hSpacing: 32, groupGap: 24, collectorGap: 24 };
 const SVGNS = "http://www.w3.org/2000/svg";
