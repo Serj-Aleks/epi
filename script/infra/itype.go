@@ -84,3 +84,5 @@ type gnode struct {
 type dicts struct{ obj, atr map[string]string }
 // reImg: картинка в контенте — md ![…](файл) или html <img src="файл">
 var reImg = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)\)|<img[^>]*\ssrc="([^"]+)"`)
+// sysParams: параметры, которые понимает система — связи, роль и вид карточки, оси и списки графа, место
+var sysParams = []string{"Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix", "Alias", "Rank", "Tabs", "I-sort", "Process", "I-process", "Content", "Color", "Defs", "Deep", "N-west", "West", "S-west", "Nord", "Graph", "List", "Locus"}

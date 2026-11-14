@@ -94,3 +94,10 @@ m[strconv.Itoa(next)] = a + " " + p + " " + b
 out, _ := json.MarshalIndent(m, "", "  "); return os.WriteFile(jp, out, 0644) }
 // sitNum: номер ситуации по ключу
 func sitNum(k string) (int, bool) {n, err := strconv.Atoi(k); return n, err == nil }
+// params: имена параметров для подбора в ⊞ — системные и те, что уже есть в концептах темы, в алфавите
+func (q *Medium) params() []string {
+seen, out := map[string]bool{}, []string{}
+add := func(k string) {if l := strings.ToLower(k); !seen[l] {seen[l] = true; out = append(out, k)}}
+for _, k := range sysParams {add(k)}
+for _, p := range q.cidx {if b, err := os.ReadFile(p); err == nil {ls, _ := conceptLines(b); for _, l := range ls {if isParam(l) {add(lineKey(l))}}}}
+sort.Slice(out, func(i, j int) bool {return strings.ToLower(out[i]) < strings.ToLower(out[j])}); return out }

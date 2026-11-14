@@ -43,6 +43,7 @@ if req.URL.Path == "/api/qwest" {json.NewEncoder(w).Encode(q.qwestFind(req.URL.Q
 if req.URL.Path == "/api/find" {json.NewEncoder(w).Encode(q.findIn(req.URL.Query().Get("name"), req.URL.Query().Get("q"))); return}
 if req.URL.Path == "/api/qwizt" {json.NewEncoder(w).Encode(q.qwizFind(req.URL.Query().Get("q"))); return}
 if req.URL.Path == "/api/taxa" {json.NewEncoder(w).Encode(q.taxa()); return}
+if req.URL.Path == "/api/params" {json.NewEncoder(w).Encode(q.params()); return}
 if req.URL.Path == "/api/dict" {json.NewEncoder(w).Encode(q.dict(req.URL.Query().Get("name"))); return}
 if req.URL.Path == "/api/themes" {json.NewEncoder(w).Encode(q.themesInfo()); return}
 if req.URL.Path == "/api/themeicon" {n := req.URL.Query().Get("name"); if _, ok := q.themeExists(n); !ok || q.themeIcon(n) == "" {http.NotFound(w, req); return}; w.Header().Del("Content-Type"); http.ServeFile(w, req, q.themeIcon(n)); return}
