@@ -35,8 +35,6 @@ for _, m := range reRefs.FindAllStringSubmatch(reFence.ReplaceAllString(text, ""
 	n := strings.TrimSpace(m[1])
 	if k := strings.ToLower(n); n != "" && !seen[k] {seen[k] = true; ns = append(ns, n)}}
 sort.Strings(ns)
-old, _ := readLink(q.conceptFile(name), "Links")
-if len(old) == len(ns) {same := true; for _, n := range ns {if !has(old, n) {same = false}}; if same {return nil}}
 var pred []format.Value
 for _, n := range ns {pred = append(pred, format.Value{Kind: format.Term, Text: n})}; return q.writeLink(conceptName(q.conceptFile(name), ""), "Links", pred, q.themaDir(), true) }
 // transcl: трансклюзии концепта по файлу p — из спутников md, html, json (в стилях и svg их нет)

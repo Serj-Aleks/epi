@@ -37,7 +37,7 @@ func without(ns []string, n string) []string {
 var out []string
 for _, x := range ns {if !format.SameTerm(x, n) {out = append(out, x)}}; return out }
 // writeLink: прямой список связи у frame, у целей обратный — добавленные получают frame, убранные теряют
-// strict — только у существующих целей (ссылки контента)
+// strict — только у существующих целей (ссылки контента); цель без frame в обратном получает его и при неизменном прямом
 func (q *Medium) writeLink(frame, param string, pred []format.Value, root string, strict bool) error {
 path := q.conceptFile(frame)
 old, inv := readLink(path, param)
@@ -51,13 +51,12 @@ for _, t := range old {
 	td, ti := readLink(tp, param)
 	if err := writeLists(tp, param, td, without(ti, frame)); err != nil {return err}}
 for _, t := range d {
-	if has(old, t) {continue}
 	tp := q.targetPath(root, t)
 	if strict && !exists(tp) {continue}
 	q.known(tp)
 	td, ti := readLink(tp, param)
-	if !has(ti, frame) {ti = append(ti, frame)}
-	if err := writeLists(tp, param, td, ti); err != nil {return err}}; return nil }
+	if has(ti, frame) {continue}
+	if err := writeLists(tp, param, td, append(ti, frame)); err != nil {return err}}; return nil }
 // directOnly: строка связи без обратного списка (для контекста фрейма)
 func directOnly(l string) string {
 vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))

@@ -1,6 +1,6 @@
 // epi/script/infra/cncpt.go
 package main
-import ("fmt"; "os"; "path/filepath"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
+import ("fmt"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
 // файлы концептов: модель — одна строка, ключей и индексов нет; путь — из букв имени: <тема>/<буквы>/<имя>.uic
 //
 //	интерпретатор  lexic/preposit/A/R/I/F/M/arifm.uic
@@ -78,7 +78,7 @@ var out []string
 for _, l := range lines {if isParam(l) {out = append(out, l)}}
 preds, err := disp.Split(format.Canon(body))
 if err != nil {return err}
-q.known(path); return writeLines(path, append(out, preds...)) }
+if err := writeLines(path, append(out, preds...)); err != nil {return err}; q.known(path); return nil }
 // loadConcepts: системные концепты (lexic/constans) и концепты темы в контекст; концепт темы дополняет и переопределяет системный
 func (q *Medium) loadConcepts() error {
 on, of := q.in.OnParam, q.in.OnFrame
@@ -104,9 +104,20 @@ func (q *Medium) loadConceptsIn(root string) error {return filepath.WalkDir(root
 	if len(body) > 0 {if _, err := q.in.Run(name+" : [ "+strings.Join(body, " . ")+" ]", q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
 // conceptName: имя концепта из имени файла с прописной первой буквой (К/В/А/Д/Р/А/Т/квадрат.uic → Квадрат)
 func conceptName(path, root string) string { return capital(strings.TrimSuffix(filepath.Base(path), ".uic")) }
-// known: файл концепта темы в указатель (новый концепт виден сразу), файлы лексикона — нет
+// known: файл концепта темы в указатель (новый концепт виден сразу, ссылки на него из контента — в его обратный Links), файлы лексикона — нет
 func (q *Medium) known(path string) {
-if q.theme != "" && strings.HasPrefix(path, q.themaDir()+string(filepath.Separator)) {q.cidx[strings.ToLower(strings.TrimSuffix(filepath.Base(path), ".uic"))] = path} }
+if q.theme == "" || !strings.HasPrefix(path, q.themaDir()+string(filepath.Separator)) {return}
+k := strings.ToLower(strings.TrimSuffix(filepath.Base(path), ".uic"))
+_, was := q.cidx[k]; q.cidx[k] = path
+if !was {q.backRefs(path)} }
+// backRefs: новый концепт получает в обратный список Links тех, кто уже ссылался на него в контенте ([[Имя]] до его появления)
+func (q *Medium) backRefs(path string) {
+name := conceptName(path, ""); var add []string
+for _, p := range q.cidx {if p == path {continue}; d, _ := readLink(p, "Links"); for _, n := range d {if strings.EqualFold(n, name) {add = append(add, conceptName(p, ""))}}}
+if len(add) == 0 {return}
+d, i := readLink(path, "Links")
+for _, n := range add {if !has(i, n) {i = append(i, n)}}
+sort.Strings(i); writeLists(path, "Links", d, i) }
 // locus: место концепта темы — папка его файла от папки темы (N/U/M); у концепта лексикона — пусто
 func (q *Medium) locus(p string) string {
 rel, err := filepath.Rel(q.themaDir(), filepath.Dir(p))
