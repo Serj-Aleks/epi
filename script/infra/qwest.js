@@ -28,17 +28,18 @@ const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().spl
 flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw(); }
 // themeShow: карточка темы — картинка темы в шапке
 function themeShow(back) { if (!back) pPush({ k: "t", a: "", f: "" }); cardName = null; qwestKey = "\u0000t"; clearTimeout(cardTimer); cardTimer = setTimeout(themeOpen, 0); }
-// themeOpen: сверху все темы (щелчок — переключить и открыть её карточку), ниже концепты текущей темы с фильтром (⬡ — таксон, ▪ — концепт)
+// themeOpen: сверху текущая тема, щелчок по иконке в шапке — все темы (щелчок по теме — переключить); ниже концепты текущей темы с фильтром (⬡ — таксон, ▪ — концепт)
 async function themeOpen() {
 const ts = await api("/api/themes").catch(() => []), rs = last && last.theme ? await api("/api/qwest?q=").catch(() => []) : [];
 if (qwestKey !== "\u0000t") return;
 cardBox.hidden = false; cardBox.innerHTML = ""; cardBox.scrollTop = 0; cardBox.dataset.name = ""; cardCss("");
 const st = pstack[pstack.length - 1] || {}, head = el("chead"), ic = el("cicon"), cur = ts.find(t => t.name === (last && last.theme));
 if (cur) nxIcon(ic, cur.icon);
+ic.title = st.all ? "текущая тема" : "все темы"; ic.onclick = () => { st.all = !st.all; themeOpen(); };
 head.append(pBackBtn(), ic, el("cname", (last && last.theme) || "—"));
 const tools = el("ctools"), x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x); head.append(tools); cardBox.append(head);
 const tl = el("clens thlist");
-ts.forEach(t => { const row = el("throw" + (t.name === (last && last.theme) ? " on" : "")), ti = el("cicon"); nxIcon(ti, t.icon);
+ts.filter(t => st.all || t.name === (last && last.theme)).forEach(t => { const row = el("throw" + (t.name === (last && last.theme) ? " on" : "")), ti = el("cicon"); nxIcon(ti, t.icon);
   const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.textContent = t.name; a.onclick = async e => { e.preventDefault(); if (t.name !== last.theme) { await act("/api/thema/open", { name: t.name }); themeShow(); } };
   row.append(ti, a, el("thmeta", `концептов ${t.concepts} · таксонов ${t.taxa} · спутников ${t.sats} · сеансов ${t.seans}` + (t.last ? ` · последний ${t.last}` : ""))); tl.append(row); });
 cardBox.append(tl);
