@@ -1,8 +1,9 @@
 // epi/script/infra/trans.go
 package main
-import ("os"; "path/filepath"; "strings"; "unicode"; "unicode/utf8"; "epi/script/format")
+import ("os"; "path/filepath"; "strconv"; "strings"; "unicode"; "unicode/utf8"; "epi/script/format")
 // транслятор trans "текст": слова по словарям — preposit, xdict (шум), defnt (определение), atrbt (атрибуты),
-// объекты — концепты темы (формы слова — Alias); результат — блок предикации, нераспознанное — вопрос с выбором
+// объекты — концепты темы (формы слова — Alias); результат — блок предикации; нераспознанное в одном предложении — вопрос с выбором,
+// в нескольких — отметка ?слово в результате и запись в словарь нераспознанных incog темы
 // transTokens: слова (буквы, цифры, дефис внутри слова), тире и конец предложения
 func transTokens(text string) []string {
 var ts []string
@@ -17,6 +18,18 @@ for _, r := range text {
 flush()
 var out []string
 for _, t := range ts {if t != "" {out = append(out, t)}}; return out }
+// transSentences: предложения текста — те же концы, что у transTokens
+func transSentences(text string) []string {
+var out []string
+for _, s := range strings.FieldsFunc(text, func(r rune) bool {return r == '.' || r == '!' || r == '?' || r == ';'}) {if s = strings.TrimSpace(s); s != "" {out = append(out, s)}}; return out }
+// incog: нераспознанное слово w в словаре prtcl/incog.uic темы — «Слово : [ счётчик "первое предложение" ]»
+func (q *Medium) incog(w, sentence string) error {
+path := filepath.Join(q.themaDir(), "prtcl", "incog.uic")
+n, s := 0, sentence
+if b, err := os.ReadFile(path); err == nil {
+	ls, _ := conceptLines(b)
+	for _, l := range ls {if isParam(l) && format.SameTerm(lineKey(l), capital(w)) {if vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:])); err == nil && len(vs) == 1 && len(vs[0].Items) == 2 {n, _ = strconv.Atoi(vs[0].Items[0].Text); s = vs[0].Items[1].Text}}}}
+return writeParam(path, capital(w), []format.Value{{Kind: format.Array, Items: []format.Value{{Kind: format.Integer, Text: strconv.Itoa(n + 1)}, {Kind: format.String, Text: s}}}}) }
 // dictFile: слово в словаре класса lexic/<класс> — путь из букв, как у концептов
 func (q *Medium) dictFile(class, word string) string { return letterPath(filepath.Join(q.dir, "lexic", class), word) }
 // conceptIndex: слово → имя концепта в папке root (имя — из файла, синонимы — Alias)
@@ -77,6 +90,8 @@ var out []format.Value
 var attrs []string
 lastObj := -1
 skip := map[string]bool{}
+sents := transSentences(b.Text)
+ask, si, dot := len(sents) < 2, 0, false
 // end: конец предложения — атрибуты без следующего объекта к предыдущему («Угол — прямой» → Угол.Прямой); разделитель « . »
 end := func() {
 	if len(attrs) > 0 && lastObj >= 0 {out[lastObj].Text += "." + strings.Join(attrs, "."); out[lastObj].Kind = format.Field}
@@ -84,8 +99,14 @@ end := func() {
 	if n := len(out); n > 0 && !(out[n-1].Kind == format.Op && out[n-1].Text == ".") {out = append(out, format.Value{Kind: format.Op, Text: "."})}
 	attrs, lastObj = nil, -1}
 for _, w := range transTokens(b.Text) {
-	if w == "." {end(); continue}
+	if w == "." {end(); if !dot {si++}; dot = true; continue}
+	dot = false
 	c, name := q.classify(w, d)
+	if c == "" && !ask {
+		sent := ""
+		if si < len(sents) {sent = sents[si]}
+		if q.theme != "" {q.incog(w, sent)}
+		out = append(out, format.Value{Kind: format.Term, Text: "?" + w}); continue}
 	if c == "" && !skip[w] {
 		ans := q.choose("слово «"+w+"» не распознано: к какому словарю отнести? ("+q.theme+" — объект, концепт темы; atrbt — атрибут; ✕ — пропустить)", opts)
 		switch ans {
