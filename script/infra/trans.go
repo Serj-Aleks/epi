@@ -76,7 +76,7 @@ case "preposit", "xdict", "defnt":
 	if err := writeLines(q.dictFile(answer, w), nil); err != nil {return "", ""}; return answer, ""}
 if name, ok := strings.CutPrefix(answer, "thema:"); ok && q.theme != "" {
 	name = capital(strings.TrimSpace(name))
-	if learnName(q.themaDir(), w, name, d.obj) {return "thema", name}}
+	if learnName(q.themaDir(), w, name, d.obj) {q.indexConcepts(); return "thema", name}}
 if name, ok := strings.CutPrefix(answer, "atrbt:"); ok {
 	name = capital(strings.TrimSpace(name))
 	if learnName(filepath.Join(q.dir, "lexic", "atrbt"), w, name, d.atr) {return "atrbt", name}}; return "", "" }
