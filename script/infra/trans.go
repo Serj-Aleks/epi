@@ -1,7 +1,7 @@
 // epi/script/infra/trans.go
 package main
 import ("encoding/json"; "fmt"; "os"; "path/filepath"; "strconv"; "strings"; "unicode"; "unicode/utf8"; "epi/script/format")
-// транслятор trans "текст": слова по словарям — preposit, xdict (шум), defnt (определение), atrbt (атрибуты),
+// транслятор trans "текст": слова по словарям — preposit, xdict (шум), defnt (определение), numer (числительные: слово : число),
 // объекты — концепты темы (формы слова — Alias); результат — блок предикации; нераспознанное в одном предложении — вопрос с выбором,
 // в нескольких — отметка ?слово в результате и запись в словарь нераспознанных incog темы
 // transTokens: слова (буквы, цифры, дефис внутри слова), тире и конец предложения
@@ -49,13 +49,13 @@ filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {continue}
 		for _, v := range vs {
 			if v.Kind == format.Array {for _, it := range v.Items {idx[strings.ToLower(it.Text)] = name}} else {idx[strings.ToLower(v.Text)] = name}}}; return nil}); return idx }
-// classify: класс слова по словарям; для объекта и атрибута — имя концепта
+// classify: класс слова по словарям; для объекта — имя концепта, для числительного — число
 func (q *Medium) classify(w string, d dicts) (string, string) {
 if w == "—" {return "defnt", ""}
 if r, _ := utf8.DecodeRuneInString(w); unicode.IsDigit(r) {return "number", ""}
 for _, c := range []string{"xdict", "defnt", "preposit"} {if exists(q.dictFile(c, w)) {return c, ""}}
 for _, f := range q.in.Frames {if _, ok := f.Kernel[w]; ok {return "preposit", ""}}
-if n, ok := d.atr[w]; ok {return "atrbt", n}
+if p := q.dictFile("numer", w); exists(p) {if l, err := os.ReadFile(p); err == nil {if _, n, ok := strings.Cut(string(l), ":"); ok {return "numer", strings.TrimSpace(n)}}}
 if n, ok := d.obj[w]; ok {return "thema", n}; return "", "" }
 // learnName: слово w — концепт name в папке root: совпало с именем — новый концепт, иначе синоним (Alias)
 func learnName(root, w, name string, idx map[string]string) bool {
@@ -70,7 +70,7 @@ al = append(al, format.Value{Kind: format.Term, Text: w})
 if err := writeParam(path, "Alias", []format.Value{{Kind: format.Array, Items: al}}); err != nil {return false}
 idx[w], idx[strings.ToLower(name)] = name, name; return true }
 // learn: ответ пополняет словарь — preposit, xdict, defnt: слово в словарь; preposit:п — синоним препозиции п (слово : п),
-// само слово — новая препозиция, тире — знак определения (defnt); thema:Имя — объект; atrbt:Имя — атрибут
+// само слово — новая препозиция, тире — знак определения (defnt); thema:Имя — объект; numer:N — числительное (слово : N)
 func (q *Medium) learn(w, answer string, d dicts) (string, string) {
 switch answer {
 case "preposit", "xdict", "defnt":
@@ -84,16 +84,16 @@ if t, ok := strings.CutPrefix(answer, "preposit:"); ok {
 if name, ok := strings.CutPrefix(answer, "thema:"); ok && q.theme != "" {
 	name = capital(strings.TrimSpace(name))
 	if learnName(q.themaDir(), w, name, d.obj) {q.indexConcepts(); return "thema", name}}
-if name, ok := strings.CutPrefix(answer, "atrbt:"); ok {
-	name = capital(strings.TrimSpace(name))
-	if learnName(filepath.Join(q.dir, "lexic", "atrbt"), w, name, d.atr) {return "atrbt", name}}; return "", "" }
+if n, ok := strings.CutPrefix(answer, "numer:"); ok {
+	n = strings.TrimSpace(n)
+	if vs, err := format.Parse(n); err != nil || len(vs) != 1 || vs[0].Kind != format.Integer && vs[0].Kind != format.Decimal {return "", ""}
+	if err := writeLines(q.dictFile("numer", w), []string{w + " : " + n}); err != nil {return "", ""}; return "numer", n}; return "", "" }
 // trans: ядро интерпретатора trans "текст" → [ предикация ]; атрибут — параметр следующего объекта, иначе предыдущего;
-// объект перед объектом без препозиции — атрибут второго («прямыми углами» → Угол.Прямой)
-// («прямыми углами» → Угол.Прямой)
+// объект перед объектом без препозиции — атрибут второго («прямыми углами» → Угол.Прямой); числительное — число перед объектом
 func (q *Medium) trans(a, b *format.Value) (format.Value, bool) {
 if a != nil || b == nil || b.Kind != format.String || q.choose == nil {return format.Value{}, false}
-d := dicts{obj: conceptIndex(q.themaDir()), atr: conceptIndex(filepath.Join(q.dir, "lexic", "atrbt"))}
-opts := []string{"preposit", q.theme, "xdict", "✕"}
+d := dicts{obj: conceptIndex(q.themaDir())}
+opts := []string{"preposit", q.theme, "numer", "xdict", "✕"}
 var out []format.Value
 var attrs []string
 lastObj, seg := -1, 0
@@ -117,10 +117,9 @@ for _, w := range transTokens(b.Text) {
 		if q.theme != "" {q.incog(w, sent)}
 		out = append(out, format.Value{Kind: format.Term, Text: "?" + w}); continue}
 	if c == "" && !skip[w] {
-		ans := q.choose("слово «"+w+"» не распознано: к какому словарю отнести? ("+q.theme+" — объект, концепт темы; preposit — препозиция или синоним; xdict — шум; ✕ — пропустить)", opts)
+		ans := q.choose("слово «"+w+"» не распознано: к какому словарю отнести? ("+q.theme+" — объект, концепт темы; preposit — препозиция или синоним; numer — числительное; xdict — шум; ✕ — пропустить)", opts)
 		switch ans {
-		case q.theme: ans = "thema:" + capital(w)
-		case "atrbt": ans = "atrbt:" + capital(w)}
+		case q.theme: ans = "thema:" + capital(w)}
 		if c, name = q.learn(w, ans, d); c == "" {skip[w] = true}}
 	switch c {
 	case "thema":
@@ -128,7 +127,7 @@ for _, w := range transTokens(b.Text) {
 		out = append(out, format.Value{Kind: format.Term, Text: strings.Join(append([]string{name}, attrs...), ".")})
 		if len(attrs) > 0 {out[len(out)-1].Kind = format.Field}
 		attrs, lastObj = nil, len(out)-1
-	case "atrbt": attrs = append(attrs, name)
+	case "numer": if vs, err := format.Parse(name); err == nil && len(vs) == 1 {out = append(out, vs[0])}
 	case "preposit": out = append(out, format.Value{Kind: format.Term, Text: w})
 	case "defnt": out = append(out, format.Value{Kind: format.Op, Text: ":"})
 	case "number": if vs, err := format.Parse(w); err == nil && len(vs) == 1 {out = append(out, vs[0])}}}

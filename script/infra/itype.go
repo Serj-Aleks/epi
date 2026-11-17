@@ -80,8 +80,8 @@ type gnode struct {
 	Type      string  `json:"type,omitempty"`
 	Theme     string  `json:"theme,omitempty"`
 	Neighbors []gnode `json:"neighbors,omitempty"`}
-// dicts: указатели словарей с формами слов — объекты темы и атрибуты (lexic/atrbt)
-type dicts struct{ obj, atr map[string]string }
+// dicts: указатель словаря с формами слов — объекты темы
+type dicts struct{ obj map[string]string }
 // reImg: картинка в контенте — md ![…](файл) или html <img src="файл">
 var reImg = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)\)|<img[^>]*\ssrc="([^"]+)"`)
 // sysParams: параметры, которые понимает система — связи, роль и вид карточки, оси и списки графа, место

@@ -165,7 +165,7 @@ if p := letterPath(filepath.Join(q.dir, "lexic", "radix"), name); exists(p) {ret
 func (q *Medium) iconFile(name string) string {
 if name == "" || strings.ContainsAny(name, "/\\") {return ""}
 roots := []string{q.themaDir()}
-for _, c := range []string{"radix", "preposit", "atrbt", "constans"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
+for _, c := range []string{"radix", "preposit", "constans"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
 base := strings.ToLower(name)
 for _, r := range roots {
 	dir := filepath.Dir(letterPath(r, name))
