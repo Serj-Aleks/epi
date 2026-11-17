@@ -1,6 +1,6 @@
 // epi/script/infra/main.go
 package main
-import ("encoding/json"; "flag"; "log"; "net/http"; "os"; "path/filepath"; "strings"; "epi/script/disp"; "epi/script/format")
+import ("encoding/json"; "flag"; "log"; "net/http"; "os"; "path/filepath"; "runtime"; "strings"; "time"; "epi/script/disp"; "epi/script/format")
 // сервер панели — интерфейс среды: строка предикаций в браузере, ответ диспетчера — следующей строкой диалога
 // данные в папке script: lexic — системный лексикон, thema — темы автора (концепты и протокол prtcl)
 // запуск из папки script: go run ./infra [-addr localhost:5832]
@@ -24,10 +24,20 @@ if err := q.startTheme(); err != nil {return nil, err}; return q, nil }
 // serve: запросы панели /api/…; Choice — ответ на вопрос с выбором, Ext — тип спутника
 // situation: Text — «объект препозиция объект»; sat: GET читает спутник, POST пишет; img — <папка концепта>/img/<файл>, без name — <тема>/img/<файл>
 // icon с theme — концепт другой темы (qwizt); в новой теме сразу открывается сеанс; закрытый сеанс — файл только для чтения
+// запрос дольше 10 с — стеки всех горутин в hang.txt папки script (диагностика зависания)
 func (q *Medium) serve(w http.ResponseWriter, req *http.Request) {
 w.Header().Set("Content-Type", "application/json")
 q.mu.Lock()
 defer q.mu.Unlock()
+done := make(chan struct{})
+defer close(done)
+go func(path string) {select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		buf := make([]byte, 1<<20)
+		n := runtime.Stack(buf, true)
+		os.WriteFile(filepath.Join(q.dir, "hang.txt"), append([]byte(time.Now().Format("2006-01-02 15:04:05")+" "+path+"\n"), buf[:n]...), 0644)
+		log.Printf("запрос %s висит больше 10 с — стеки в hang.txt", path)}}(req.URL.Path)
 var body struct {
 	Text   string `json:"text"`
 	To     string `json:"to"`
