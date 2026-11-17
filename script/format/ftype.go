@@ -58,6 +58,8 @@ var Operators = map[string]bool{"+": true, "-": true, "*": true, "/": true, "//"
 	"&": true, "|": true}
 // termRe: терм начинается с буквы любого алфавита
 const termRe = `\pL[\pL\pN_?!*+~&|-]*`
+// rootDash: корень словообразования с тире в начале — только внутри [ ] (Кислород.Radix : [ Кисл- -Род- ])
+var rootDash = regexp.MustCompile(`^-\p{Lu}[\pL\pN_?!*+~&|-]*$`)
 // atoms: виды атомов и их шаблоны
 var atoms = []struct {
 	kind Kind
@@ -83,11 +85,12 @@ var atoms = []struct {
 	{Path, regexp.MustCompile(`^` + termRe + `(/` + termRe + `)+$`)},
 	{GetTerm, regexp.MustCompile(`^:` + termRe + `$`)},
 	{Term, regexp.MustCompile(`^` + termRe + `$`)},}
-// parser: текст и место разбора
+// parser: текст и место разбора; in — закрывающая скобка текущего блока (внутри [ ] корень может начинаться с тире: -Род-)
 type parser struct {
 	src       []rune
 	pos       int
-	line, col int}
+	line, col int
+	in        rune}
 // Entry: определение объектного блока — ключ и значение (одно или несколько)
 type Entry struct {
 	Key   Value
