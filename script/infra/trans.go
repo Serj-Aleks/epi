@@ -32,9 +32,9 @@ if b, err := os.ReadFile(path); err == nil {
 return writeParam(path, capital(w), []format.Value{{Kind: format.Array, Items: []format.Value{{Kind: format.Integer, Text: strconv.Itoa(n + 1)}, {Kind: format.String, Text: s}}}}) }
 // dictFile: слово в словаре класса lexic/<класс> — путь из букв, как у концептов
 func (q *Medium) dictFile(class, word string) string { return letterPath(filepath.Join(q.dir, "lexic", class), word) }
-// conceptIndex: слово → имя концепта в папке root (имя — из файла, синонимы — Alias)
+// conceptIndex: слово → имя концепта в папке root (имя — из файла, синонимы — Alias); своё имя концепта важнее чужого синонима
 func conceptIndex(root string) map[string]string {
-idx := map[string]string{}
+idx, al := map[string]string{}, map[string]string{}
 filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 	if err != nil {return nil}
 	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
@@ -48,7 +48,8 @@ filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 		if err != nil {continue}
 		for _, v := range vs {
-			if v.Kind == format.Array {for _, it := range v.Items {idx[strings.ToLower(it.Text)] = name}} else {idx[strings.ToLower(v.Text)] = name}}}; return nil}); return idx }
+			if v.Kind == format.Array {for _, it := range v.Items {al[strings.ToLower(it.Text)] = name}} else {al[strings.ToLower(v.Text)] = name}}}; return nil})
+for w, n := range al {if _, ok := idx[w]; !ok {idx[w] = n}}; return idx }
 // classify: класс слова по словарям; для объекта — имя концепта, для числительного — число
 func (q *Medium) classify(w string, d dicts) (string, string) {
 if w == "—" {return "defnt", ""}
