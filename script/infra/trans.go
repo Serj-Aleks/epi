@@ -87,7 +87,8 @@ if name, ok := strings.CutPrefix(answer, "thema:"); ok && q.theme != "" {
 if name, ok := strings.CutPrefix(answer, "atrbt:"); ok {
 	name = capital(strings.TrimSpace(name))
 	if learnName(filepath.Join(q.dir, "lexic", "atrbt"), w, name, d.atr) {return "atrbt", name}}; return "", "" }
-// trans: ядро интерпретатора trans "текст" → [ предикация ]; атрибут — параметр следующего объекта, иначе предыдущего
+// trans: ядро интерпретатора trans "текст" → [ предикация ]; атрибут — параметр следующего объекта, иначе предыдущего;
+// объект перед объектом без препозиции — атрибут второго («прямыми углами» → Угол.Прямой)
 // («прямыми углами» → Угол.Прямой)
 func (q *Medium) trans(a, b *format.Value) (format.Value, bool) {
 if a != nil || b == nil || b.Kind != format.String || q.choose == nil {return format.Value{}, false}
@@ -123,6 +124,7 @@ for _, w := range transTokens(b.Text) {
 		if c, name = q.learn(w, ans, d); c == "" {skip[w] = true}}
 	switch c {
 	case "thema":
+		if lastObj >= 0 && lastObj == len(out)-1 {attrs = append(strings.Split(out[lastObj].Text, "."), attrs...); out = out[:lastObj]}
 		out = append(out, format.Value{Kind: format.Term, Text: strings.Join(append([]string{name}, attrs...), ".")})
 		if len(attrs) > 0 {out[len(out)-1].Kind = format.Field}
 		attrs, lastObj = nil, len(out)-1
