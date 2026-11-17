@@ -136,9 +136,10 @@ function lensSlots(box, c) {
 const send = (k, v) => { k = k.trim(); v = v.trim(); if (!k) return; inp.value = c.name + "." + k + " :" + (v ? " " + v : linkKeys.includes(k) ? " []" : ""); document.getElementById("f").requestSubmit(); };
 const row = (key, val, inv) => { const r = el("crow");
   const k = document.createElement(key === null ? "input" : "span"); k.className = "ckey"; if (key === null) { k.placeholder = "Param"; k.spellcheck = false; k.setAttribute("list", "pnames"); } else k.textContent = key;
-  const v = document.createElement("input"); v.className = "cval"; v.value = val; v.spellcheck = false;
+  const v = document.createElement("textarea"); v.className = "cval"; v.rows = 1; v.value = val; v.spellcheck = false;
+  const fit = () => { v.style.height = "auto"; v.style.height = v.scrollHeight + "px"; }; v.oninput = () => { v.value = v.value.replace(/\n/g, " "); fit(); }; requestAnimationFrame(fit);
   const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "record"; ok.onclick = () => send(key === null ? k.value : key, v.value);
-  v.onkeydown = e => { if (e.key === "Enter") ok.click(); };
+  v.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ok.click(); } };
   r.append(k, v, ok); if (inv && inv !== "[]") r.append(el("cinv", "← " + inv)); box.append(r); };
 { const r = el("crow"), k = el("ckey", "имя"), v = document.createElement("input"); v.className = "cval"; v.value = c.name; v.spellcheck = false;
   const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "rename"; ok.onclick = () => { const n = v.value.trim(); if (n && n !== c.name) runPred("rename [ " + c.name + " " + n + " ]"); };

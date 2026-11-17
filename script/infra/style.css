@@ -159,6 +159,7 @@ form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
 input.ckey { width: 9ch; padding: 2px 4px; flex: none; }
 .crow input.ckey { background: var(--g1); border: 1px solid var(--line); color: var(--fg); font: 13px inherit; font-family: inherit; }
 .cval { flex: 1; min-width: 10ch; font: 13px inherit; font-family: inherit; padding: 2px 4px; background: var(--g1); border: 1px solid var(--line); color: var(--fg); }
+textarea.cval { resize: none; overflow: hidden; box-sizing: border-box; line-height: 1.35; }
 .cinv { width: 100%; padding-left: calc(9ch + 6px); color: var(--dim); font-size: 12px; }
 .cbodyline { padding: 2px 14px; font-size: 13px; color: var(--fg); white-space: pre-wrap; }
 /* карточка темы: темы и фильтр */
