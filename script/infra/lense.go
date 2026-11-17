@@ -57,7 +57,7 @@ for i := 0; i < len(ra) && i < len(rb); i++ {
 	ob, ok := aOrder[rb[i]]
 	if !ok {ob = limit}
 	if oa != ob {return oa < ob}}; return len(ra) < len(rb) }
-// dict: словари концепта — концепты из его Defs, словарь — json-спутник «термин : определение»
+// dict: словари концепта — концепты из его Defs, словарь — json-спутник «термин : определение» или «термин : [ определения ]»
 // Deep — первые литеры слова для нечёткого поиска (по умолчанию 3); длинные термины раньше
 func (q *Medium) dict(name string) map[string]any {
 p := q.conceptPath(name)
@@ -72,7 +72,10 @@ for _, n := range settingList(p, "Defs") {
 	if err != nil {continue}
 	var sat map[string]any
 	if json.Unmarshal(b, &sat) != nil {continue}
-	for k, v := range sat {if s, ok := v.(string); ok && strings.TrimSpace(k) != "" {terms = append(terms, map[string]string{"term": k, "def": s, "dict": conceptName(dp, "")})}}}
+	for k, v := range sat {
+		if strings.TrimSpace(k) == "" {continue}
+		if s, ok := v.(string); ok {terms = append(terms, map[string]string{"term": k, "def": s, "dict": conceptName(dp, "")})}
+		if l, ok := v.([]any); ok {for _, x := range l {if s, ok := x.(string); ok {terms = append(terms, map[string]string{"term": k, "def": s, "dict": conceptName(dp, "")})}}}}}
 sort.Slice(terms, func(i, j int) bool {return len(terms[i]["term"]) > len(terms[j]["term"])})
 if terms != nil {out["terms"] = terms}; return out }
 // situation: новая ситуация «a p b» в json концепта name — номер на единицу больше наибольшего в теме

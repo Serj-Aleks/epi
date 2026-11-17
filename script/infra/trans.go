@@ -1,6 +1,6 @@
 // epi/script/infra/trans.go
 package main
-import ("os"; "path/filepath"; "strconv"; "strings"; "unicode"; "unicode/utf8"; "epi/script/format")
+import ("encoding/json"; "fmt"; "os"; "path/filepath"; "strconv"; "strings"; "unicode"; "unicode/utf8"; "epi/script/format")
 // транслятор trans "текст": слова по словарям — preposit, xdict (шум), defnt (определение), atrbt (атрибуты),
 // объекты — концепты темы (формы слова — Alias); результат — блок предикации; нераспознанное в одном предложении — вопрос с выбором,
 // в нескольких — отметка ?слово в результате и запись в словарь нераспознанных incog темы
@@ -95,7 +95,7 @@ d := dicts{obj: conceptIndex(q.themaDir()), atr: conceptIndex(filepath.Join(q.di
 opts := []string{"preposit", q.theme, "xdict", "✕"}
 var out []format.Value
 var attrs []string
-lastObj := -1
+lastObj, seg := -1, 0
 skip := map[string]bool{}
 sents := transSentences(b.Text)
 ask, si, dot := len(sents) < 2, 0, false
@@ -103,8 +103,9 @@ ask, si, dot := len(sents) < 2, 0, false
 end := func() {
 	if len(attrs) > 0 && lastObj >= 0 {out[lastObj].Text += "." + strings.Join(attrs, "."); out[lastObj].Kind = format.Field}
 	if n := len(out); n > 0 && out[n-1].Kind == format.Op && out[n-1].Text == ":" {out = out[:n-1]}
+	if len(out) > seg {q.sense(out[seg:])}
 	if n := len(out); n > 0 && !(out[n-1].Kind == format.Op && out[n-1].Text == ".") {out = append(out, format.Value{Kind: format.Op, Text: "."})}
-	attrs, lastObj = nil, -1}
+	attrs, lastObj, seg = nil, -1, len(out)}
 for _, w := range transTokens(b.Text) {
 	if w == "." {end(); if !dot {si++}; dot = true; continue}
 	dot = false
@@ -132,3 +133,39 @@ for _, w := range transTokens(b.Text) {
 end()
 if n := len(out); n > 0 && out[n-1].Kind == format.Op && out[n-1].Text == "." {out = out[:n-1]}
 return format.Value{Kind: format.Array, Items: out}, true }
+// sense: смысл распознанного предложения — вопросы ✓/✕: атрибут (Объект.Атрибут → связь Attrib), определение
+// (Объект : … → json объекта), ситуация (Объект препозиция Объект → json левого объекта); с ?словом — без вопросов
+func (q *Medium) sense(seg []format.Value) {
+obj := func(v format.Value) bool {return (v.Kind == format.Term || v.Kind == format.Field) && !format.IsPrepTerm(v.Text)}
+for _, v := range seg {if strings.HasPrefix(v.Text, "?") {return}}
+for _, v := range seg {
+	if v.Kind != format.Field || !obj(v) {continue}
+	ps := strings.Split(v.Text, ".")
+	old, _ := readLink(q.conceptFile(ps[0]), "Attrib")
+	var add []string
+	for _, a := range ps[1:] {if !has(old, a) && !has(add, a) {add = append(add, a)}}
+	if len(add) == 0 || !q.in.Ask("записать атрибут: "+ps[0]+".Attrib : [ "+strings.Join(append(old, add...), " ")+" ] ?") {continue}
+	var vs []format.Value
+	for _, a := range append(old, add...) {vs = append(vs, format.Value{Kind: format.Term, Text: a})}
+	root, _ := q.linkRoot("Attrib")
+	if q.writeLink(ps[0], "Attrib", []format.Value{{Kind: format.Array, Items: vs}}, root, false) == nil {q.indexConcepts()}}
+if len(seg) > 2 && obj(seg[0]) && seg[1].Kind == format.Op && seg[1].Text == ":" {
+	x, r := strings.Split(seg[0].Text, ".")[0], format.Canon(seg[2:])
+	if q.in.Ask("записать определение: "+x+" : "+r+" — в json "+x+" ?") {q.define(x, r)}; return}
+if len(seg) == 3 && obj(seg[0]) && obj(seg[2]) && seg[1].Kind == format.Term && format.IsPrepTerm(seg[1].Text) {
+	x := strings.Split(seg[0].Text, ".")[0]
+	if q.in.Ask("записать ситуацию: "+seg[0].Text+" "+seg[1].Text+" "+seg[2].Text+" — в json "+x+" ?") {q.situation(x, seg[0].Text, seg[1].Text, seg[2].Text)}} }
+// define: определение r термина name в json концепта name — «Термин : [ правые части ]»; строка-значение становится списком
+func (q *Medium) define(name, r string) error {
+cp := q.cidx[strings.ToLower(name)]
+if cp == "" {return fmt.Errorf("концепта %s в теме нет", name)}
+jp := strings.TrimSuffix(cp, ".uic") + ".json"
+m := map[string]any{}
+if jb, err := os.ReadFile(jp); err == nil {if json.Unmarshal(jb, &m) != nil {return fmt.Errorf("%s: json не читается", jp)}}
+var list []any
+switch v := m[name].(type) {
+case string: list = []any{v}
+case []any: list = v}
+for _, x := range list {if x == r {return nil}}
+m[name] = append(list, r)
+out, _ := json.MarshalIndent(m, "", "  "); return os.WriteFile(jp, out, 0644) }
