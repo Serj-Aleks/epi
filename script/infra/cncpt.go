@@ -156,16 +156,16 @@ for _, l := range lines {
 	if !isParam(l) || !format.SameTerm(lineKey(l), key) {continue}
 	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 	if err == nil && len(vs) == 1 {return vs[0].Text}}; return "" }
-// conceptPath: файл существующего концепта в теме или в лексиконе (prfix, sufix, radix); тире словообразования (-Род-) отбрасываются; "" — концепта нет
+// conceptPath: файл существующего концепта в теме или в лексиконе (radix); тире словообразования (-Род-) отбрасываются; "" — концепта нет
 func (q *Medium) conceptPath(name string) string {
 name = strings.Trim(name, "-")
 if p := q.conceptFile(name); exists(p) {return p}
-for _, c := range []string{"prfix", "sufix", "radix"} {if p := letterPath(filepath.Join(q.dir, "lexic", c), name); exists(p) {return p}}; return "" }
+if p := letterPath(filepath.Join(q.dir, "lexic", "radix"), name); exists(p) {return p}; return "" }
 // iconFile: картинка концепта — <папка>/<имя>.svg или <папка>/img/<имя>.png|jpg|jpeg|webp|gif|ico
 func (q *Medium) iconFile(name string) string {
 if name == "" || strings.ContainsAny(name, "/\\") {return ""}
 roots := []string{q.themaDir()}
-for _, c := range []string{"prfix", "sufix", "radix", "preposit", "atrbt", "constans"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
+for _, c := range []string{"radix", "preposit", "atrbt", "constans"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
 base := strings.ToLower(name)
 for _, r := range roots {
 	dir := filepath.Dir(letterPath(r, name))

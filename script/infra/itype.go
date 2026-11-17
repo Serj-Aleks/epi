@@ -58,7 +58,7 @@ var reRefs, reFence = regexp.MustCompile(`\[\[([^\]]+)\]\]`), regexp.MustCompile
 // reIncl: трансклюзия {{Имя}} в контенте (вне блоков кода)
 var reIncl = regexp.MustCompile(`\{\{([^{}]+)\}\}`)
 // refKeys: параметры концепта, в значениях которых — имена концептов
-var refKeys = []string{"Alias", "Attrib", "Preposit", "Prfix", "Sufix", "Radix", "Taxon", "Links", "Defs", "I-process", "I-sort"}
+var refKeys = []string{"Alias", "Attrib", "Preposit", "Radix", "Taxon", "Links", "Defs", "I-process", "I-sort"}
 // reToken, reRefMark: слово имени и ссылка или трансклюзия с именем
 var reToken, reRefMark = regexp.MustCompile(`[\p{L}\p{N}_-]+`), regexp.MustCompile(`(\[\[|\{\{)([^\]\}]+)(\]\]|\}\})`)
 // aOrder: место литеры в алфавите темы; пробел, «-», «,» — раньше всех
@@ -66,12 +66,12 @@ var aOrder = func() map[rune]int {
 m := map[rune]int{' ': -1, '-': -1, ',': -1}
 pos := 0
 for _, c := range aSort {if c != ' ' {m[c] = pos; pos++}}; return m}()
-// linkOrder: связи локального контекста — оси (Prfix, Attrib, Sufix, Preposit), затем Radix, Taxon
-var linkOrder = []string{"Prfix", "Attrib", "Sufix", "Preposit", "Radix", "Taxon", "Links"}
+// linkOrder: связи локального контекста — оси (Radix, Attrib, Taxon, Preposit), затем Links
+var linkOrder = []string{"Radix", "Attrib", "Taxon", "Preposit", "Links"}
 // graphTypes: связи графа, затем Radix и вычисляемая Transcl (в списке всегда, на оси — по настройке)
 // graphCodes: коды связей в списке под графом; настройки N-west, West, S-west, Nord, List — именами связей
-var graphTypes = []string{"Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix", "Transcl"}
-var graphCodes = map[string]string{"Themes": "TM", "Alias": "AL", "Attrib": "AT", "Preposit": "PP", "Prfix": "PF", "Sufix": "SF", "Taxon": "TX", "Links": "LK", "Radix": "RX", "Transcl": "TC"}
+var graphTypes = []string{"Taxon", "Links", "Attrib", "Preposit", "Radix", "Transcl"}
+var graphCodes = map[string]string{"Themes": "TM", "Alias": "AL", "Attrib": "AT", "Preposit": "PP", "Taxon": "TX", "Links": "LK", "Radix": "RX", "Transcl": "TC"}
 // gnode: узел графа — имя, картинка, цвет, соседи (в подсказке); Type theme — узел-тема, Theme — тема соседа
 type gnode struct {
 	Name      string  `json:"name"`
@@ -85,4 +85,4 @@ type dicts struct{ obj, atr map[string]string }
 // reImg: картинка в контенте — md ![…](файл) или html <img src="файл">
 var reImg = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)\)|<img[^>]*\ssrc="([^"]+)"`)
 // sysParams: параметры, которые понимает система — связи, роль и вид карточки, оси и списки графа, место
-var sysParams = []string{"Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix", "Alias", "Rank", "Tabs", "I-sort", "Process", "I-process", "Content", "Color", "Defs", "Deep", "N-west", "West", "S-west", "Nord", "Graph", "List", "Locus"}
+var sysParams = []string{"Taxon", "Links", "Attrib", "Preposit", "Radix", "Alias", "Rank", "Tabs", "I-sort", "Process", "I-process", "Content", "Color", "Defs", "Deep", "N-west", "West", "S-west", "Nord", "Graph", "List", "Locus"}

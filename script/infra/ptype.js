@@ -7,7 +7,7 @@ const tsel = document.getElementById("thema"), cardBox = document.getElementById
 const NXG = { padding: 24, nodeW: 80, nodeH: 40, vSpacing: 10, hSpacing: 32, groupGap: 24, collectorGap: 24 };
 const SVGNS = "http://www.w3.org/2000/svg";
 // связи с прямым и обратным списком (линза ⊞)
-const linkKeys = ["Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix"];
+const linkKeys = ["Taxon", "Links", "Attrib", "Preposit", "Radix"];
 // лента: история ввода, сеанс открыт для записи, последнее состояние сервера
 let hist = [], hpos = 0, writable = false, last = null;
 // режим строки ввода: new, rename, clone, cnew, concept

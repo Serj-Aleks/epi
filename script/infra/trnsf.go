@@ -15,15 +15,16 @@ files := conceptFiles(src, dst)
 for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
 for _, f := range files {if err := copyFile(f[0], f[1]); err != nil {return format.Value{}, false}}
 q.adopt(name, dst); return format.Value{Kind: format.Term, Text: name}, true }
-// replaceRefs: имя old → name во всех концептах темы и лексикона связей (prfix, sufix, radix) — в значениях refKeys,
+// replaceRefs: имя old → name во всех концептах темы и лексикона корней (radix) — в значениях refKeys (корень с тире -Род- сохраняет тире),
 // ссылках и трансклюзиях текстовых спутников
 func (q *Medium) replaceRefs(old, name string) error {
-swap := func(s string) string {return reToken.ReplaceAllStringFunc(s, func(t string) string {if format.SameTerm(t, old) {return name}; return t})}
+swap := func(s string) string {return reToken.ReplaceAllStringFunc(s, func(t string) string {
+	if format.SameTerm(t, old) {return name}
+	if c := strings.Trim(t, "-"); c != t && format.SameTerm(c, old) {return strings.Replace(t, c, name, 1)}; return t})}
 mark := func(s string) string {return reRefMark.ReplaceAllStringFunc(s, func(m string) string {
 	sub := reRefMark.FindStringSubmatch(m)
 	if format.SameTerm(strings.TrimSpace(sub[2]), old) && (sub[1] == "[[") == (sub[3] == "]]") {return sub[1] + name + sub[3]}; return m})}
-roots := []string{q.themaDir()}
-for _, c := range []string{"prfix", "sufix", "radix"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
+roots := []string{q.themaDir(), filepath.Join(q.dir, "lexic", "radix")}
 for _, r := range roots {
 	err := filepath.WalkDir(r, func(path string, d os.DirEntry, err error) error {
 		if err != nil {return nil}
@@ -191,7 +192,7 @@ for _, l := range lines {
 	if !isParam(l) || !has(refKeys, lineKey(l)) {continue}
 	k := lineKey(l)
 	uniq := func(ns []string) []string {var o []string; for _, n := range ns {if !format.SameTerm(n, name) && !has(o, n) {o = append(o, n)}}; return o}
-	if has([]string{"Taxon", "Links", "Attrib", "Preposit", "Prfix", "Sufix", "Radix"}, k) {d, i := readLink(path, k); writeLists(path, k, uniq(d), uniq(i)); continue}
+	if has([]string{"Taxon", "Links", "Attrib", "Preposit", "Radix"}, k) {d, i := readLink(path, k); writeLists(path, k, uniq(d), uniq(i)); continue}
 	writeParam(path, k, []format.Value{listBlock(uniq(settingList(path, k)))})} }
 // dedupe: строка параметра — без повторов имён в каждом блоке (после замены имени, union)
 func dedupe(l string) string {
