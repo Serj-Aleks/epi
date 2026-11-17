@@ -66,10 +66,10 @@ if (rep.options) {
   rep.options.forEach(o => {
     const b = document.createElement("button"); b.textContent = o; q.append(b);
     b.onclick = () => {
-      if (o !== last.theme && o !== "atrbt") { choose(o, o); return; }
-      const pre = o === "atrbt" ? "atrbt:" : "thema:";
-      mode = "concept"; inp.disabled = false; inp.value = word.charAt(0).toUpperCase() + word.slice(1);
-      inp.placeholder = (o === "atrbt" ? "имя атрибута" : "имя концепта темы " + o) + " (Enter — принять, Esc — пропустить)"; inp.focus();
+      if (o !== last.theme && o !== "atrbt" && o !== "preposit") { choose(o, o); return; }
+      const pre = o === "atrbt" ? "atrbt:" : o === "preposit" ? "preposit:" : "thema:";
+      mode = "concept"; inp.disabled = false; inp.value = o === "preposit" ? word : word.charAt(0).toUpperCase() + word.slice(1);
+      inp.placeholder = (o === "atrbt" ? "имя атрибута" : o === "preposit" ? "препозиция — само слово, синоним — препозиция (+), определение — тире" : "имя концепта темы " + o) + " (Enter — принять, Esc — пропустить)"; inp.focus();
       conceptDone = (name) => choose(name ? pre + name : "✕", name ? o + ": " + name : "✕"); }; });
   return; }
 const q = el("q", rep.question);

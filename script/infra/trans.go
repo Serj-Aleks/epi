@@ -69,11 +69,18 @@ for k, n := range idx {if n == name && !strings.EqualFold(k, name) {al = append(
 al = append(al, format.Value{Kind: format.Term, Text: w})
 if err := writeParam(path, "Alias", []format.Value{{Kind: format.Array, Items: al}}); err != nil {return false}
 idx[w], idx[strings.ToLower(name)] = name, name; return true }
-// learn: ответ пополняет словарь — preposit, xdict, defnt: слово в словарь; thema:Имя — объект; atrbt:Имя — атрибут
+// learn: ответ пополняет словарь — preposit, xdict, defnt: слово в словарь; preposit:п — синоним препозиции п (слово : п),
+// само слово — новая препозиция, тире — знак определения (defnt); thema:Имя — объект; atrbt:Имя — атрибут
 func (q *Medium) learn(w, answer string, d dicts) (string, string) {
 switch answer {
 case "preposit", "xdict", "defnt":
 	if err := writeLines(q.dictFile(answer, w), nil); err != nil {return "", ""}; return answer, ""}
+if t, ok := strings.CutPrefix(answer, "preposit:"); ok {
+	switch t = strings.TrimSpace(t); {
+	case t == "" || strings.ContainsAny(t, " \t"): return "", ""
+	case strings.EqualFold(t, w): return q.learn(w, "preposit", d)
+	case t == "—" || t == "–" || t == "-": return q.learn(w, "defnt", d)}
+	if err := writeLines(q.dictFile("preposit", w), []string{w + " : " + t}); err != nil {return "", ""}; return "preposit", ""}
 if name, ok := strings.CutPrefix(answer, "thema:"); ok && q.theme != "" {
 	name = capital(strings.TrimSpace(name))
 	if learnName(q.themaDir(), w, name, d.obj) {q.indexConcepts(); return "thema", name}}
@@ -85,7 +92,7 @@ if name, ok := strings.CutPrefix(answer, "atrbt:"); ok {
 func (q *Medium) trans(a, b *format.Value) (format.Value, bool) {
 if a != nil || b == nil || b.Kind != format.String || q.choose == nil {return format.Value{}, false}
 d := dicts{obj: conceptIndex(q.themaDir()), atr: conceptIndex(filepath.Join(q.dir, "lexic", "atrbt"))}
-opts := []string{"preposit", q.theme, "atrbt", "defnt", "xdict", "✕"}
+opts := []string{"preposit", q.theme, "xdict", "✕"}
 var out []format.Value
 var attrs []string
 lastObj := -1
@@ -108,7 +115,7 @@ for _, w := range transTokens(b.Text) {
 		if q.theme != "" {q.incog(w, sent)}
 		out = append(out, format.Value{Kind: format.Term, Text: "?" + w}); continue}
 	if c == "" && !skip[w] {
-		ans := q.choose("слово «"+w+"» не распознано: к какому словарю отнести? ("+q.theme+" — объект, концепт темы; atrbt — атрибут; ✕ — пропустить)", opts)
+		ans := q.choose("слово «"+w+"» не распознано: к какому словарю отнести? ("+q.theme+" — объект, концепт темы; preposit — препозиция или синоним; xdict — шум; ✕ — пропустить)", opts)
 		switch ans {
 		case q.theme: ans = "thema:" + capital(w)
 		case "atrbt": ans = "atrbt:" + capital(w)}
