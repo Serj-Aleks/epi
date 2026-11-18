@@ -172,7 +172,7 @@ for _, src := range []string{`ln 0`, `ln -1`, `asin 2`, `1 & 2`, `2 sin 3`} {
 	in := New(100, func(string) bool { return true })
 	in.Run(src, NewEnv(nil))
 	if len(in.Unknown) != 1 {t.Errorf("%s: ожидалось «не распознано»", src)}} }
-// Синоним концепта — параметр Alias
+// Синоним концепта — параметр Alias: чтение через синоним, если своего фрейма нет; запись — в свой фрейм
 func TestAliasParam(t *testing.T) {
 in := New(100, func(string) bool { return true })
 env := NewEnv(nil)
@@ -182,13 +182,14 @@ for _, c := range []struct{ src, want string }{
 	{`X.A : 5 . X.Alias : [ Y Z ]`, "@none"},
 	{`Y.A * Z.A`, "25"},
 	{`Z.B : 7`, "@none"},
-	{`X.B`, "7"},
-	{`Y`, "{ A : 5 Alias : [ Y Z ] B : 7 }"},
+	{`Z.B`, "7"},
+	{`X.B`, "@none"},
+	{`Y`, "{ A : 5 Alias : [ Y Z ] }"},
 	{`W.A`, "@none"},} {
 	v, err := in.Run(c.src, env)
 	if err != nil || v.String() != c.want {t.Errorf("%s = %v %v, ожидалось %s", c.src, v, err, c.want)}}
-if got := strings.Join(saved, "|"); got != "X.A : 5|X.Alias : [ Y Z ]|X.B : 7" {t.Errorf("запись: %s", got)}
-if len(in.Unknown) != 1 {t.Errorf("W.A — не распознано: %v", in.Unknown)} }
+if got := strings.Join(saved, "|"); got != "X.A : 5|X.Alias : [ Y Z ]|Z.B : 7" {t.Errorf("запись: %s", got)}
+if len(in.Unknown) != 2 {t.Errorf("X.B, W.A — не распознано: %v", in.Unknown)} }
 // Тело фрейма не стирает его параметры (концепт — параметры и импликации)
 func TestFrameKeepsParams(t *testing.T) {
 in := New(100, func(string) bool { return true })

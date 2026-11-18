@@ -325,7 +325,7 @@ for _, t := range toks {if t.Kind == format.Term && format.IsPrepTerm(t.Text) {i
 func splitField(t string) (frame, param string, ok bool) {
 parts := strings.Split(t, ".")
 if len(parts) != 2 || format.IsPrepTerm(parts[0]) || format.IsPrepTerm(parts[1]) {return "", "", false}; return parts[0], parts[1], true }
-// defParam: «Фрейм.Параметр : значение» — связывается без вычисления, ( ) — сейчас; фрейма нет — появляется; синоним — тот же фрейм
+// defParam: «Фрейм.Параметр : значение» — связывается без вычисления, ( ) — сейчас; фрейма нет — появляется; пишется в свой фрейм, не в синоним
 func (in *Interp) defParam(s *slot, toks []format.Value, env *Env) (format.Value, error) {
 frame, param, ok := splitField(s.def.Text)
 if !ok {in.unknown(s.toks(), "— параметр пишется «Фрейм.Параметр», оба с прописной буквы"); return none, nil}
@@ -333,13 +333,13 @@ if len(toks) == 1 && toks[0].Kind == format.Expr {
 	v, err := in.evalOperand(toks, env, false)
 	if err != nil {return none, err}
 	toks = []format.Value{v}}
-fb, real := env.findFrame(frame)
+fb, _ := env.find(frame)
 if fb == nil {
 	fb = &binding{env: env}
 	env.set(frame, fb)}
 if fb.params == nil {fb.params = map[string]*binding{}}
 fb.params[format.Key(param)] = &binding{pred: toks, env: env}
-if in.OnParam != nil {if err := in.OnParam(real, param, toks); err != nil {return none, err}}; return none, nil }
+if in.OnParam != nil {if err := in.OnParam(frame, param, toks); err != nil {return none, err}}; return none, nil }
 // param: значение «Фрейм.Параметр» — модель параметра интерпретируется при обращении
 func (in *Interp) param(a []format.Value, env *Env) (format.Value, error) {
 frame, param, ok := splitField(a[0].Text)
