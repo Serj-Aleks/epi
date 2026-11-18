@@ -120,14 +120,15 @@ for _, t := range graphTypes {
 	d, i := resolve(s[0], t, true), resolve(s[1], t, false)
 	if len(d)+len(i) > 0 {extra = append(extra, map[string]any{"type": t, "direct": d, "inverse": i})}}
 out["extra"] = extra; return out }
-// syncAlias: группа синонимов — у каждого в Alias все остальные, выбывший теряет frame
+// syncAlias: группа синонимов — у каждого в Alias все остальные; новый в списке приводит свою группу, бывший в группе — только себя;
+// выбывшие из списка frame — отдельная группа: теряют frame и всех, кто остался с ним
 // имена, которые не концепты темы, остаются; контекст участников заново, у frame его задаёт текущая предикация
 func (q *Medium) syncAlias(frame string, old, now []string) error {
 exist := func(n string) string {return q.cidx[strings.ToLower(n)]}
 group := []string{conceptName(q.conceptFile(frame), "")}
 add := func(n string) {if p := exist(n); p != "" && !has(group, conceptName(p, "")) {group = append(group, conceptName(p, ""))}}
 for _, a := range now {add(a)}
-for _, a := range now {if exist(a) != "" {as, _ := readLink(exist(a), "Alias"); for _, x := range as {add(x)}}}
+for _, a := range now {if exist(a) != "" && !has(old, a) {as, _ := readLink(exist(a), "Alias"); for _, x := range as {add(x)}}}
 put := func(n string, as []string) error {
 	v := listBlock(as)
 	if err := writeParam(exist(n), "Alias", []format.Value{v}); err != nil || format.SameTerm(n, frame) {return err}
@@ -138,7 +139,8 @@ put := func(n string, as []string) error {
 for _, a := range old {
 	if exist(a) == "" || has(group, a) {continue}
 	as, _ := readLink(exist(a), "Alias")
-	if err := put(conceptName(exist(a), ""), without(as, frame)); err != nil {return err}}
+	for _, m := range group {as = without(as, m)}
+	if err := put(conceptName(exist(a), ""), as); err != nil {return err}}
 for _, m := range group {
 	cur := now
 	if !format.SameTerm(m, frame) {cur, _ = readLink(exist(m), "Alias")}
