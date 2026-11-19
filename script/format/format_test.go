@@ -126,9 +126,3 @@ want := "A : 1\nB : [ X : 2\nY : 3 ] C\nD"
 if got != want {t.Fatalf("канонический текст:\n%q\nожидалось\n%q", got, want)}
 v2, _ := Parse(got)
 if Canon(v2) != got {t.Fatal("повторный обход меняет текст")} }
-// TestRootDash: корень с тире в начале — только внутри [ ]
-func TestRootDash(t *testing.T) {
-vs, err := Parse("Кислород.Radix : [ Кисл- -Род- Род- ]")
-if err != nil || len(vs) != 3 || len(vs[2].Items) != 3 || vs[2].Items[1].Kind != Term || vs[2].Items[1].Text != "-Род-" {t.Fatalf("%v %v", err, vs)}
-if _, err := Parse("A : -Род-"); err == nil {t.Fatal("вне [ ] тире в начале корня — ошибка")}
-if _, err := Parse("A : ( -Род- )"); err == nil {t.Fatal("в ( ) тире в начале корня — ошибка")} }

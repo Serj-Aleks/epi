@@ -8,9 +8,8 @@ func (q *Medium) linkRoot(param string) (string, bool) {
 switch format.Key(param) {
 case "Taxon", "Links", "Attrib", "Preposit": return q.themaDir(), true
 case "Radix": return filepath.Join(q.dir, "lexic", "radix"), true}; return "", false }
-// targetPath: файл цели t связи: концепт темы, если он есть, иначе — в root; тире словообразования (-Род-) отбрасываются
+// targetPath: файл цели t связи: концепт темы, если он есть, иначе — в root
 func (q *Medium) targetPath(root, t string) string {
-t = strings.Trim(t, "-")
 if p := q.conceptFile(t); exists(p) {return p}; return letterPath(root, t) }
 // names: имена из предикации — блок [ A B ] или термы
 func names(vs []format.Value) []string {
@@ -87,7 +86,6 @@ func (q *Medium) nexusGraph(name string) map[string]any {
 path := q.conceptPath(name)
 if path == "" {return map[string]any{"found": false}}
 mk := func(n string) (gnode, string, bool) {
-	n = strings.Trim(n, "-")
 	p := q.conceptPath(n)
 	if p == "" {return gnode{}, "", false}
 	g := gnode{Name: conceptName(p, ""), Color: setting(p, "Color")}

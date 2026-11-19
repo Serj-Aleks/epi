@@ -28,9 +28,6 @@ if err != nil {return nil, err}; return items, nil }
 // seq: значения до закрывающей скобки end (0 — до конца текста)
 func (p *parser) seq(end rune, line, col int) ([]Value, error) {
 var items []Value
-in := p.in
-p.in = end
-defer func() {p.in = in}()
 for {
 	for p.pos < len(p.src) && isSpace(p.peek()) {p.next()}
 	if p.pos >= len(p.src) {if end != 0 {return nil, p.errAt(line, col, "блок не закрыт: нет «%c»", end)}; return items, nil}
@@ -95,7 +92,6 @@ for p.pos < len(p.src) && !isDelim(p.peek()) {
 tok := string(p.src[start:p.pos])
 if Operators[tok] {return Value{Kind: Op, Text: tok, Line: line, Col: col}, nil}
 if len(tok) > 1 && strings.HasSuffix(tok, ":") {return Value{}, p.errAt(line, col, "определение пишется через пробел: «%s :»", strings.TrimSuffix(tok, ":"))}
-if p.in == ']' && rootDash.MatchString(tok) {return Value{Kind: Term, Text: tok, Line: line, Col: col}, nil}
 for _, a := range atoms {if a.re.MatchString(tok) {return Value{Kind: a.kind, Text: tok, Line: line, Col: col}, nil}}; return Value{}, p.errAt(line, col, "непонятный токен %q", tok) }
 // after: за строкой или тегом нет слитного продолжения
 func (p *parser) after(v Value) (Value, error) {

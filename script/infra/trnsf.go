@@ -15,12 +15,10 @@ files := conceptFiles(src, dst)
 for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
 for _, f := range files {if err := copyFile(f[0], f[1]); err != nil {return format.Value{}, false}}
 q.adopt(name, dst); return format.Value{Kind: format.Term, Text: name}, true }
-// replaceRefs: имя old → name во всех концептах темы и лексикона корней (radix) — в значениях refKeys (корень с тире -Род- сохраняет тире),
+// replaceRefs: имя old → name во всех концептах темы и лексикона корней (radix) — в значениях refKeys,
 // ссылках и трансклюзиях текстовых спутников
 func (q *Medium) replaceRefs(old, name string) error {
-swap := func(s string) string {return reToken.ReplaceAllStringFunc(s, func(t string) string {
-	if format.SameTerm(t, old) {return name}
-	if c := strings.Trim(t, "-"); c != t && format.SameTerm(c, old) {return strings.Replace(t, c, name, 1)}; return t})}
+swap := func(s string) string {return reToken.ReplaceAllStringFunc(s, func(t string) string {if format.SameTerm(t, old) {return name}; return t})}
 mark := func(s string) string {return reRefMark.ReplaceAllStringFunc(s, func(m string) string {
 	sub := reRefMark.FindStringSubmatch(m)
 	if format.SameTerm(strings.TrimSpace(sub[2]), old) && (sub[1] == "[[") == (sub[3] == "]]") {return sub[1] + name + sub[3]}; return m})}
