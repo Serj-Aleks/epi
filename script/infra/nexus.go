@@ -39,7 +39,8 @@ for _, x := range ns {if !format.SameTerm(x, n) {out = append(out, x)}}; return 
 // writeLink: прямой список связи у frame, у целей обратный — добавленные получают frame, убранные теряют
 // strict — только у существующих целей (ссылки контента); цель без frame в обратном получает его и при неизменном прямом
 func (q *Medium) writeLink(frame, param string, pred []format.Value, root string, strict bool) error {
-path := q.conceptFile(frame)
+path := q.conceptPath(frame)
+if path == "" {path = q.conceptFile(frame)}
 old, inv := readLink(path, param)
 d := names(pred)
 if err := writeLists(path, param, d, inv); err != nil {return err}
@@ -120,9 +121,9 @@ for _, t := range graphTypes {
 out["extra"] = extra; return out }
 // syncAlias: группа синонимов — у каждого в Alias все остальные; новый в списке приводит свою группу, бывший в группе — только себя;
 // выбывшие из списка frame — отдельная группа: теряют frame и всех, кто остался с ним
-// имена, которые не концепты темы, остаются; контекст участников заново, у frame его задаёт текущая предикация
+// имена, которые не концепты темы или корни, остаются; контекст участников заново, у frame его задаёт текущая предикация
 func (q *Medium) syncAlias(frame string, old, now []string) error {
-exist := func(n string) string {return q.cidx[strings.ToLower(n)]}
+exist := q.conceptPath
 group := []string{conceptName(q.conceptFile(frame), "")}
 add := func(n string) {if p := exist(n); p != "" && !has(group, conceptName(p, "")) {group = append(group, conceptName(p, ""))}}
 for _, a := range now {add(a)}

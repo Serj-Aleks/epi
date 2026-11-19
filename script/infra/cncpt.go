@@ -26,17 +26,18 @@ func conceptLines(b []byte) ([]string, error) {return disp.Split(string(b)) }
 // lineKey: параметр строки «Параметр : …»
 func lineKey(line string) string {
 k, _, _ := strings.Cut(line, " "); return k }
-// writeConcept: параметр фрейма автора строкой в файле концепта, повторное определение заменяет строку; синонимы — группа
+// writeConcept: параметр фрейма автора строкой в файле концепта (темы или корня lexic/radix), повторное определение заменяет строку; синонимы — группа
 func (q *Medium) writeConcept(frame, param string, pred []format.Value) error {
 if q.theme == "" {return nil}
 if root, ok := q.linkRoot(param); ok {return q.writeLink(frame, param, pred, root, false)}
 if format.SameTerm(param, "Rank") {return q.writeRank(frame, pred)}
 if format.SameTerm(param, "Locus") {return q.writeLocus(frame, pred)}
-if !format.SameTerm(param, "Alias") {q.known(q.conceptFile(frame)); return writeParam(q.conceptFile(frame), param, pred)}
-path := q.conceptFile(frame)
+path := q.conceptPath(frame)
+if path == "" {path = q.conceptFile(frame)}
+if !format.SameTerm(param, "Alias") {q.known(path); return writeParam(path, param, pred)}
 old, _ := readLink(path, "Alias")
 if err := writeParam(path, "Alias", pred); err != nil {return err}
-q.cidx[strings.ToLower(frame)] = path; return q.syncAlias(frame, old, names(pred)) }
+q.known(path); return q.syncAlias(frame, old, names(pred)) }
 // writeRank: ранг концепта; пустой ранг (Rank :) — концепт больше не таксон, он убирается из Taxon всех дочерних
 func (q *Medium) writeRank(frame string, pred []format.Value) error {
 path := q.conceptFile(frame); q.known(path)
