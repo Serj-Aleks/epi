@@ -20,16 +20,23 @@ for _, e := range es {
 	ss = append(ss, SeansRow{Name: n, Closed: st.Mode().Perm()&0200 == 0})}
 sort.Slice(ss, func(i, j int) bool { return ss[i].Name > ss[j].Name }); return ss, nil }
 // switchTo: сделать сеанс текущим; строки сеанса — модели «[ предикация ] -> интерпретация», диалог показывается
-// каким был, заново не выполняется; ошибка отмечена «-> !»
+// каким был, заново не выполняется; ошибка отмечена «-> !»; строка, которую грамматика не читает, — как текст с ошибкой
 func (q *Medium) switchTo(name string) error {
 st, err := os.Stat(q.seans(name))
 if err != nil {return err}
 b, err := os.ReadFile(q.seans(name))
 if err != nil {return err}
 text, errLines := bangs(string(b))
-vs, err := format.Parse(text)
-if err != nil {return fmt.Errorf("%s: %w", name, err)}
 var turns []Turn
+vs, err := format.Parse(text)
+if err != nil {
+	vs = nil
+	for i, l := range strings.Split(text, "\n") {
+		if strings.TrimSpace(l) == "" {continue}
+		if ls, err := format.Parse(l); err == nil && len(ls) == 3 && ls[1].Kind == format.Op && ls[1].Text == "->" {ls[0].Line, ls[2].Line = i+1, i+1; vs = append(vs, ls...); continue}
+		p, a, _ := strings.Cut(l, " -> ")
+		vs = append(vs, format.Value{Kind: format.String, Text: strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(p), "["), "]")), Line: i + 1}, format.Value{Kind: format.Op, Text: "->"}, format.Value{Kind: format.String, Text: "строка не читается грамматикой: " + a, Line: i + 1})
+		errLines[i+1] = true}}
 for i := 0; i+2 < len(vs); i += 3 {
 	if vs[i+1].Kind != format.Op || vs[i+1].Text != "->" {return fmt.Errorf("%s: строка %d: ожидалась модель «[ … ] -> …»", name, vs[i].Line)}
 	t := Turn{Pred: vs[i].Text, Answer: vs[i+2].String()}
