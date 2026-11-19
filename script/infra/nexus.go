@@ -67,7 +67,8 @@ func (q *Medium) nexusData(name string) ([]string, map[string][2][]string, bool)
 paths := []string{q.conceptFile(name), letterPath(filepath.Join(q.dir, "lexic", "radix"), name)}
 found := false
 for _, p := range paths {if exists(p) {found = true}}
-alias, _ := readLink(paths[0], "Alias")
+var alias []string
+for _, p := range paths {pa, _ := readLink(p, "Alias"); alias = append(alias, pa...)}
 links := map[string][2][]string{}
 for _, l := range linkOrder {
 	var d, i []string
@@ -118,7 +119,8 @@ for _, t := range graphTypes {
 	s := links[t]
 	d, i := resolve(s[0], t, true), resolve(s[1], t, false)
 	if len(d)+len(i) > 0 {extra = append(extra, map[string]any{"type": t, "direct": d, "inverse": i})}}
-out["extra"] = extra; return out }
+out["extra"] = extra
+if p := q.conceptPath(name); strings.HasPrefix(p, filepath.Join(q.dir, "lexic", "radix")) {out["dialects"] = q.dialects(p)}; return out }
 // syncAlias: группа синонимов — у каждого в Alias все остальные; новый в списке приводит свою группу, бывший в группе — только себя;
 // выбывшие из списка frame — отдельная группа: теряют frame и всех, кто остался с ним
 // имена, которые не концепты темы или корни, остаются; контекст участников заново, у frame его задаёт текущая предикация
@@ -176,3 +178,20 @@ for _, t := range ts {
 	for _, p := range themeIndex(filepath.Join(q.themaRoot(), t)) {if overlap(nameTokens(p), me, deep) {hits = append(hits, gnode{Name: conceptName(p, ""), Theme: t})}}
 	sort.Slice(hits, func(i, j int) bool {return aLess(hits[i].Name, hits[j].Name)})
 	if len(hits) > 0 {south = append(south, gnode{Name: t, Icon: icon, Type: "theme", Neighbors: hits})}}; return north, south }
+// dialects: корень p и его синонимы — слова каждого корня (обратный Radix) по темам, где есть их концепт; тема "" — концепта нет нигде
+func (q *Medium) dialects(p string) []map[string]any {
+ts, _ := q.themes()
+idx := map[string]map[string]string{}
+for _, t := range ts {idx[t] = conceptIndex(filepath.Join(q.themaRoot(), t))}
+roots := []string{conceptName(p, "")}
+as, _ := readLink(p, "Alias")
+for _, a := range as {if strings.HasPrefix(q.conceptPath(a), filepath.Join(q.dir, "lexic", "radix")) && !has(roots, a) {roots = append(roots, a)}}
+var out []map[string]any
+for _, r := range roots {
+	_, ws := readLink(q.conceptPath(r), "Radix")
+	var nodes []gnode
+	for _, w := range ws {
+		n := 0
+		for _, t := range ts {if c, ok := idx[t][strings.ToLower(w)]; ok && format.SameTerm(c, w) {nodes = append(nodes, gnode{Name: w, Theme: t}); n++}}
+		if n == 0 {nodes = append(nodes, gnode{Name: w})}}
+	out = append(out, map[string]any{"root": r, "words": nodes})}; return out }
