@@ -83,7 +83,8 @@ if p == "" {return format.Value{}, false}; return format.Value{Kind: format.Term
 // graphType: имя связи графа по значению настройки (без учёта регистра); "" — не связь
 func graphType(v string) string {for _, t := range graphTypes {if strings.EqualFold(t, v) {return t}}; return "" }
 // nexusGraph: граф — оси nw, wt, sw, nr: Radix, Attrib, Taxon, Preposit или по N-west, West, S-west, Nord
-// слева и сверху обратные списки, справа и снизу прямые, остальное — extra; узлы — только существующие концепты
+// слева и сверху обратные списки, справа и снизу прямые, остальное — extra; узлы — только существующие концепты;
+// по Radix — и концепты других тем (корни общие), с темой
 // соседи узла по той же связи — у входящего его прямой список, у исходящего обратный (в обоих есть центр), у центра — синонимы; Transcl вычисляется; Nord : Themes — ось тем
 func (q *Medium) nexusGraph(name string) map[string]any {
 path := q.conceptPath(name)
@@ -93,12 +94,17 @@ mk := func(n string) (gnode, string, bool) {
 	if p == "" {return gnode{}, "", false}
 	g := gnode{Name: conceptName(p, ""), Color: setting(p, "Color")}
 	if q.iconFile(n) != "" {g.Icon = "/api/icon?name=" + n}; return g, p, true}
+var idx map[string]map[string]string
+other := func(n string) string {
+	if idx == nil {idx = map[string]map[string]string{}; ts, _ := q.themes(); for _, t := range ts {if t != q.theme {idx[t] = conceptIndex(filepath.Join(q.themaRoot(), t))}}}
+	for t, ix := range idx {if c, ok := ix[strings.ToLower(n)]; ok && format.SameTerm(c, n) {return t}}; return ""}
 resolve := func(ns []string, slot string, inv bool) []gnode {
 	out := []gnode{}
 	for _, n := range ns {
 		g, p, ok := mk(n)
-		if !ok {continue}
-		if slot != "" {nd, ni := readLink(p, slot); if slot == "Transcl" {nd, ni = q.inclLists(n)}; if inv {nd = ni}; for _, x := range nd {if xg, _, ok := mk(x); ok {g.Neighbors = append(g.Neighbors, gnode{Name: xg.Name})}}}
+		if !ok {if slot == "Radix" {if t := other(n); t != "" {out = append(out, gnode{Name: n, Theme: t})}}; continue}
+		if slot != "" {nd, ni := readLink(p, slot); if slot == "Transcl" {nd, ni = q.inclLists(n)}; if inv {nd = ni}; for _, x := range nd {
+			if xg, _, ok := mk(x); ok {g.Neighbors = append(g.Neighbors, gnode{Name: xg.Name})} else if slot == "Radix" {if t := other(x); t != "" {g.Neighbors = append(g.Neighbors, gnode{Name: x, Theme: t})}}}}
 		out = append(out, g)}; return out}
 alias, links, _ := q.nexusData(name)
 if d, i := q.inclLists(name); len(d)+len(i) > 0 {links["Transcl"] = [2][]string{d, i}}
