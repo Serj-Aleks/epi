@@ -7,7 +7,7 @@ import ("fmt"; "os"; "path/filepath"; "strconv"; "strings"; "epi/script/disp"; "
 func (q *Medium) clone(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
 src, name := q.cidx[strings.ToLower(arg.Items[0].Text)], capital(arg.Items[1].Text)
-if src == "" {q.in.RawErr = fmt.Errorf("концепта %s в теме нет", arg.Items[0].Text); return format.Value{}, false}
+if src == "" {return q.renameRoot(arg.Items[0].Text, name)}
 if checkName(name) != nil {q.in.RawErr = fmt.Errorf("имя %s — с прописной буквы, без пробелов", name); return format.Value{}, false}
 if q.conceptPath(name) != "" {q.in.RawErr = fmt.Errorf("концепт %s уже есть", name); return format.Value{}, false}
 dst := filepath.Join(filepath.Dir(src), strings.ToLower(name)+".uic")
@@ -15,14 +15,15 @@ files := conceptFiles(src, dst)
 for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
 for _, f := range files {if err := copyFile(f[0], f[1]); err != nil {return format.Value{}, false}}
 q.adopt(name, dst); return format.Value{Kind: format.Term, Text: name}, true }
-// replaceRefs: имя old → name во всех концептах темы и лексикона корней (radix) — в значениях refKeys,
+// replaceRefs: имя old → name во всех концептах темы (all — всех тем) и лексикона корней (radix) — в значениях refKeys,
 // ссылках и трансклюзиях текстовых спутников
-func (q *Medium) replaceRefs(old, name string) error {
+func (q *Medium) replaceRefs(old, name string, all bool) error {
 swap := func(s string) string {return reToken.ReplaceAllStringFunc(s, func(t string) string {if format.SameTerm(t, old) {return name}; return t})}
 mark := func(s string) string {return reRefMark.ReplaceAllStringFunc(s, func(m string) string {
 	sub := reRefMark.FindStringSubmatch(m)
 	if format.SameTerm(strings.TrimSpace(sub[2]), old) && (sub[1] == "[[") == (sub[3] == "]]") {return sub[1] + name + sub[3]}; return m})}
 roots := []string{q.themaDir(), filepath.Join(q.dir, "lexic", "radix")}
+if ts, _ := q.themes(); all {roots = roots[1:]; for _, t := range ts {roots = append(roots, filepath.Join(q.themaRoot(), t))}}
 for _, r := range roots {
 	err := filepath.WalkDir(r, func(path string, d os.DirEntry, err error) error {
 		if err != nil {return nil}
@@ -45,11 +46,11 @@ for _, r := range roots {
 			if v := mark(string(sb)); v != string(sb) {if err := os.WriteFile(sp, []byte(v), 0644); err != nil {return err}}}; return nil})
 	if err != nil {return err}}; return nil }
 // rename: rename [ Старое Новое ] — файлы концепта, спутников и img/<имя>.* под новым именем
-// в той же папке, имя заменяется во всех связях и в контенте, контекст темы заново; ответ — новое имя
+// в той же папке, имя заменяется во всех связях и в контенте, контекст темы заново; ответ — новое имя; концепта в теме нет — корень лексикона
 func (q *Medium) rename(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
 src, name := q.cidx[strings.ToLower(arg.Items[0].Text)], capital(arg.Items[1].Text)
-if src == "" {q.in.RawErr = fmt.Errorf("концепта %s в теме нет", arg.Items[0].Text); return format.Value{}, false}
+if src == "" {return q.renameRoot(arg.Items[0].Text, name)}
 if checkName(name) != nil {q.in.RawErr = fmt.Errorf("имя %s — с прописной буквы, без пробелов", name); return format.Value{}, false}
 if p := q.conceptPath(name); p != "" && !strings.EqualFold(arg.Items[0].Text, name) {q.in.RawErr = fmt.Errorf("концепт %s уже есть", name); return format.Value{}, false}
 old := conceptName(src, "")
@@ -58,7 +59,7 @@ if dst != src {
 	files := conceptFiles(src, dst)
 	for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
 	for _, f := range files {if err := os.Rename(f[0], f[1]); err != nil {return format.Value{}, false}}}
-if err := q.replaceRefs(old, name); err != nil {return format.Value{}, false}
+if err := q.replaceRefs(old, name, false); err != nil {return format.Value{}, false}
 q.indexConcepts()
 q.env = disp.NewEnv(nil)
 if q.loadAliases() != nil || q.loadConcepts() != nil {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: name}, true }
@@ -172,7 +173,7 @@ for _, dp := range paths[1:] {
 	if err := mergeSats(main, dp); err != nil {q.in.RawErr = err; return format.Value{}, false}
 	for _, f := range conceptFiles(dp, dp) {os.Remove(f[0])}
 	delete(q.cidx, strings.ToLower(dname))
-	if err := q.replaceRefs(dname, mname); err != nil {q.in.RawErr = err; return format.Value{}, false}}
+	if err := q.replaceRefs(dname, mname, false); err != nil {q.in.RawErr = err; return format.Value{}, false}}
 selfClean(main, mname)
 q.indexConcepts()
 q.env = disp.NewEnv(nil)
@@ -206,3 +207,19 @@ for i, v := range vs {
 		for _, y := range items {if x.Kind == format.Term && y.Kind == format.Term && format.SameTerm(x.Text, y.Text) {dup = true}}
 		if !dup {items = append(items, x)}}
 	vs[i].Items = items}; return lineKey(l) + " : " + format.Canon(vs) }
+// renameRoot: корень lexic/radix old → name: файл по буквам нового имени, имя заменяется в связях и контенте всех тем; ответ — новое имя
+func (q *Medium) renameRoot(old, name string) (format.Value, bool) {
+rad := filepath.Join(q.dir, "lexic", "radix")
+src := letterPath(rad, old)
+if !exists(src) {q.in.RawErr = fmt.Errorf("концепта %s в теме нет, корня в лексиконе нет", old); return format.Value{}, false}
+if checkName(name) != nil {q.in.RawErr = fmt.Errorf("имя %s — с прописной буквы, без пробелов", name); return format.Value{}, false}
+dst := letterPath(rad, name)
+if exists(dst) && !strings.EqualFold(old, name) {q.in.RawErr = fmt.Errorf("корень %s уже есть", name); return format.Value{}, false}
+old = conceptName(src, "")
+if dst != src {
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {return format.Value{}, false}
+	for _, f := range conceptFiles(src, dst) {if err := os.Rename(f[0], f[1]); err != nil {return format.Value{}, false}}
+	for d := filepath.Dir(src); d != rad && os.Remove(d) == nil; d = filepath.Dir(d) {}}
+if err := q.replaceRefs(old, name, true); err != nil {return format.Value{}, false}
+q.env = disp.NewEnv(nil)
+if q.loadAliases() != nil || q.loadConcepts() != nil {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: name}, true }
