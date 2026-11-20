@@ -80,11 +80,11 @@ for _, l := range lines {if isParam(l) {out = append(out, l)}}
 preds, err := disp.Split(format.Canon(body))
 if err != nil {return err}
 if err := writeLines(path, append(out, preds...)); err != nil {return err}; q.known(path); return nil }
-// loadConcepts: системные концепты (lexic/constans) и концепты темы в контекст; концепт темы дополняет и переопределяет системный
+// loadConcepts: системные концепты (lexic/constans) и концепты темы в контекст; концепт темы дополняет и переопределяет системный; вопросов при загрузке нет
 func (q *Medium) loadConcepts() error {
-on, of := q.in.OnParam, q.in.OnFrame
-q.in.OnParam, q.in.OnFrame = nil, nil
-defer func() {q.in.OnParam, q.in.OnFrame = on, of}()
+on, of, ak := q.in.OnParam, q.in.OnFrame, q.in.Ask
+q.in.OnParam, q.in.OnFrame, q.in.Ask = nil, nil, nil
+defer func() {q.in.OnParam, q.in.OnFrame, q.in.Ask = on, of, ak}()
 if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {return err}; return q.loadConceptsIn(q.themaDir()) }
 // loadConceptsIn: концепты в папке root — имя из пути; у связи в контекст — только прямой список
 func (q *Medium) loadConceptsIn(root string) error {return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {

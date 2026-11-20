@@ -14,11 +14,11 @@ for p := range f.Kernel {preps = append(preps, p)}
 sort.Strings(preps)
 line := "Preposit : [ " + strings.Join(preps, " ") + " ]"
 if strings.TrimSpace(string(b)) == line {return nil}; return writeLines(path, []string{line}) }
-// loadAliases: файлы препозиций, кроме интерпретаторов, — предикации (plus : +) в общем контексте
+// loadAliases: файлы препозиций, кроме интерпретаторов, — предикации (plus : +) в общем контексте; вопросов при загрузке нет
 func (q *Medium) loadAliases() error {
-on := q.in.OnAlias
-q.in.OnAlias = nil
-defer func() { q.in.OnAlias = on }()
+on, ak := q.in.OnAlias, q.in.Ask
+q.in.OnAlias, q.in.Ask = nil, nil
+defer func() { q.in.OnAlias, q.in.Ask = on, ak }()
 frames := map[string]bool{}
 for _, f := range q.in.Frames {frames[strings.ToLower(f.Name)+".uic"] = true}
 root := filepath.Join(q.dir, "lexic", "preposit"); return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
