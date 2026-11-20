@@ -131,7 +131,7 @@ q.loadConceptsIn(dst)
 q.in.OnParam, q.in.OnFrame = on, of }
 // union: union [ Главный Дубль … ] — строки дублей в главный: связи — объединение, Rank — большее,
 // прочее — если у главного нет; json по ключам (занятый — «ключ-2»), md, html, txt, css дописываются, прочие — если нет
-// дубли удаляются, ссылки на них — на главный; ответ — имя главного
+// дубли удаляются, ссылки на них — на главный; ответ — имя главного; дубль, который ещё и корень лексикона, — отказ
 func (q *Medium) union(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) < 2 {return format.Value{}, false}
 var paths []string
@@ -140,6 +140,7 @@ for _, v := range arg.Items {
 	p := q.cidx[strings.ToLower(v.Text)]
 	if p == "" {q.in.RawErr = fmt.Errorf("концепта %s в теме нет", v.Text); return format.Value{}, false}
 	if has(paths, p) {q.in.RawErr = fmt.Errorf("%s — дважды", v.Text); return format.Value{}, false}
+	if len(paths) > 0 && exists(letterPath(filepath.Join(q.dir, "lexic", "radix"), v.Text)) {q.in.RawErr = fmt.Errorf("%s — и корень лексикона, объединять нельзя", v.Text); return format.Value{}, false}
 	paths = append(paths, p)}
 main, mname := paths[0], conceptName(paths[0], "")
 for _, dp := range paths[1:] {

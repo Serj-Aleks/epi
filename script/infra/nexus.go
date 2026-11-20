@@ -1,6 +1,6 @@
 // epi/script/infra/nexus.go
 package main
-import ("os"; "path/filepath"; "sort"; "strconv"; "strings"; "epi/script/format")
+import ("fmt"; "os"; "path/filepath"; "sort"; "strconv"; "strings"; "epi/script/format")
 // связи концептов — Taxon, Links, Attrib, Preposit, Radix; в файле два списка «[ прямой ] [ обратный ]»
 // автор пишет прямой (Жёлтый.Taxon : [ Цвет ]), обратный script ведёт сам (Цвет: Taxon : [ ] [ Жёлтый ])
 // linkRoot: где цели связи — Taxon, Links, Attrib, Preposit в теме; Radix — в теме, если есть, иначе в lexic
@@ -37,8 +37,9 @@ func without(ns []string, n string) []string {
 var out []string
 for _, x := range ns {if !format.SameTerm(x, n) {out = append(out, x)}}; return out }
 // writeLink: прямой список связи у frame, у целей обратный — добавленные получают frame, убранные теряют
-// strict — только у существующих целей (ссылки контента); цель без frame в обратном получает его и при неизменном прямом
+// strict — только у существующих целей (ссылки контента); цель без frame в обратном получает его и при неизменном прямом; Radix на себя — ошибка
 func (q *Medium) writeLink(frame, param string, pred []format.Value, root string, strict bool) error {
+if format.SameTerm(param, "Radix") {for _, n := range names(pred) {if format.SameTerm(n, frame) {return fmt.Errorf("%s не может быть своим корнем", frame)}}}
 path := q.conceptPath(frame)
 if path == "" {path = q.conceptFile(frame)}
 old, inv := readLink(path, param)
