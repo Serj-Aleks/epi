@@ -1,6 +1,6 @@
 // epi/script/infra/thema.go
 package main
-import ("fmt"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
+import ("fmt"; "log"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
 // темы автора: тема — папка thema/<Имя> с протоколом prtcl и концептами (путь из букв имени, строки «Параметр : предикация»)
 // активная тема одна, системный лексикон lexic — общий
 // themaRoot, themaDir: папка тем и папка активной темы
@@ -39,32 +39,40 @@ if !ok {return fmt.Errorf("темы %s нет", old)}
 if t, ok := q.themeExists(name); ok && t != cur {return fmt.Errorf("тема %s уже есть", t)}
 if err := os.Rename(filepath.Join(q.themaRoot(), cur), filepath.Join(q.themaRoot(), name)); err != nil {return err}
 if q.theme == cur {q.theme = name}; return nil }
-// switchTheme: тема активна — контекст заново (системные алиасы и концепты темы), база нераспознанных темы, последний открытый сеанс
+// switchTheme: тема активна — контекст заново (системные алиасы и концепты темы), база нераспознанных темы, последний открытый сеанс; тема не загрузилась — назад к прежней теме и её сеансу, ответ — ошибка
 func (q *Medium) switchTheme(name string) error {
+pt, pc := q.theme, q.cur
+back := func(err error) error {
+	q.theme = ""
+	if pt != "" && pt != name && q.switchTheme(pt) == nil && pc != "" && pc != q.cur && exists(q.seans(pc)) {q.switchTo(pc)}; return err}
 q.theme, q.cur, q.closed, q.turns = name, "", false, nil
 q.indexConcepts()
 q.in.Unknown = nil
-if err := q.loadIgnor(); err != nil {return err}
+if err := q.loadIgnor(); err != nil {return back(err)}
 q.env = disp.NewEnv(nil)
-if err := q.loadAliases(); err != nil {return err}
-if err := q.loadConcepts(); err != nil {return err}
+if err := q.loadAliases(); err != nil {return back(err)}
+if err := q.loadConcepts(); err != nil {return back(err)}
 ss, err := q.list()
 if err != nil {return err}
 for _, s := range ss {if !s.Closed {return q.switchTo(s.Name)}}; q.saveState(); return nil }
-// startTheme: при запуске — тема и сеанс из state.uic, иначе тема последнего открытого сеанса, иначе первая; тем нет — ни одной
+// startTheme: при запуске — тема и сеанс из state.uic, иначе тема последнего открытого сеанса, иначе первая; тем нет — ни одной;
+// тема не загрузилась — в терминал, дальше следующая; не загрузилась ни одна — сервер без темы
 func (q *Medium) startTheme() error {
 ts, err := q.themes()
 if err != nil || len(ts) == 0 {return err}
 if t, s := q.loadState(); t != "" {
 	if cur, ok := q.themeExists(t); ok {
-		if err := q.switchTheme(cur); err != nil {return err}
-		if s != "" && s != q.cur && exists(q.seans(s)) {return q.switchTo(s)}; return nil}}
+		if err := q.switchTheme(cur); err == nil {if s != "" && s != q.cur && exists(q.seans(s)) {return q.switchTo(s)}; return nil} else {log.Printf("тема %s не загрузилась: %v", cur, err); q.theme = ""}}}
 best, last := ts[0], ""
 for _, t := range ts {
 	q.theme = t
 	ss, err := q.list()
 	if err != nil {return err}
-	for _, s := range ss {if !s.Closed && s.Name > last {best, last = t, s.Name}}}; return q.switchTheme(best) }
+	for _, s := range ss {if !s.Closed && s.Name > last {best, last = t, s.Name}}}
+for i, t := range append([]string{best}, ts...) {
+	if i > 0 && t == best {continue}
+	if err = q.switchTheme(t); err == nil {return nil}
+	log.Printf("тема %s не загрузилась: %v", t, err); q.theme = ""}; return nil }
 // statePath, saveState, loadState: state.uic — тема и сеанс, где автор остановился
 func (q *Medium) statePath() string {return filepath.Join(q.dir, "state.uic") }
 func (q *Medium) saveState() {writeLines(q.statePath(), []string{"Thema : " + q.theme, "Seans : " + q.cur}) }
