@@ -106,7 +106,7 @@ node(data.center, xC, yCT, true);
 if (hasR) { const R = nxColumn(ne, et, se, yAxis);
   outgoing(ne, xR, R.upperY, xRC, xC + g.nodeW, "--graph-nw"); outgoing(et, xR, R.middleY, xRC, xC + g.nodeW, "--graph-wt"); outgoing(se, xR, R.lowerY, xRC, xC + g.nodeW, "--graph-sw"); }
 if (st.length) outgoing(st, xC, yCT + g.nodeH + g.vSpacing * 2, xBC, xC + g.nodeW, "--graph-nr"); }
-// nxList: список связей под графом; List : [ … ] — скрытые связи; у корня — диалекты: слова корня и его синонимов по темам
+// nxList: список связей под графом; List : [ … ] — скрытые связи; у корня — диалекты: концепты корня и его синонимов по темам
 function nxList(box, data) {
 const skip = new Set((data.list || []).map(s => s.toLowerCase()));
 const code = t => (data.codes || {})[t] || t, center = data.center.name;
@@ -123,9 +123,9 @@ secs.forEach(sec => { if (!sec.nodes || !sec.nodes.length) return;
     const clean = nxVisible(n, center);
     if (clean.length) { div.append(" [ "); clean.forEach((nb, k) => { if (k) { const s = document.createElement("span"); s.className = "dag-link-sep"; s.textContent = " · "; div.append(s); } div.append(link(nb, true)); }); div.append(" ]"); } });
   root.append(div); });
-(data.dialects || []).forEach(d => { if (!d.words || !d.words.length) return;
+(data.dialects || []).forEach(d => { if (!d.concepts || !d.concepts.length) return;
   const div = el("dag-section dag-section-extra"), lab = document.createElement("span"); lab.className = "dag-section-label"; lab.textContent = d.root + ": "; div.append(lab);
-  d.words.forEach((w, i) => { if (i) { const s = document.createElement("span"); s.className = "dag-link-sep"; s.textContent = " · "; div.append(s); }
+  d.concepts.forEach((w, i) => { if (i) { const s = document.createElement("span"); s.className = "dag-link-sep"; s.textContent = " · "; div.append(s); }
     if (w.theme) { const t = document.createElement("span"); t.className = "dag-link-secondary"; t.textContent = w.theme + " "; div.append(t); } div.append(link(w)); });
   root.append(div); });
 box.append(root); }

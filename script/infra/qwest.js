@@ -5,7 +5,7 @@ function qwestShow(qs, back, all) { if (!back) pPush({ k: "q", a: qs, f: "", all
 function qinfo(r) { return ["параметров " + (r.params || 0), r.sats ? "спутники " + r.sats : "", r.rank ? "Rank " + r.rank : ""].filter(Boolean).join(" · "); }
 // mark: подсветить слова в тексте
 function mark(s, ts) { let r = esc(s); ts.forEach(t => { r = r.replace(new RegExp(esc(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`); }); return r; }
-// qwestOpen: список qwest с фильтром по имени (& — и), ⬡ — таксон, ▪ — концепт; концепт другой темы переключает тему; radix — корни и число их слов
+// qwestOpen: список qwest с фильтром по имени (& — и), ⬡ — таксон, ▪ — концепт; концепт другой темы переключает тему; radix — корни и число их концептов
 async function qwestOpen(qs, all) {
 let rs;
 const rad = all === "r";

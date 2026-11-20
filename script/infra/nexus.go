@@ -179,7 +179,7 @@ for _, t := range ts {
 	for _, p := range themeIndex(filepath.Join(q.themaRoot(), t)) {if overlap(nameTokens(p), me, deep) {hits = append(hits, gnode{Name: conceptName(p, ""), Theme: t})}}
 	sort.Slice(hits, func(i, j int) bool {return aLess(hits[i].Name, hits[j].Name)})
 	if len(hits) > 0 {south = append(south, gnode{Name: t, Icon: icon, Type: "theme", Neighbors: hits})}}; return north, south }
-// dialects: корень p и его синонимы — слова каждого корня (обратный Radix) по темам, где есть их концепт; тема "" — концепта нет нигде
+// dialects: корень p и его синонимы — концепты каждого корня (обратный Radix) по темам, где есть их концепт; тема "" — концепта нет нигде
 func (q *Medium) dialects(p string) []map[string]any {
 ts, _ := q.themes()
 idx := map[string]map[string]string{}
@@ -189,10 +189,10 @@ as, _ := readLink(p, "Alias")
 for _, a := range as {if strings.HasPrefix(q.conceptPath(a), filepath.Join(q.dir, "lexic", "radix")) && !has(roots, a) {roots = append(roots, a)}}
 var out []map[string]any
 for _, r := range roots {
-	_, ws := readLink(q.conceptPath(r), "Radix")
+	_, cs := readLink(q.conceptPath(r), "Radix")
 	var nodes []gnode
-	for _, w := range ws {
+	for _, w := range cs {
 		n := 0
 		for _, t := range ts {if c, ok := idx[t][strings.ToLower(w)]; ok && format.SameTerm(c, w) {nodes = append(nodes, gnode{Name: w, Theme: t}); n++}}
 		if n == 0 {nodes = append(nodes, gnode{Name: w})}}
-	out = append(out, map[string]any{"root": r, "words": nodes})}; return out }
+	out = append(out, map[string]any{"root": r, "concepts": nodes})}; return out }
