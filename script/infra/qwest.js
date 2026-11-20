@@ -1,18 +1,19 @@
 // script/infra/qwest.js — поиск qwest, qwizt, карточка темы, поиск внутри концепта
-// qwestShow: список найденного в панели; all — qwizt, во всех темах
-function qwestShow(qs, back, all) { if (!back) pPush({ k: "q", a: qs, f: "", all }); cardName = null; qwestKey = (all ? "\u0001" : "") + qs; clearTimeout(cardTimer); cardTimer = setTimeout(() => qwestOpen(qs, all), 0); }
+// qwestShow: список найденного в панели; all — qwizt, во всех темах; "r" — radix, корни лексикона
+function qwestShow(qs, back, all) { if (!back) pPush({ k: "q", a: qs, f: "", all }); cardName = null; qwestKey = (all === "r" ? "\u0002" : all ? "\u0001" : "") + qs; clearTimeout(cardTimer); cardTimer = setTimeout(() => qwestOpen(qs, all), 0); }
 // qinfo: подсказка строки списка — число параметров, спутники, ранг таксона
 function qinfo(r) { return ["параметров " + (r.params || 0), r.sats ? "спутники " + r.sats : "", r.rank ? "Rank " + r.rank : ""].filter(Boolean).join(" · "); }
 // mark: подсветить слова в тексте
 function mark(s, ts) { let r = esc(s); ts.forEach(t => { r = r.replace(new RegExp(esc(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`); }); return r; }
-// qwestOpen: список qwest с фильтром по имени (& — и), ⬡ — таксон, ▪ — концепт; концепт другой темы переключает тему
+// qwestOpen: список qwest с фильтром по имени (& — и), ⬡ — таксон, ▪ — концепт; концепт другой темы переключает тему; radix — корни и число их слов
 async function qwestOpen(qs, all) {
 let rs;
-try { rs = await api((all ? "/api/qwizt?q=" : "/api/qwest?q=") + encodeURIComponent(qs)); } catch (e) { return; }
-if ((all ? "\u0001" : "") + qs !== qwestKey) return;
+const rad = all === "r";
+try { rs = await api((rad ? "/api/radix?q=" : all ? "/api/qwizt?q=" : "/api/qwest?q=") + encodeURIComponent(qs)); } catch (e) { return; }
+if ((rad ? "\u0002" : all ? "\u0001" : "") + qs !== qwestKey) return;
 rs = rs || []; cardBox.hidden = false; cardBox.innerHTML = ""; cardBox.scrollTop = 0; cardBox.dataset.name = ""; cardCss("");
 const ts = qs.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
-const head = el("chead"), st = pstack[pstack.length - 1] || {}; head.append(pBackBtn(), el("cname", (all ? "qwizt " : "qwest ") + (qs ? "«" + qs + "»" : "—") + " · " + rs.length));
+const head = el("chead"), st = pstack[pstack.length - 1] || {}; head.append(pBackBtn(), el("cname", (rad ? "radix " : all ? "qwizt " : "qwest ") + (qs ? "«" + qs + "»" : "—") + " · " + rs.length));
 const flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
 const tools = el("ctools"), x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
 head.append(flt, tools); cardBox.append(head);
@@ -21,8 +22,8 @@ const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().spl
   const shown = rs.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
   if (!shown.length) { list.append(el("cempty", "—")); return; }
   shown.forEach(r => { const row = el("qrow"), ic = el("cicon"); nxIcon(ic, r.icon);
-    const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.title = qinfo(r); a.innerHTML = mark(r.name, ts.concat(fs)); a.onclick = async e => { e.preventDefault(); if (all && r.theme !== last.theme) await act("/api/thema/open", { name: r.theme }); nxGo(r.name); };
-    const top = el("qtop"), mk = el("tpmark", r.taxon ? "⬡" : "▪"); top.append(mk, ic, a); if (r.type || all) top.append(el("qtype", (all ? r.theme + (r.type ? " · " : "") : "") + (r.type || ""))); row.append(top);
+    const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.title = qinfo(r); a.innerHTML = mark(r.name, ts.concat(fs)); a.onclick = async e => { e.preventDefault(); if (all && !rad && r.theme !== last.theme) await act("/api/thema/open", { name: r.theme }); nxGo(r.name); };
+    const top = el("qtop"), mk = el("tpmark", r.taxon ? "⬡" : "▪"); top.append(mk, ic, a); if (r.type || all) top.append(el("qtype", (all && !rad ? r.theme + (r.type ? " · " : "") : "") + (r.type || ""))); row.append(top);
     if (r.excerpt) { const ex = el("qex"); ex.innerHTML = mark(r.excerpt, ts); row.append(ex); }
     list.append(row); }); };
 flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw(); }

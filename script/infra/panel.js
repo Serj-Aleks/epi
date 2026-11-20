@@ -16,6 +16,7 @@ if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice
 else if (!turn.error && /^(clone|rename|union)\s/.test(turn.pred || "") && !/^@/.test(turn.answer || "")) cardShow(turn.answer);
 else if (!turn.error && /^qwest\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1"));
 else if (!turn.error && /^qwizt\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1"), false, true);
+else if (!turn.error && /^radix\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1"), false, "r");
 else if (!turn.error && cardName) cardShow(cardName); }
 // api: запрос к серверу, с body — POST
 async function api(path, body) {

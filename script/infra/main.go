@@ -12,7 +12,7 @@ q := &Medium{dir: dir}
 q.in = disp.New(limit, func(string) bool { return false })
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 q.in.FrameOf("trans").Kernel["trans"] = q.trans
-q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus, "qwest": q.qwest, "clone": q.clone, "rename": q.rename, "qwizt": q.qwizt, "import": q.importC, "union": q.union}
+q.in.Raw = map[string]func(format.Value) (format.Value, bool){"nexus": q.nexus, "qwest": q.qwest, "clone": q.clone, "rename": q.rename, "qwizt": q.qwizt, "import": q.importC, "union": q.union, "radix": q.radix}
 q.in.OnParam = q.writeConcept
 q.in.OnFrame = func(name string, body []format.Value) {if err := q.writeBody(name, body); err != nil {log.Print(err)}}
 q.in.OnAlias = func(name, target string) {
@@ -52,6 +52,7 @@ if req.URL.Path == "/api/card" {json.NewEncoder(w).Encode(q.card(req.URL.Query()
 if req.URL.Path == "/api/qwest" {json.NewEncoder(w).Encode(q.qwestFind(req.URL.Query().Get("q"))); return}
 if req.URL.Path == "/api/find" {json.NewEncoder(w).Encode(q.findIn(req.URL.Query().Get("name"), req.URL.Query().Get("q"))); return}
 if req.URL.Path == "/api/qwizt" {json.NewEncoder(w).Encode(q.qwizFind(req.URL.Query().Get("q"))); return}
+if req.URL.Path == "/api/radix" {json.NewEncoder(w).Encode(q.radixFind(req.URL.Query().Get("q"))); return}
 if req.URL.Path == "/api/taxa" {json.NewEncoder(w).Encode(q.taxa()); return}
 if req.URL.Path == "/api/params" {json.NewEncoder(w).Encode(q.params()); return}
 if req.URL.Path == "/api/dict" {json.NewEncoder(w).Encode(q.dict(req.URL.Query().Get("name"))); return}

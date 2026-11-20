@@ -88,3 +88,21 @@ for _, cp := range paths {
 		if every(low, ts) {out = append(out, map[string]string{"name": n, "type": ty, "excerpt": excerpt(text, low, ts[0])})}}}; return out }
 // every: все слова ts — в строке s
 func every(s string, ts []string) bool {for _, t := range ts {if !strings.Contains(s, t) {return false}}; return true }
+// radixFind: корни lexic/radix, в имени или синонимах которых все слова запроса (& — и); type — число слов корня; больше слов — выше
+func (q *Medium) radixFind(query string) []map[string]any {
+ts := qterms(query)
+out := []map[string]any{}
+filepath.WalkDir(filepath.Join(q.dir, "lexic", "radix"), func(p string, d os.DirEntry, err error) error {
+	if err != nil || d.IsDir() || !strings.HasSuffix(p, ".uic") {return nil}
+	name := conceptName(p, "")
+	alias, _ := readLink(p, "Alias")
+	head := strings.ToLower(name + " " + strings.Join(alias, " "))
+	for _, t := range ts {if !strings.Contains(head, t) {return nil}}
+	_, ws := readLink(p, "Radix")
+	out = append(out, map[string]any{"name": name, "words": len(ws), "type": "слов " + strconv.Itoa(len(ws))}); return nil})
+sort.Slice(out, func(i, j int) bool {a, b := out[i]["words"].(int), out[j]["words"].(int); if a != b {return a > b}; return aLess(out[i]["name"].(string), out[j]["name"].(string))})
+return out }
+// radix: radix "запрос" — корни лексикона, список показывает панель; ответ — число найденных
+func (q *Medium) radix(arg format.Value) (format.Value, bool) {
+if arg.Kind != format.Term && arg.Kind != format.String {return format.Value{}, false}
+return format.Value{Kind: format.Integer, Text: strconv.Itoa(len(q.radixFind(arg.Text)))}, true }
