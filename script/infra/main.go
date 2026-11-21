@@ -59,6 +59,7 @@ if req.URL.Path == "/api/dict" {json.NewEncoder(w).Encode(q.dict(req.URL.Query()
 if req.URL.Path == "/api/themes" {json.NewEncoder(w).Encode(q.themesInfo()); return}
 if req.URL.Path == "/api/themeicon" {n := req.URL.Query().Get("name"); if _, ok := q.themeExists(n); !ok || q.themeIcon(n) == "" {http.NotFound(w, req); return}; w.Header().Del("Content-Type"); http.ServeFile(w, req, q.themeIcon(n)); return}
 if req.URL.Path == "/api/process" {json.NewEncoder(w).Encode(q.process(req.URL.Query().Get("name"))); return}
+if req.URL.Path == "/api/corpus" {json.NewEncoder(w).Encode(q.corpus(req.URL.Query().Get("name"))); return}
 if req.URL.Path == "/api/children" {json.NewEncoder(w).Encode(q.children(req.URL.Query().Get("name"))); return}
 if req.URL.Path == "/api/situation" {
 	f := strings.Fields(body.Text)

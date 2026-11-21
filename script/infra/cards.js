@@ -82,7 +82,7 @@ head.append(pBackBtn(), ic, el("cname", c.name));
 if (c.color) { head.style.borderBottom = "3px solid " + c.color; head.querySelector(".cname").style.color = c.color; }
 favicon(c.icon);
 const tools = el("ctools");
-[["graph", "✦"], ["taxon", "⬡"], ["content", "≡"], ["process", "⊛"], ["rank", "◈"], ["tabs", "↕"], ["slots", "⊞"]].filter(([k]) => (k !== "rank" || cardRank(c) > 0) && (k !== "tabs" || cardSet(c, "Tabs")) && (k !== "process" || cardSet(c, "Process"))).forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardName = c.name; cardOpen(c.name); }; tools.append(b); });
+[["graph", "✦"], ["taxon", "⬡"], ["content", "≡"], ["process", "⊛"], ["rank", "◈"], ["tabs", "↕"], ["corpus", "E"], ["slots", "⊞"]].filter(([k]) => (k !== "rank" || cardRank(c) > 0) && (k !== "tabs" || cardSet(c, "Tabs")) && (k !== "process" || cardSet(c, "Process"))).forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardName = c.name; cardOpen(c.name); }; tools.append(b); });
 const cl = document.createElement("button"); cl.textContent = "⧉"; cl.title = "clone"; cl.onclick = () => { cloneSrc = c.name; askName("clone"); }; tools.prepend(cl);
 const x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
 const fi = document.createElement("input"); fi.className = "cval cfind"; fi.placeholder = "find"; fi.spellcheck = false; fi.title = "поиск внутри концепта и его синонимов (md, html, json, xml, txt)";
@@ -102,6 +102,7 @@ if (lens.content) { const box = el("clens"); root.append(box); await lensContent
 if (lens.process && cardSet(c, "Process")) { const box = el("clens"); root.append(box); await lensProcess(box, c); }
 if (lens.rank && cardRank(c) > 0) { const box = el("clens"); root.append(box); await lensRank(box, c); }
 if (lens.tabs && cardSet(c, "Tabs")) { const box = el("clens"); root.append(box); await lensTabs(box, c); }
+if (lens.corpus) { const box = el("clens"); lensCorpus(box, c); root.append(box); }
 if (lens.slots) { const box = el("clens"); lensSlots(box, c); root.append(box); }
 if (gen !== cardGen) return;
 cardCss(css); cardBox.hidden = false; cardBox.replaceChildren(...root.childNodes); cardBox.scrollTop = keep; }

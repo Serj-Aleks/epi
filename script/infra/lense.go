@@ -1,6 +1,6 @@
 // epi/script/infra/lense.go
 package main
-import ("encoding/json"; "fmt"; "os"; "sort"; "strconv"; "strings")
+import ("encoding/json"; "fmt"; "os"; "sort"; "strconv"; "strings"; "epi/script/disp"; "epi/script/format")
 // данные линз карточки: таксоны, дочерние, процесс и ситуации, словари, алфавит темы
 // taxa: таксоны темы — концепты с параметром Rank, имя, цвет, картинка, в алфавите темы
 func (q *Medium) taxa() []map[string]string {
@@ -104,3 +104,33 @@ add := func(k string) {if l := strings.ToLower(k); !seen[l] {seen[l] = true; out
 for _, k := range sysParams {add(k)}
 for _, p := range q.cidx {if b, err := os.ReadFile(p); err == nil {ls, _ := conceptLines(b); for _, l := range ls {if isParam(l) {add(lineKey(l))}}}}
 sort.Slice(out, func(i, j int) bool {return strings.ToLower(out[i]) < strings.ToLower(out[j])}); return out }
+// corpus: тело концепта в песочнице — контекст темы заново, без записи, вопросов и протокола; строки тела по порядку
+// с интерпретацией (у определения «Ф.П : …» — значение Ф.П после него) и итог — интерпретация фрейма по имени
+func (q *Medium) corpus(name string) map[string]any {
+p := q.conceptPath(name)
+if p == "" {return map[string]any{"error": "концепта " + name + " нет"}}
+b, err := os.ReadFile(p)
+if err != nil {return map[string]any{"error": err.Error()}}
+lines, err := conceptLines(b)
+if err != nil {return map[string]any{"error": err.Error()}}
+var body []string
+for _, l := range lines {if !isParam(l) {body = append(body, l)}}
+out := map[string]any{"name": conceptName(p, "")}
+if len(body) == 0 {return out}
+env, un, oa := q.env, q.in.Unknown, q.in.OnAlias
+defer func() {q.env, q.in.Unknown, q.in.OnAlias = env, un, oa}()
+on, of, ak := q.in.OnParam, q.in.OnFrame, q.in.Ask
+fresh := func() error {q.in.OnAlias = nil; q.env = disp.NewEnv(nil); if err := q.loadAliases(); err != nil {return err}; err := q.loadConcepts(); q.in.OnParam, q.in.OnFrame, q.in.Ask = nil, nil, nil; return err}
+defer func() {q.in.OnParam, q.in.OnFrame, q.in.Ask = on, of, ak}()
+show := func(v format.Value, err error) (string, bool) {if err != nil {return err.Error(), true}; return format.Canon([]format.Value{v}), false}
+if err := fresh(); err != nil {out["error"] = err.Error(); return out}
+var rows []map[string]any
+for _, l := range body {
+	v, err := q.in.Run(l, q.env)
+	if k, _, ok := strings.Cut(l, " : "); ok && err == nil && strings.Contains(k, ".") && !strings.ContainsAny(k, " ([{") {v, err = q.in.Run(k, q.env)}
+	s, bad := show(v, err)
+	rows = append(rows, map[string]any{"text": l, "value": s, "error": bad})}
+out["lines"] = rows
+if err := fresh(); err != nil {out["error"] = err.Error(); return out}
+s, bad := show(q.in.Run(out["name"].(string), q.env))
+out["result"], out["rerror"] = s, bad; return out }

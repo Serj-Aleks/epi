@@ -194,3 +194,5 @@ body:has(#card:not([hidden]))::after { right: calc(50% + 90px); }
 #work { flex-direction: column; }
 #card { order: -1; width: auto; max-height: 55vh; border-left: 0; border-bottom: 1px solid var(--barline); }
 body:has(#card:not([hidden]))::after { right: 90px; } }
+.corpus .err { color: var(--err); }
+.ptab tr.ctotal td { border-top: 2px solid var(--fg); font-weight: 700; }
