@@ -130,7 +130,7 @@ inpT.oninput = async () => { drop.innerHTML = ""; const v = inpT.value.trim(), l
 inpT.onblur = () => setTimeout(() => drop.innerHTML = "", 200);
 const wrap = el("twrap"); wrap.append(inpT, drop);
 box.append(pills, wrap); }
-// lensCorpus: E тело — строки тела с интерпретацией и итог фрейма под чертой; вычисляется в песочнице только по ↻
+// lensCorpus: E тело — роли входа со значениями по умолчанию, строки тела с интерпретацией и итог фрейма под чертой; вычисляется в песочнице только по ↻
 function lensCorpus(box, c) {
 const bar = el("ctools"), go = document.createElement("button"); go.textContent = "↻"; go.title = "вычислить"; bar.append(go); box.append(bar);
 const out = el("corpus"); out.append(el("cempty", "↻ — вычислить тело")); box.append(out);
@@ -139,6 +139,7 @@ go.onclick = async () => { const d = await api("/api/corpus?name=" + encodeURICo
   if (!d.lines || !d.lines.length) { out.append(el("cempty", "тела нет")); return; }
   const t = document.createElement("table"); t.className = "ptab";
   const row = (a, b, bad, cls) => { const tr = document.createElement("tr"), x = document.createElement("td"), y = document.createElement("td"); if (cls) tr.className = cls; const code = document.createElement("code"); code.textContent = a; x.append(code); y.textContent = b; if (bad) y.className = "err"; tr.append(x, y); t.append(tr); };
+  (d.in || []).forEach(l => row("In " + l.text, l.value, l.error, "cin"));
   d.lines.forEach(l => row(l.text, l.value, l.error));
   row(d.name, d.result, d.rerror, "ctotal"); out.append(t); }; }
 // lensSlots: ⊞ строки концепта — ✓ отправляет Концепт.Параметр : значение в строку ввода; пустое — «Концепт.Параметр :», у связи — [] (Rank : — не таксон)

@@ -40,7 +40,7 @@ func (r reader) isPrep(i int) bool { return i < len(r.vs) && isPrepTok(r.vs[i]) 
 func (r reader) readOperand(i int) ([]format.Value, int, bool) {
 vs := r.vs
 if i >= len(vs) || vs[i].Kind == format.Op || r.isPrep(i) || format.IsDef(vs, i) {return nil, i, false}
-if vs[i].Kind == format.Term && i+1 < len(vs) && vs[i+1].Kind == format.Object {return vs[i : i+2], i + 2, true}; return vs[i : i+1], i + 1, true }
+if vs[i].Kind == format.Term && i+1 < len(vs) && (vs[i+1].Kind == format.Object || vs[i+1].Kind == format.Array && upperFirst(vs[i].Text) == vs[i].Text) {return vs[i : i+2], i + 2, true}; return vs[i : i+1], i + 1, true }
 // readSlot: слот с позиции i — определение (значение с препозиции — алиас препозиции), препозиция в начале или между операндами
 // у Raw-препозиции слово со строчной — операнд (qwest numer); в слоте одна препозиция; «Ключ :» в конце — пустое значение
 func (r reader) readSlot(i int) (*slot, int) {
@@ -185,7 +185,7 @@ if r := in.Raw[sym]; frame == nil && r != nil {
 	if !ok {in.unknown(s.toks(), "— «"+sym+"» не интерпретирует такой операнд"); return none, nil}
 	if fr != nil {in.use(fr)}; return v, nil}
 if frame != nil {
-	if s.prefix == nil || s.a[0].Kind != format.Object {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(frame, s.a[0], env)}
+	if s.prefix == nil || s.a[0].Kind != format.Object {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(ptok.Text, frame, s.a[0], env)}
 a, err := in.evalOperand(s.a, env, false)
 if err != nil {return none, err}
 pa, pb := &a, (*format.Value)(nil)
@@ -221,19 +221,48 @@ case format.Term: return in.apply(a, env)
 case format.Field: return in.param(a, env)}; return v, nil }
 // apply: аппликация объекта по имени, с аргументами или без; модель «имя -> предикация» интерпретируется при обращении
 func (in *Interp) apply(a []format.Value, env *Env) (format.Value, error) {
-b, _ := env.findFrame(a[0].Text)
+b, real := env.findFrame(a[0].Text)
 if b == nil {in.unknown(a, "— имя не определено"); return none, nil}
 if len(b.pred) == 1 && b.pred[0].Kind == format.Array {
-	if len(a) == 2 {return in.call(b, a[1], env)}; return in.call(b, format.Value{Kind: format.Object}, env)}
+	if len(a) == 2 {return in.call(real, b, a[1], env)}; return in.call(real, b, format.Value{Kind: format.Object}, env)}
 if len(b.pred) == 0 {return frameValue(b), nil}
 if len(a) == 2 {in.unknown(a, "— «"+a[0].Text+"» не фрейм"); return none, nil}
 r, _, err := in.block(b.pred, b.env); return r, err }
-// call: экземпляр фрейма — контекст, дочерний к описанию; аргументы «Ключ : предикация» интерпретируются в контексте вызова
-func (in *Interp) call(frame *binding, args format.Value, env *Env) (format.Value, error) {
+// call: экземпляр фрейма — контекст, дочерний к описанию; аргументы «Ключ : предикация» интерпретируются в контексте вызова;
+// аргумент — и имя в теле, и параметр фрейма на время вызова (параметры и аргументы — одно); In — роли входа:
+// позиционный вызов «Фрейм [ 2 10 ]» по их порядку, неподанная роль — параметр фрейма по умолчанию;
+// результат — Ex (параметры выхода, процедура) блоком, иначе параметр с именем фрейма (функция), иначе последняя импликация
+func (in *Interp) call(name string, frame *binding, args format.Value, env *Env) (format.Value, error) {
 inst := NewEnv(frame.env)
-for _, e := range args.Entries() {inst.vars[format.Key(e.Key.Text)] = &binding{pred: e.Value, env: env}}
+if frame.params == nil {frame.params = map[string]*binding{}}
+roles := roleNames(frame, "In")
+es := args.Entries()
+if args.Kind == format.Array {for i, v := range args.Items {if i < len(roles) {es = append(es, format.Entry{Key: format.Value{Kind: format.Term, Text: roles[i]}, Value: []format.Value{v}})}}}
+for _, r := range roles {if pb := frame.params[format.Key(r)]; pb != nil {inst.vars[format.Key(r)] = pb}}
+saved := map[string]*binding{}
+defer func() {for k, old := range saved {if old == nil {delete(frame.params, k)} else {frame.params[k] = old}}}()
+for _, e := range es {
+	k, b := format.Key(e.Key.Text), &binding{pred: e.Value, env: env}
+	if _, ok := saved[k]; !ok {saved[k] = frame.params[k]}
+	inst.vars[k], frame.params[k] = b, b}
 if err := in.step(); err != nil {return none, err}
-r, _, err := in.block(frame.pred[0].Items, inst); return r, err }
+r, _, err := in.block(frame.pred[0].Items, inst)
+if err != nil {return r, err}
+if ex := roleNames(frame, "Ex"); len(ex) > 0 {
+	v := format.Value{Kind: format.Object, Items: []format.Value{}}
+	for _, n := range ex {
+		x := none
+		if pb := frame.params[format.Key(n)]; pb != nil {if x, _, err = in.block(pb.pred, pb.env); err != nil {return none, err}}
+		v.Items = append(v.Items, format.Value{Kind: format.Term, Text: n}, format.Value{Kind: format.Op, Text: ":"}, x)}; return v, nil}
+if pb := frame.params[format.Key(name)]; name != "" && pb != nil {r, _, err = in.block(pb.pred, pb.env)}; return r, err }
+// roleNames: имена из параметра key фрейма — блок терминов или один термин (In, Ex)
+func roleNames(b *binding, key string) []string {
+pb := b.params[format.Key(key)]
+if pb == nil {return nil}
+var out []string
+for _, v := range pb.pred {
+	if v.Kind == format.Term {out = append(out, v.Text)}
+	if v.Kind == format.Array {for _, t := range v.Items {if t.Kind == format.Term {out = append(out, t.Text)}}}}; return out }
 // num: значение, целое ли, число ли
 func num(v *format.Value) (float64, bool, bool) {
 	if v == nil {return 0, false, false}

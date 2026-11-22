@@ -208,3 +208,18 @@ v, _ = in.Run("recur { In : [ 2 3 ] As : S.I Corpus : [ S.I * S.I ] }", env)
 if v.String() != "9" || strings.Join(in.Used, " ") != "arifm zycle" {t.Fatalf("последний шаг = %v (%v)", v, in.Used)}
 in.Run("recur { In : 5 As : S.I Corpus : [ S.I ] }", env)
 if len(in.Unknown) != 1 {t.Fatalf("In не блок — не распознано: %v", in.Unknown)} }
+// TestFrameRoles: роли входа In, позиционный и именованный вызов, умолчания, результат — имя фрейма или Ex
+func TestFrameRoles(t *testing.T) {
+in := New(10000, nil); env := NewEnv(nil)
+for _, c := range []struct{ src, want string }{
+	{`Gradus.In : [ Basis Exponens ]`, "@none"},
+	{`Gradus.Basis : 2 . Gradus.Exponens : 3`, "@none"},
+	{`Gradus : [ Gradus.Gradus : 1 . recur { In : [ 1 2 3 4 5 6 7 8 9 10 ] As : Gradus.I Corpus : [ ( Gradus.I > Gradus.Exponens ) -> @none . Gradus.Gradus : ( Gradus.Gradus * Gradus.Basis ) ] } ]`, "@none"},
+	{`Gradus`, "8"},
+	{`Gradus { Basis : 2 Exponens : 10 }`, "1024"},
+	{`Gradus [ 3 4 ]`, "81"},
+	{`Gradus.Basis`, "2"},
+	{`Summa.In : [ A B ] . Summa.Ex : [ S D ]`, "@none"},
+	{`Summa : [ Summa.S : ( Summa.A + Summa.B ) . Summa.D : ( Summa.A - Summa.B ) ]`, "@none"},
+	{`Summa [ 7 2 ]`, "{ S : 9 D : 5 }"},
+}{ v, err := in.Run(c.src, env); got := ""; if err == nil {got = format.Canon([]format.Value{v})} else {got = err.Error()}; t.Logf("%s => %s", c.src, got); if c.want != "" && got != c.want {t.Errorf("%s: %s, ждём %s", c.src, got, c.want)}}}
