@@ -228,7 +228,7 @@ if len(b.pred) == 1 && b.pred[0].Kind == format.Array {
 if len(b.pred) == 0 {return frameValue(b), nil}
 if len(a) == 2 {in.unknown(a, "— «"+a[0].Text+"» не фрейм"); return none, nil}
 r, _, err := in.block(b.pred, b.env); return r, err }
-// call: экземпляр фрейма — контекст, дочерний к описанию; аргументы «Ключ : предикация» интерпретируются в контексте вызова;
+// call: экземпляр фрейма — контекст, дочерний к описанию; аргументы «Ключ : предикация» интерпретируются в контексте вызова, ( ) — сейчас (9.3, рекурсия);
 // аргумент — и имя в теле, и параметр фрейма на время вызова; у фрейма с In или Ex все его параметры живут на время вызова и в файл не пишутся; In — роли входа:
 // позиционный вызов «Фрейм [ 2 10 ]» по их порядку, неподанная роль — параметр фрейма по умолчанию; ошибка с подсказкой:
 // в In не имя роли, значений больше, чем ролей, у роли нет ни значения, ни умолчания;
@@ -255,6 +255,7 @@ if local {
 	defer func() {frame.params = saved; if in.calls[frame]--; in.calls[frame] == 0 {delete(in.calls, frame)}}()
 } else {defer func() {for k, old := range saved {if old == nil {delete(frame.params, k)} else {frame.params[k] = old}}}()}
 for _, e := range es {
+	if len(e.Value) == 1 && e.Value[0].Kind == format.Expr {v, err := in.evalOperand(e.Value, env, false); if err != nil {return none, err}; e.Value = []format.Value{v}}
 	k, b := format.Key(e.Key.Text), &binding{pred: e.Value, env: env}
 	if _, ok := saved[k]; !ok && !local {saved[k] = frame.params[k]}
 	inst.vars[k], frame.params[k] = b, b}
