@@ -23,7 +23,7 @@ st.textContent = (css || "").replace(/\/\*[\s\S]*?\*\//g, "").split("}").map(r =
 function esc(s) { return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 // refLinks: ссылки [[Имя]] — на концепт (md и html)
 function refLinks(s) { return s.replace(/\[\[([^\]]+)\]\]/g, (_, n) => `<a href="#" class="cref" data-n="${esc(n.trim())}">${esc(n.trim())}</a>`); }
-// mdHtml: md в html — заголовки, списки, таблицы, код, ссылки; картинка файл — из img концепта, /img/файл — из img темы
+// mdHtml: md в html — заголовки, списки, таблицы, код, ссылки; картинка файл — из img концепта, /img/файл — из img темы; ячейки таблицы делятся по «|» вне кода
 function mdHtml(md, name) {
 const code = [];
 md = md.replace(/```([\s\S]+?)```/g, (_, c) => { code.push("<pre><code>" + esc(c.replace(/^\n/, "").replace(/\n$/, "")) + "</code></pre>"); return `\x00C${code.length - 1}\x00`; });
@@ -37,7 +37,7 @@ for (const line of md.split("\n")) {
   if (/^\|.+\|$/.test(line)) { endList();
     if (!tab) { h += "<table>"; tab = true; head = true; }
     if (/^\|[-| :]+\|$/.test(line)) continue;
-    const cells = line.split("|").slice(1, -1).map(c => inl(c.trim()));
+    const cells = []; let cell = "", code = false; for (const ch of line.slice(1, -1)) { if (ch === "`") code = !code; if (ch === "|" && !code) { cells.push(cell); cell = ""; } else cell += ch; } cells.push(cell); cells.forEach((c, i) => cells[i] = inl(c.trim()));
     h += "<tr>" + cells.map(c => head ? `<th>${c}</th>` : `<td>${c}</td>`).join("") + "</tr>"; head = false; continue; }
   endTab();
   let m;
