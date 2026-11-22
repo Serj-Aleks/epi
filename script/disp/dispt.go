@@ -185,7 +185,7 @@ if r := in.Raw[sym]; frame == nil && r != nil {
 	if !ok {in.unknown(s.toks(), "— «"+sym+"» не интерпретирует такой операнд"); return none, nil}
 	if fr != nil {in.use(fr)}; return v, nil}
 if frame != nil {
-	if s.prefix == nil || s.a[0].Kind != format.Object {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(frame, s.a[0], env)}
+	if s.prefix == nil || s.a[0].Kind != format.Object {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(ptok.Text, frame, s.a[0], env)}
 a, err := in.evalOperand(s.a, env, false)
 if err != nil {return none, err}
 pa, pb := &a, (*format.Value)(nil)
@@ -224,20 +224,28 @@ func (in *Interp) apply(a []format.Value, env *Env) (format.Value, error) {
 b, _ := env.findFrame(a[0].Text)
 if b == nil {in.unknown(a, "— имя не определено"); return none, nil}
 if len(b.pred) == 1 && b.pred[0].Kind == format.Array {
-	if len(a) == 2 {return in.call(b, a[1], env)}; return in.call(b, format.Value{Kind: format.Object}, env)}
+	if len(a) == 2 {return in.call(a[0].Text, b, a[1], env)}; return in.call(a[0].Text, b, format.Value{Kind: format.Object}, env)}
 if len(b.pred) == 0 {return frameValue(b), nil}
 if len(a) == 2 {in.unknown(a, "— «"+a[0].Text+"» не фрейм"); return none, nil}
 r, _, err := in.block(b.pred, b.env); return r, err }
 // call: экземпляр фрейма — контекст, дочерний к описанию; аргументы «Ключ : предикация» интерпретируются в контексте вызова;
 // аргумент — и имя в теле, и параметр фрейма на время вызова; у фрейма с In или Ex все его параметры живут на время вызова и в файл не пишутся; In — роли входа:
-// позиционный вызов «Фрейм [ 2 10 ]» по их порядку, неподанная роль — параметр фрейма по умолчанию;
+// позиционный вызов «Фрейм [ 2 10 ]» по их порядку, неподанная роль — параметр фрейма по умолчанию; ошибка с подсказкой:
+// в In не имя роли, значений больше, чем ролей, у роли нет ни значения, ни умолчания;
 // результат — Ex: термин — значение этого параметра (функция), блок — блок параметров выхода (процедура); без Ex — последняя импликация
-func (in *Interp) call(frame *binding, args format.Value, env *Env) (format.Value, error) {
+func (in *Interp) call(name string, frame *binding, args format.Value, env *Env) (format.Value, error) {
 inst := NewEnv(frame.env)
 if frame.params == nil {frame.params = map[string]*binding{}}
 roles := roleNames(frame, "In")
 es := args.Entries()
 if args.Kind == format.Array {for i, v := range args.Items {if i < len(roles) {es = append(es, format.Entry{Key: format.Value{Kind: format.Term, Text: roles[i]}, Value: []format.Value{v}})}}}
+if pb := frame.params[format.Key("In")]; pb != nil {for _, v := range pb.pred {its := []format.Value{v}; if v.Kind == format.Array {its = v.Items}
+	for _, t := range its {if r := []rune(t.Text); t.Kind != format.Term || len(r) == 0 || !unicode.IsUpper(r[0]) {return none, fmt.Errorf("%s.In : %s — в In имена ролей с прописной, а не значения; значение подаётся при вызове: %s [ … ]", name, format.Canon(pb.pred), name)}}}}
+if args.Kind == format.Array && len(args.Items) > len(roles) {return none, fmt.Errorf("%s: подано значений %d, ролей %d (%s.In : [ %s ])", name, len(args.Items), len(roles), name, strings.Join(roles, " "))}
+for _, r := range roles {
+	given := frame.params[format.Key(r)] != nil
+	for _, e := range es {given = given || format.SameTerm(e.Key.Text, r)}
+	if !given {return none, fmt.Errorf("%s: нет значения роли %s — подайте при вызове: %s [ %s ], или задайте по умолчанию: %s.%s : …", name, r, name, strings.Join(roles, " "), name, r)}}
 for _, r := range roles {if pb := frame.params[format.Key(r)]; pb != nil {inst.vars[format.Key(r)] = pb}}
 saved, local := map[string]*binding{}, frame.params[format.Key("In")] != nil || frame.params[format.Key("Ex")] != nil
 if local {

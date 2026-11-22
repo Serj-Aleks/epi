@@ -228,3 +228,13 @@ for _, c := range []struct{ src, want string }{
 }{ v, err := in.Run(c.src, env); got := ""; if err == nil {got = format.Canon([]format.Value{v})} else {got = err.Error()}; t.Logf("%s => %s", c.src, got); if c.want != "" && got != c.want {t.Errorf("%s: %s, ждём %s", c.src, got, c.want)}}
 if w := strings.Join(wrote, " "); w != "Gradus.In Gradus.Ex Gradus.Basis Gradus.Exponens Summa.In Summa.Ex" {t.Errorf("в файл записано: %s", w)}
 if v, _ := in.Run("Gradus.I", env); v.String() != "@none" {t.Errorf("Gradus.I после вызова = %v", v)} }
+// TestTriangulum: условия с & и |, переход в другой фрейм, ошибки вызова с подсказкой
+func TestTriangulum(t *testing.T) {
+in := New(10000, nil); env := NewEnv(nil)
+for _, s := range []string{"Existens.In : [ A B C ]", "Existens : [ ( ( ( Existens.A + Existens.B ) > Existens.C ) & ( ( Existens.A + Existens.C ) > Existens.B ) ) & ( ( Existens.B + Existens.C ) > Existens.A ) ]", "Triangulum.In : [ A B C ]",
+	"Triangulum : [ ( Existens [ Triangulum.A Triangulum.B Triangulum.C ] ) = @false -> 'nullum . ( ( Triangulum.A = Triangulum.B ) & ( Triangulum.B = Triangulum.C ) ) -> 'aequilaterum . ( ( ( Triangulum.A = Triangulum.B ) | ( Triangulum.B = Triangulum.C ) ) | ( Triangulum.A = Triangulum.C ) ) -> 'isosceles . 'scalenum ]", "Signum.In : [ 3 ] . Signum : [ 1 ]"} {
+	if _, err := in.Run(s, env); err != nil {t.Fatal(s, err)}}
+for _, c := range []struct{ src, want string }{{"Triangulum [ 1 2 10 ]", "nullum"}, {"Triangulum [ 5 5 5 ]", "aequilaterum"}, {"Triangulum [ 5 5 8 ]", "isosceles"}, {"Triangulum [ 3 4 5 ]", "scalenum"},
+	{"Triangulum [ 3 4 ]", "нет значения роли C"}, {"Triangulum [ 3 4 5 6 ]", "подано значений 4, ролей 3"}, {"Signum [ 1 ]", "в In имена ролей"}} {
+	v, err := in.Run(c.src, env); got := v.String(); if err != nil {got = err.Error()}
+	if !strings.Contains(got, c.want) {t.Errorf("%s = %s, ждём %s", c.src, got, c.want)}}}

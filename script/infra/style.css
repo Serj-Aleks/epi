@@ -201,3 +201,5 @@ body:has(#card:not([hidden]))::after { right: 90px; } }
 .corpus .err { color: var(--err); }
 .ptab tr.ctotal td { border-top: 2px solid var(--fg); font-weight: 700; }
 .ptab tr.cin td { color: var(--dim); }
+.ptab tr.cskip td { color: var(--dim); }
+.corpus td.err input::placeholder { color: var(--err); }

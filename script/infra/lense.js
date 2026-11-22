@@ -142,8 +142,8 @@ go.onclick = async () => { const q = Object.entries(args).map(([k, v]) => "&a." 
   const t = document.createElement("table"); t.className = "ptab";
   const row = (a, b, bad, cls) => { const tr = document.createElement("tr"), x = document.createElement("td"), y = document.createElement("td"); if (cls) tr.className = cls; const code = document.createElement("code"); code.textContent = a; x.append(code); if (b instanceof Node) y.append(b); else y.textContent = b; if (bad) y.className = "err"; tr.append(x, y); t.append(tr); };
   (d.in || []).forEach(l => { const f = document.createElement("input"); f.className = "cval"; f.spellcheck = false; f.placeholder = l.value; f.value = args[l.text] || ""; f.title = "значение роли " + l.text + " (пусто — по умолчанию), Enter — вычислить";
-    f.oninput = () => { args[l.text] = f.value; }; f.onkeydown = e => { if (e.key === "Enter") go.click(); }; row("In " + l.text, f, false, "cin"); });
-  d.lines.forEach(l => row(l.text, l.value, l.error));
+    f.oninput = () => { args[l.text] = f.value; }; f.onkeydown = e => { if (e.key === "Enter") go.click(); }; row("In " + l.text, f, l.error, "cin"); });
+  d.lines.forEach(l => row(l.text, l.value, l.error, l.skip ? "cskip" : ""));
   row(d.name, d.result, d.rerror, "ctotal"); out.append(t); }; }
 // lensSlots: ⊞ строки концепта — ✓ отправляет Концепт.Параметр : значение в строку ввода; пустое — «Концепт.Параметр :», у связи — [] (Rank : — не таксон)
 // у связи правится только прямой список, обратный ведёт script; первая строка — имя (rename), вторая — место (Locus), последняя — новый параметр с подбором имени (системные и уже есть в теме)

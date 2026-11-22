@@ -106,7 +106,9 @@ for _, p := range q.cidx {if b, err := os.ReadFile(p); err == nil {ls, _ := conc
 sort.Slice(out, func(i, j int) bool {return strings.ToLower(out[i]) < strings.ToLower(out[j])}); return out }
 // corpus: тело концепта в песочнице — контекст темы заново, без записи, вопросов и протокола; строки тела по порядку
 // с интерпретацией (у определения «Ф.П : …» — значение Ф.П после него) и итог — интерпретация фрейма по имени;
-// in — роли входа (In) со значениями по умолчанию; args — значения ролей из линзы (вместо умолчаний, только в песочнице)
+// in — роли входа (In) со значениями по умолчанию; args — значения ролей из линзы (вместо умолчаний, только в песочнице);
+// у роли нет значения — строки тела не вычисляются, итог — ошибка вызова с подсказкой; путь выполнения: условие ложно — «ложь — дальше»,
+// истинно — значение строки, строки после неё — «не выполняется»
 func (q *Medium) corpus(name string, args map[string]string) map[string]any {
 p := q.conceptPath(name)
 if p == "" {return map[string]any{"error": "концепта " + name + " нет"}}
@@ -128,8 +130,17 @@ if err := fresh(); err != nil {out["error"] = err.Error(); return out}
 var ins []map[string]any
 for _, l := range lines {if isParam(l) && format.SameTerm(lineKey(l), "In") {if vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:])); err == nil && len(vs) > 0 {for _, r := range vs[0].Items {if r.Kind == format.Term {s, bad := show(q.in.Run(out["name"].(string)+"."+r.Text, q.env)); ins = append(ins, map[string]any{"text": r.Text, "value": s, "error": bad})}}}}}
 out["in"] = ins
+miss := false
+for _, r := range ins {if r["value"] == "@none" {r["value"], r["error"], miss = "нет значения — введите", true, true}}
 var rows []map[string]any
+done := false
 for _, l := range body {
+	if miss || done {v := ""; if done {v = "не выполняется"}; rows = append(rows, map[string]any{"text": l, "value": v, "error": false, "skip": done}); continue}
+	if left, ok := implLeft(l); ok {
+		f, err := q.in.Run(left, q.env)
+		if err == nil && f.Kind == format.Literal && f.Text == "@false" {rows = append(rows, map[string]any{"text": l, "value": "ложь — дальше", "error": false, "skip": true}); continue}
+		if err != nil || f.Kind != format.Literal || f.Text != "@true" {s, _ := show(f, err); if err == nil {s = "условие дало не флаг: " + s}; rows = append(rows, map[string]any{"text": l, "value": s, "error": true}); continue}
+		done = true}
 	v, err := q.in.Run(l, q.env)
 	if k, _, ok := strings.Cut(l, " : "); ok && err == nil && strings.Contains(k, ".") && !strings.ContainsAny(k, " ([{") {v, err = q.in.Run(k, q.env)}
 	s, bad := show(v, err)
@@ -138,3 +149,13 @@ out["lines"] = rows
 if err := fresh(); err != nil {out["error"] = err.Error(); return out}
 s, bad := show(q.in.Run(out["name"].(string), q.env))
 out["result"], out["rerror"] = s, bad; return out }
+// implLeft: левый слот импликации «A -> B» — до «->» вне скобок и строк; ok — строка импликация
+func implLeft(l string) (string, bool) {
+depth, str := 0, false
+for i := 0; i < len(l); i++ {
+	switch c := l[i]; {
+	case c == '"': str = !str
+	case str:
+	case c == '(' || c == '[' || c == '{': depth++
+	case c == ')' || c == ']' || c == '}': depth--
+	case depth == 0 && strings.HasPrefix(l[i:], " -> "): return strings.TrimSpace(l[:i]), true}}; return "", false }
