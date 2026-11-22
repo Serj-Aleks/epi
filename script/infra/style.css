@@ -43,7 +43,7 @@ form::before { content: "›"; color: var(--acc); padding: 12px 0 12px 16px; }
 #card { width: 50%; overflow-y: auto; border-left: 1px solid var(--barline); font-size: 14px; }
 #card[hidden] { display: none; }
 /* карточка: шапка, линзы, контент */
-.chead { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--g2); border-bottom: 1px solid var(--line); }
+.chead { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--g2); border-bottom: 1px solid var(--line); }
 .chead .cval { flex: 1; max-width: 20ch; }
 .chead .cfind { flex: 1; min-width: 8ch; max-width: 22ch; margin-left: auto; }
 .chead .cfind + .ctools { margin-left: 0; }
