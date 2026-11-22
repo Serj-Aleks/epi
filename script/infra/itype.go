@@ -48,6 +48,8 @@ type Medium struct {
 const limit = 10000
 // corpusKey: ключ тела фрейма в json концепта — список предикаций по порядку импликаций
 const corpusKey = "Corpus"
+// sysTheme: системная тема — её концепты (активные фреймы) видны во всех темах, концепт текущей темы важнее
+const sysTheme = "ACTUS"
 // aSort: алфавит темы — порядок концептов и тем
 const aSort = "nmlrhgkcsztdbpfvwuoaeiyjqx нмлркхгжщчшсзцтдбпфвюуоёэеиыйяаьъ"
 // qwestTypes: спутники, в которых ищет qwest; reTags, reMarks, reSpace — разметка, которую убирает qtext

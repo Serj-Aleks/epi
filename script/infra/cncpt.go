@@ -105,12 +105,14 @@ func bodyLines(path string, lines []string) []string {
 if c, ok := readCorpus(path); ok {return c}
 var body []string
 for _, l := range lines {if !isParam(l) {body = append(body, l)}}; return body }
-// loadConcepts: системные концепты (lexic/constans) и концепты темы в контекст; концепт темы дополняет и переопределяет системный; вопросов при загрузке нет
+// loadConcepts: системные концепты (lexic/constans), концепты системной темы (ACTUS) и концепты текущей темы в контекст;
+// концепт темы дополняет и переопределяет системный; вопросов при загрузке нет
 func (q *Medium) loadConcepts() error {
 on, of, ak := q.in.OnParam, q.in.OnFrame, q.in.Ask
 q.in.OnParam, q.in.OnFrame, q.in.Ask = nil, nil, nil
 defer func() {q.in.OnParam, q.in.OnFrame, q.in.Ask = on, of, ak}()
-if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {return err}; return q.loadConceptsIn(q.themaDir()) }
+if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {return err}
+if t, ok := q.themeExists(sysTheme); ok && !format.SameTerm(t, q.theme) {if err := q.loadConceptsIn(filepath.Join(q.themaRoot(), t)); err != nil {return err}}; return q.loadConceptsIn(q.themaDir()) }
 // loadConceptsIn: концепты в папке root — имя из пути; у связи в контекст — только прямой список; тело — Corpus json,
 // тело строками файла концепта (прежняя запись) один раз переносится в Corpus
 func (q *Medium) loadConceptsIn(root string) error {return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
