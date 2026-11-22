@@ -206,8 +206,10 @@ v, err := in.Run("S.Sum : 0 . S.L : [ 1 2 3 4 ] . recur { In : S.L As : S.I Corp
 if err != nil || v.String() != "10" {t.Fatalf("S.Sum = %v %v", v, err)}
 v, _ = in.Run("recur { In : [ 2 3 ] As : S.I Corpus : [ S.I * S.I ] }", env)
 if v.String() != "9" || strings.Join(in.Used, " ") != "arifm zycle" {t.Fatalf("последний шаг = %v (%v)", v, in.Used)}
-in.Run("recur { In : 5 As : S.I Corpus : [ S.I ] }", env)
-if len(in.Unknown) != 1 {t.Fatalf("In не блок — не распознано: %v", in.Unknown)} }
+v, _ = in.Run("S.N : 4 . recur { In : S.N As : S.I Corpus : [ S.I * 2 ] }", env)
+if v.String() != "8" {t.Fatalf("In : S.N = %v", v)}
+in.Run("recur { In : 2.5 As : S.I Corpus : [ S.I ] }", env)
+if len(in.Unknown) != 1 {t.Fatalf("In не целое — не распознано: %v", in.Unknown)} }
 // TestFrameRoles: роли входа In, позиционный и именованный вызов, умолчания, результат — Ex термином или блоком
 func TestFrameRoles(t *testing.T) {
 in := New(10000, nil); env := NewEnv(nil); var wrote []string
@@ -215,7 +217,7 @@ in.OnParam = func(f, p string, _ []format.Value) error {wrote = append(wrote, f+
 for _, c := range []struct{ src, want string }{
 	{`Gradus.In : [ Basis Exponens ] . Gradus.Ex : Gradus`, "@none"},
 	{`Gradus.Basis : 2 . Gradus.Exponens : 3`, "@none"},
-	{`Gradus : [ Gradus.Gradus : 1 . recur { In : [ 1 2 3 4 5 6 7 8 9 10 ] As : Gradus.I Corpus : [ ( Gradus.I > Gradus.Exponens ) -> @none . Gradus.Gradus : ( Gradus.Gradus * Gradus.Basis ) ] } ]`, "@none"},
+	{`Gradus : [ Gradus.Gradus : 1 . recur { In : Gradus.Exponens As : Gradus.I Corpus : [ Gradus.Gradus : ( Gradus.Gradus * Gradus.Basis ) ] } ]`, "@none"},
 	{`Gradus`, "8"},
 	{`Gradus { Basis : 2 Exponens : 10 }`, "1024"},
 	{`Gradus [ 3 4 ]`, "81"},
