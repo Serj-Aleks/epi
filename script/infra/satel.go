@@ -1,6 +1,6 @@
 // epi/script/infra/satel.go
 package main
-import ("encoding/json"; "fmt"; "io"; "os"; "path/filepath"; "sort"; "strings"; "epi/script/format")
+import ("encoding/json"; "fmt"; "io"; "os"; "path/filepath"; "sort"; "strings"; "epi/script/disp"; "epi/script/format")
 // спутники концепта — файлы рядом с ним: то же имя, другое расширение (md, json, svg, css, xml, html, txt)
 // Content — тип спутника по умолчанию (md); карточка концепта, включения {{ }}, слияние спутников при union
 // satFile: файл спутника ext концепта name; "" — концепта нет или тип не спутника
@@ -20,12 +20,14 @@ if b, err := os.ReadFile(p); err == nil {lines, _ = conceptLines(b)}
 if c, ok := readCorpus(p); ok {lines = append(lines, c...)}
 c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color"), "locus": q.locus(p)}
 if q.iconFile(name) != "" {c["icon"] = "/api/icon?name=" + name}; return c }
-// writeSat: записать спутник; прямой список Links — ссылки [[ ]] спутников md и html вместе, обратные у целей ведёт writeLink
+// writeSat: записать спутник; прямой список Links — ссылки [[ ]] спутников md и html вместе, обратные у целей ведёт writeLink; json проверяется на читаемость и перечитывает контекст темы (тело Corpus)
 func (q *Medium) writeSat(name, ext, text string) error {
 p := q.satFile(name, ext)
 if p == "" {return os.ErrNotExist}
+if ext == "json" && !json.Valid([]byte(text)) {return fmt.Errorf("json не читается — нужны фигурные скобки { … } вокруг пар «ключ : значение»")}
 if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {return err}
 if err := os.WriteFile(p, []byte(text), 0644); err != nil {return err}
+if ext == "json" {q.env = disp.NewEnv(nil); if err := q.loadAliases(); err != nil {return err}; if err := q.loadConcepts(); err != nil {return err}}
 if k := strings.ToLower(name); q.cidx[k] != "" {if ns := transcl(q.cidx[k]); len(ns) > 0 {q.tidx[k] = ns} else {delete(q.tidx, k)}}
 if (ext != "md" && ext != "html") || !strings.HasPrefix(q.conceptPath(name), q.themaDir()) {return nil}
 text = ""
