@@ -20,7 +20,9 @@ type Interp struct {
 	Ask     func(q string) bool
 	Unknown []string // база нераспознанных предикаций (канонический текст)
 	steps   int
-	allowed int}
+	allowed int
+	// calls: фреймы в вызове — их параметры живут на время вызова и в файл не пишутся
+	calls map[*binding]int}
 // Stopped: пользователь не разрешил продолжать после исчерпания лимита
 type Stopped struct{ Steps int }
 // Frame: фрейм-интерпретатор, Kernel — препозиции, которые он интерпретирует (история — в протоколе)

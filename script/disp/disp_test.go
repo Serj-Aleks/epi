@@ -210,7 +210,8 @@ in.Run("recur { In : 5 As : S.I Corpus : [ S.I ] }", env)
 if len(in.Unknown) != 1 {t.Fatalf("In не блок — не распознано: %v", in.Unknown)} }
 // TestFrameRoles: роли входа In, позиционный и именованный вызов, умолчания, результат — Ex термином или блоком
 func TestFrameRoles(t *testing.T) {
-in := New(10000, nil); env := NewEnv(nil)
+in := New(10000, nil); env := NewEnv(nil); var wrote []string
+in.OnParam = func(f, p string, _ []format.Value) error {wrote = append(wrote, f+"."+p); return nil}
 for _, c := range []struct{ src, want string }{
 	{`Gradus.In : [ Basis Exponens ] . Gradus.Ex : Gradus`, "@none"},
 	{`Gradus.Basis : 2 . Gradus.Exponens : 3`, "@none"},
@@ -222,4 +223,6 @@ for _, c := range []struct{ src, want string }{
 	{`Summa.In : [ A B ] . Summa.Ex : [ S D ]`, "@none"},
 	{`Summa : [ Summa.S : ( Summa.A + Summa.B ) . Summa.D : ( Summa.A - Summa.B ) ]`, "@none"},
 	{`Summa [ 7 2 ]`, "{ S : 9 D : 5 }"},
-}{ v, err := in.Run(c.src, env); got := ""; if err == nil {got = format.Canon([]format.Value{v})} else {got = err.Error()}; t.Logf("%s => %s", c.src, got); if c.want != "" && got != c.want {t.Errorf("%s: %s, ждём %s", c.src, got, c.want)}}}
+}{ v, err := in.Run(c.src, env); got := ""; if err == nil {got = format.Canon([]format.Value{v})} else {got = err.Error()}; t.Logf("%s => %s", c.src, got); if c.want != "" && got != c.want {t.Errorf("%s: %s, ждём %s", c.src, got, c.want)}}
+if w := strings.Join(wrote, " "); w != "Gradus.In Gradus.Ex Gradus.Basis Gradus.Exponens Summa.In Summa.Ex" {t.Errorf("в файл записано: %s", w)}
+if v, _ := in.Run("Gradus.I", env); v.String() != "@none" {t.Errorf("Gradus.I после вызова = %v", v)} }

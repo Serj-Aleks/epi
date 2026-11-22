@@ -229,7 +229,7 @@ if len(b.pred) == 0 {return frameValue(b), nil}
 if len(a) == 2 {in.unknown(a, "— «"+a[0].Text+"» не фрейм"); return none, nil}
 r, _, err := in.block(b.pred, b.env); return r, err }
 // call: экземпляр фрейма — контекст, дочерний к описанию; аргументы «Ключ : предикация» интерпретируются в контексте вызова;
-// аргумент — и имя в теле, и параметр фрейма на время вызова (параметры и аргументы — одно); In — роли входа:
+// аргумент — и имя в теле, и параметр фрейма на время вызова; у фрейма с In или Ex все его параметры живут на время вызова и в файл не пишутся; In — роли входа:
 // позиционный вызов «Фрейм [ 2 10 ]» по их порядку, неподанная роль — параметр фрейма по умолчанию;
 // результат — Ex: термин — значение этого параметра (функция), блок — блок параметров выхода (процедура); без Ex — последняя импликация
 func (in *Interp) call(frame *binding, args format.Value, env *Env) (format.Value, error) {
@@ -239,11 +239,16 @@ roles := roleNames(frame, "In")
 es := args.Entries()
 if args.Kind == format.Array {for i, v := range args.Items {if i < len(roles) {es = append(es, format.Entry{Key: format.Value{Kind: format.Term, Text: roles[i]}, Value: []format.Value{v}})}}}
 for _, r := range roles {if pb := frame.params[format.Key(r)]; pb != nil {inst.vars[format.Key(r)] = pb}}
-saved := map[string]*binding{}
-defer func() {for k, old := range saved {if old == nil {delete(frame.params, k)} else {frame.params[k] = old}}}()
+saved, local := map[string]*binding{}, frame.params[format.Key("In")] != nil || frame.params[format.Key("Ex")] != nil
+if local {
+	for k, b := range frame.params {saved[k] = b}
+	if in.calls == nil {in.calls = map[*binding]int{}}
+	in.calls[frame]++
+	defer func() {frame.params = saved; if in.calls[frame]--; in.calls[frame] == 0 {delete(in.calls, frame)}}()
+} else {defer func() {for k, old := range saved {if old == nil {delete(frame.params, k)} else {frame.params[k] = old}}}()}
 for _, e := range es {
 	k, b := format.Key(e.Key.Text), &binding{pred: e.Value, env: env}
-	if _, ok := saved[k]; !ok {saved[k] = frame.params[k]}
+	if _, ok := saved[k]; !ok && !local {saved[k] = frame.params[k]}
 	inst.vars[k], frame.params[k] = b, b}
 if err := in.step(); err != nil {return none, err}
 r, _, err := in.block(frame.pred[0].Items, inst)
@@ -370,7 +375,7 @@ if fb == nil {
 	env.set(frame, fb)}
 if fb.params == nil {fb.params = map[string]*binding{}}
 fb.params[format.Key(param)] = &binding{pred: toks, env: env}
-if in.OnParam != nil {if err := in.OnParam(frame, param, toks); err != nil {return none, err}}; return none, nil }
+if in.OnParam != nil && in.calls[fb] == 0 {if err := in.OnParam(frame, param, toks); err != nil {return none, err}}; return none, nil }
 // param: значение «Фрейм.Параметр» — модель параметра интерпретируется при обращении
 func (in *Interp) param(a []format.Value, env *Env) (format.Value, error) {
 frame, param, ok := splitField(a[0].Text)
