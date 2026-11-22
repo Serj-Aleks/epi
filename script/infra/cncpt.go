@@ -1,6 +1,6 @@
 // epi/script/infra/cncpt.go
 package main
-import ("fmt"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
+import ("encoding/json"; "fmt"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
 // файлы концептов: модель — одна строка, ключей и индексов нет; путь — из букв имени: <тема>/<буквы>/<имя>.uic
 //
 //	интерпретатор  lexic/preposit/A/R/I/F/M/arifm.uic
@@ -69,7 +69,7 @@ func isParam(l string) bool {
 f := strings.Fields(l)
 if len(f) < 2 || f[1] != ":" || strings.Contains(f[0], ".") {return false}
 r, _ := utf8.DecodeRuneInString(f[0]); return unicode.IsUpper(r) }
-// writeBody: тело фрейма «Фрейм : [ … ]» строками после параметров концепта
+// writeBody: тело фрейма «Фрейм : [ … ]» — в json концепта ключом Corpus (строка — предикация, порядок — порядок импликаций); в файле концепта — только параметры
 func (q *Medium) writeBody(frame string, body []format.Value) error {
 if q.theme == "" {return nil}
 path := q.conceptFile(frame)
@@ -79,14 +79,40 @@ var out []string
 for _, l := range lines {if isParam(l) {out = append(out, l)}}
 preds, err := disp.Split(format.Canon(body))
 if err != nil {return err}
-if err := writeLines(path, append(out, preds...)); err != nil {return err}; q.known(path); return nil }
+if err := writeLines(path, out); err != nil {return err}
+if err := writeCorpus(path, preds); err != nil {return err}; q.known(path); return nil }
+// readCorpus: тело концепта path из json (ключ Corpus); ok — ключ есть
+func readCorpus(path string) ([]string, bool) {
+b, err := os.ReadFile(strings.TrimSuffix(path, ".uic") + ".json")
+if err != nil {return nil, false}
+var m map[string]any
+if json.Unmarshal(b, &m) != nil {return nil, false}
+l, ok := m[corpusKey].([]any)
+if !ok {return nil, false}
+var out []string
+for _, x := range l {if s, ok := x.(string); ok {out = append(out, s)}}; return out, true }
+// writeCorpus: тело в json концепта path ключом Corpus; пустое тело убирает ключ, json без ключей не заводится
+func writeCorpus(path string, preds []string) error {
+jp := strings.TrimSuffix(path, ".uic") + ".json"
+m := map[string]any{}
+jb, err := os.ReadFile(jp)
+if err == nil {if json.Unmarshal(jb, &m) != nil {return fmt.Errorf("%s: json не читается", jp)}}
+if len(preds) == 0 {delete(m, corpusKey)} else {m[corpusKey] = preds}
+if len(m) == 0 && err != nil {return nil}
+out, _ := json.MarshalIndent(m, "", "  "); return os.WriteFile(jp, out, 0644) }
+// bodyLines: тело концепта — Corpus из json, иначе строки файла концепта после параметров
+func bodyLines(path string, lines []string) []string {
+if c, ok := readCorpus(path); ok {return c}
+var body []string
+for _, l := range lines {if !isParam(l) {body = append(body, l)}}; return body }
 // loadConcepts: системные концепты (lexic/constans) и концепты темы в контекст; концепт темы дополняет и переопределяет системный; вопросов при загрузке нет
 func (q *Medium) loadConcepts() error {
 on, of, ak := q.in.OnParam, q.in.OnFrame, q.in.Ask
 q.in.OnParam, q.in.OnFrame, q.in.Ask = nil, nil, nil
 defer func() {q.in.OnParam, q.in.OnFrame, q.in.Ask = on, of, ak}()
 if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {return err}; return q.loadConceptsIn(q.themaDir()) }
-// loadConceptsIn: концепты в папке root — имя из пути; у связи в контекст — только прямой список
+// loadConceptsIn: концепты в папке root — имя из пути; у связи в контекст — только прямой список; тело — Corpus json,
+// тело строками файла концепта (прежняя запись) один раз переносится в Corpus
 func (q *Medium) loadConceptsIn(root string) error {return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 	if os.IsNotExist(err) && path == root {return nil}
 	if err != nil {return err}
@@ -97,11 +123,14 @@ func (q *Medium) loadConceptsIn(root string) error {return filepath.WalkDir(root
 	name := conceptName(path, root)
 	lines, err := conceptLines(b)
 	if err != nil {return fmt.Errorf("%s: %w", path, err)}
-	var body []string
+	var params []string
 	for _, l := range lines {
-		if !isParam(l) {body = append(body, l); continue}
+		if !isParam(l) {continue}
+		params = append(params, l)
 		if _, ok := q.linkRoot(lineKey(l)); ok {l = directOnly(l)}
 		if _, err := q.in.Run(name+"."+l, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}
+	body := bodyLines(path, lines)
+	if _, ok := readCorpus(path); !ok && len(body) > 0 && len(params) < len(lines) {if err := writeCorpus(path, body); err == nil {writeLines(path, params)}}
 	if len(body) > 0 {if _, err := q.in.Run(name+" : [ "+strings.Join(body, " . ")+" ]", q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
 // conceptName: имя концепта из имени файла с прописной первой буквой (К/В/А/Д/Р/А/Т/квадрат.uic → Квадрат)
 func conceptName(path, root string) string { return capital(strings.TrimSuffix(filepath.Base(path), ".uic")) }

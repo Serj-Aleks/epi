@@ -17,6 +17,7 @@ ct := strings.ToLower(setting(p, "Content"))
 if ct == "" {ct = "md"}
 lines := []string{}
 if b, err := os.ReadFile(p); err == nil {lines, _ = conceptLines(b)}
+if c, ok := readCorpus(p); ok {lines = append(lines, c...)}
 c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color"), "locus": q.locus(p)}
 if q.iconFile(name) != "" {c["icon"] = "/api/icon?name=" + name}; return c }
 // writeSat: записать спутник; прямой список Links — ссылки [[ ]] спутников md и html вместе, обратные у целей ведёт writeLink
@@ -54,7 +55,7 @@ k := strings.ToLower(name)
 var inv []string
 for o, ns := range q.tidx {if o != k && has(ns, name) {inv = append(inv, conceptName(q.cidx[o], ""))}}
 sort.Strings(inv); return q.tidx[k], inv }
-// mergeSats: спутники дубля dp → главного main; текст, который у главного уже есть, не дописывается
+// mergeSats: спутники дубля dp → главного main; текст, который у главного уже есть, не дописывается; тело Corpus — строки без повторов
 func mergeSats(main, dp string) error {
 seps := map[string]string{"md": "\n\n---\n\n", "html": "\n", "txt": "\n", "css": "\n"}
 for _, f := range conceptFiles(dp, main)[1:] {
@@ -65,6 +66,7 @@ for _, f := range conceptFiles(dp, main)[1:] {
 		sb, _ := os.ReadFile(f[0]); db, _ := os.ReadFile(f[1])
 		if json.Unmarshal(sb, &s) != nil || json.Unmarshal(db, &d) != nil {continue}
 		for k, v := range s {
+			if k == corpusKey {if dl, ok := d[k].([]any); ok {if sl, ok := v.([]any); ok {for _, x := range sl {dup := false; for _, y := range dl {dup = dup || y == x}; if !dup {dl = append(dl, x)}}; d[k] = dl; continue}}}
 			if dv, ok := d[k]; ok {if fmt.Sprint(dv) == fmt.Sprint(v) {continue}; n := 2; for {if _, t := d[fmt.Sprintf("%s-%d", k, n)]; !t {break}; n++}; k = fmt.Sprintf("%s-%d", k, n)}
 			d[k] = v}
 		out, _ := json.MarshalIndent(d, "", "  ")

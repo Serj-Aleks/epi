@@ -46,6 +46,8 @@ type Medium struct {
 	cidx    map[string]string // концепты темы: имя (строчными) → файл
 	tidx    map[string][]string} // трансклюзии темы: имя (строчными) → включаемые концепты
 const limit = 10000
+// corpusKey: ключ тела фрейма в json концепта — список предикаций по порядку импликаций
+const corpusKey = "Corpus"
 // aSort: алфавит темы — порядок концептов и тем
 const aSort = "nmlrhgkcsztdbpfvwuoaeiyjqx нмлркхгжщчшсзцтдбпфвюуоёэеиыйяаьъ"
 // qwestTypes: спутники, в которых ищет qwest; reTags, reMarks, reSpace — разметка, которую убирает qtext

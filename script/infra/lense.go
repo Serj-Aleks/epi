@@ -73,7 +73,7 @@ for _, n := range settingList(p, "Defs") {
 	var sat map[string]any
 	if json.Unmarshal(b, &sat) != nil {continue}
 	for k, v := range sat {
-		if strings.TrimSpace(k) == "" {continue}
+		if strings.TrimSpace(k) == "" || k == corpusKey {continue}
 		if s, ok := v.(string); ok {terms = append(terms, map[string]string{"term": k, "def": s, "dict": conceptName(dp, "")})}
 		if l, ok := v.([]any); ok {for _, x := range l {if s, ok := x.(string); ok {terms = append(terms, map[string]string{"term": k, "def": s, "dict": conceptName(dp, "")})}}}}}
 sort.Slice(terms, func(i, j int) bool {return len(terms[i]["term"]) > len(terms[j]["term"])})
@@ -114,8 +114,7 @@ b, err := os.ReadFile(p)
 if err != nil {return map[string]any{"error": err.Error()}}
 lines, err := conceptLines(b)
 if err != nil {return map[string]any{"error": err.Error()}}
-var body []string
-for _, l := range lines {if !isParam(l) {body = append(body, l)}}
+body := bodyLines(p, lines)
 out := map[string]any{"name": conceptName(p, "")}
 if len(body) == 0 {return out}
 env, un, oa := q.env, q.in.Unknown, q.in.OnAlias
