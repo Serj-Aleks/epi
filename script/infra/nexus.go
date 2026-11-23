@@ -158,11 +158,12 @@ for _, m := range group {
 	if err := put(m, as); err != nil {return err}}; return nil }
 // tokens: слова имени для нечёткого поиска: строчными, разделители — пробел, «-», «_»
 func tokens(s string) []string {return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {return r == ' ' || r == '-' || r == '_'}) }
-// overlap: слова совпадают по первым deep литерам, короче deep не сравниваются
+// overlap: слова совпадают по первым deep литерам, слово короче deep — только целиком (как wordEq, lense.js)
 func overlap(a, b [][]string, deep int) bool {
 for _, x := range a {for _, y := range b {for _, s := range x {for _, t := range y {
 	rs, rt := []rune(s), []rune(t)
-	if len(rs) >= deep && len(rt) >= deep && string(rs[:deep]) == string(rt[:deep]) {return true}}}}}; return false }
+	if len(rs) < deep || len(rt) < deep {if s == t {return true}; continue}
+	if string(rs[:deep]) == string(rt[:deep]) {return true}}}}}; return false }
 // nameTokens: слова имени концепта и его синонимов
 func nameTokens(p string) [][]string {
 out := [][]string{tokens(conceptName(p, ""))}
