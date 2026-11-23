@@ -1,6 +1,6 @@
 // epi/script/disp/disp_test.go
 package disp
-import ("errors"; "strings"; "testing"; "epi/script/format")
+import ("errors"; "fmt"; "strings"; "testing"; "epi/script/format")
 // runText: интерпретировать текст; ответы на вопросы системы — по очереди из answers
 func runText(t *testing.T, text string, limit int, answers ...bool) (string, *Interp, []string, error) {
 t.Helper()
@@ -259,3 +259,12 @@ for _, c := range []struct{ src, want string }{{`dstnz "углами"`, "6"}, {`
 asked := 0; in.Ask = func(string) bool {asked++; return false}
 for _, s := range []string{`"угол" front 1.5`, `dstnz 5`, `cnvrg [ A ]`, `"а" cnctn [ B ]`} {in.Run(s, env)}
 if asked != 4 {t.Errorf("не распознано: %d из 4", asked)}}
+// TestSimilis: wordEq (infra/lense.js, словари Defs) фреймом — слова равны по первым D литер, короче D — только точно; ожидания — ответы wordEq
+func TestSimilis(t *testing.T) {
+in := New(10000, nil); env := NewEnv(nil)
+for _, s := range []string{"Similis.In : [ A B D ]", "Similis : [ ( ( ( dstnz Similis.A ) < Similis.D ) | ( ( dstnz Similis.B ) < Similis.D ) ) -> ( Similis.A = Similis.B ) . ( Similis.A front Similis.D ) = ( Similis.B front Similis.D ) ]"} {
+	if _, err := in.Run(s, env); err != nil {t.Fatal(s, err)}}
+for _, c := range []struct{ a, b string; d int; want bool }{{"угол", "углами", 3, false}, {"угол", "угл", 3, false}, {"ум", "ум", 3, true}, {"ум", "умный", 3, false}, {"Квадрат", "квадраты", 3, true},
+	{"кот", "кит", 3, false}, {"модель", "модели", 5, true}, {"модель", "модели", 6, false}, {"a", "b", 1, false}, {"словарь", "слово", 4, true}} {
+	v, err := in.Run(fmt.Sprintf("Similis [ %q %q %d ]", c.a, c.b, c.d), env)
+	if err != nil || v.String() != flag(c.want).String() {t.Errorf("Similis [ %s %s %d ] = %v %v, wordEq — %v", c.a, c.b, c.d, v, err, c.want)}}}
