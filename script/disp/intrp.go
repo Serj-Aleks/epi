@@ -18,7 +18,7 @@ if !strings.Contains(s, ".") {s += ".0"}; return format.Value{Kind: format.Decim
 // flag: флаг @true или @false
 func flag(b bool) format.Value {
 if b {return vtrue}; return vfals }
-// baseFrames: фреймы-интерпретаторы системы; минус в начале предикации — унарный, функция одного аргумента — в начале
+// baseFrames: фреймы-интерпретаторы системы (serie — serie.go); минус в начале предикации — унарный, функция одного аргумента — в начале
 // recur, trans, nexus, qwest, qwizt, clone, rename, import, union — ядро задаёт среда (Interp.recur, Interp.Raw, словари)
 func baseFrames() []*Frame {
 arith := func(op func(x, y float64) (float64, bool)) Prep {return func(a, b *format.Value) (format.Value, bool) {
@@ -72,7 +72,7 @@ trgnm := map[string]Prep{
 lnrfm := map[string]Prep{
 	"ln":  unary(func(x float64) (float64, bool) { return math.Log(x), x > 0 }),
 	"exp": unary(all(math.Exp)),}; return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic},
-	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm},
+	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm}, serieFrame(),
 	{Name: "zycle", Kernel: map[string]Prep{"recur": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "trans", Kernel: map[string]Prep{"trans": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "nexus", Kernel: map[string]Prep{"nexus": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
