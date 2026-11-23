@@ -156,7 +156,7 @@ const row = (key, val, inv) => { const r = el("crow");
   const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "record"; ok.onclick = () => send(key === null ? k.value : key, v.value);
   v.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ok.click(); } };
   r.append(k, v, ok); if (inv && inv !== "[]") r.append(el("cinv", "← " + inv)); box.append(r); };
-{ const r = el("crow"), k = el("ckey", "имя"), v = document.createElement("input"); v.className = "cval"; v.value = c.name; v.spellcheck = false;
+{ const r = el("crow"), k = el("ckey", "Nomen"), v = document.createElement("input"); v.className = "cval"; v.value = c.name; v.spellcheck = false;
   const ok = document.createElement("button"); ok.textContent = "✓"; ok.title = "rename"; ok.onclick = () => { const n = v.value.trim(); if (n && n !== c.name) runPred("rename [ " + c.name + " " + n + " ]"); };
   v.onkeydown = e => { if (e.key === "Enter") ok.click(); }; r.append(k, v, ok); box.append(r); }
 if (c.locus) { const r = el("crow"), k = el("ckey", "Locus"), v = document.createElement("input"); v.className = "cval"; v.value = c.locus; v.spellcheck = false;

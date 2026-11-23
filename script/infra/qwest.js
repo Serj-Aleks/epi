@@ -63,7 +63,7 @@ const rs = await api("/api/find?name=" + encodeURIComponent(c.name) + "&q=" + en
 if (!rs.length) { box.append(el("cempty", "не найдено")); return; }
 rs.forEach(r => { const row = el("qrow"), a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.innerHTML = mark(r.name, ts);
   a.onclick = e => { e.preventDefault(); cardFind = { name: r.name, ext: r.type, q }; lens.content = true; r.name.toLowerCase() === c.name.toLowerCase() ? cardOpen(c.name) : nxGo(r.name); };
-  const top = el("qtop"); top.append(a, el("qtype", r.type || "имя")); row.append(top);
+  const top = el("qtop"); top.append(a, el("qtype", r.type || "Nomen")); row.append(top);
   if (r.excerpt) { const ex = el("qex"); ex.innerHTML = mark(r.excerpt, ts); row.append(ex); }
   box.append(row); }); }
 // findMark: подсветить слова запроса в тексте линзы и прокрутить к первому
