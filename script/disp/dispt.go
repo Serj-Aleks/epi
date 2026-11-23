@@ -125,13 +125,6 @@ if f == nil {in.unknown(s.toks(), fmt.Sprintf("— нет интерпретат
 v, ok := f(pa, pb)
 if !ok {in.unknown(s.toks(), fmt.Sprintf("— «%s» (%s) не интерпретирует такие аргументы", ptok.Text, fr.Name)); return none, nil}
 in.use(fr); return v, nil }
-// toks: токены слота
-func (s *slot) toks() []format.Value {
-var t []format.Value
-if s.def != nil {t = append(t, *s.def, format.Value{Kind: format.Op, Text: ":"})}
-if s.prefix != nil {t = append(t, *s.prefix)}
-t = append(t, s.a...)
-if s.op != nil {t = append(append(t, *s.op), s.b...)}; return t }
 // evalOperand: значение операнда — ( ) вычисляется, [ ] справа — блок, 'терм, :терм, терм — аппликация, поле — параметр
 func (in *Interp) evalOperand(a []format.Value, env *Env, right bool) (format.Value, error) {
 v := a[0]

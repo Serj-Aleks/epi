@@ -75,3 +75,10 @@ if p.ok && i < len(seg) && isModel(seg[i]) {
 	p.right, i = r.readSlot(i + 1)
 	p.ok = p.right.ok}
 if i != len(seg) {p.ok = false}; return p }
+// toks: токены слота
+func (s *slot) toks() []format.Value {
+var t []format.Value
+if s.def != nil {t = append(t, *s.def, format.Value{Kind: format.Op, Text: ":"})}
+if s.prefix != nil {t = append(t, *s.prefix)}
+t = append(t, s.a...)
+if s.op != nil {t = append(append(t, *s.op), s.b...)}; return t }
