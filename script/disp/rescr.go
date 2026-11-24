@@ -4,7 +4,9 @@ package disp
 import ("fmt"; "strings"; "epi/script/format")
 // rescr: правило тела «образец -> замена» по порядку, срабатывает первое совпавшее; место образца — роль фрейма «Фрейм.Роль»:
 // роль In — одно значение, роль Conseq — последовательность (в том числе пустая), роль дважды — одно и то же;
-// терм без пометки — буквально; результат — замена блоком [ … ]; не совпало — вопрос, у фрейма с Idem : @true — предикация как есть
+// терм без пометки — буквально; результат — замена блоком [ … ]; не совпало — вопрос, у фрейма с Idem : @true — предикация как есть;
+// Iterum : @true — переписывать снова до нормальной формы (ни одно правило не подошло), Agit : @true — выполнить результат в контексте вызова;
+// предикация из одной группы ( … ) — её содержимое
 func (in *Interp) rescr(s *slot, env *Env) (format.Value, error) {
 fail := func(why string) (format.Value, error) {in.unknown(s.toks(), "— rescr: "+strings.TrimPrefix(why, "— ")); return none, nil}
 if s.prefix == nil || s.op != nil || len(s.a) != 2 || s.a[0].Kind != format.Term || s.a[1].Kind != format.Array {return fail("пишется «rescr Фрейм [ предикация ]»")}
@@ -19,18 +21,25 @@ role := func(v format.Value) (string, bool, bool) {
 	f, r, ok := strings.Cut(v.Text, ".")
 	if !ok || !format.SameTerm(f, name) {return "", false, false}
 	seq, ok := vars[format.Key(r)]; return format.Key(r), seq, ok}
+flag := func(k string) bool {pb := b.params[format.Key(k)]; return pb != nil && len(pb.pred) == 1 && pb.pred[0].Kind == format.Literal && pb.pred[0].Text == "@true"}
+once := func(vs []format.Value) ([]format.Value, bool, error) {
+	for _, seg := range segments(b.pred[0].Items) {
+		if err := in.step(); err != nil {return nil, false, err}
+		i := 0
+		for i < len(seg) && !isModel(seg[i]) {i++}
+		if i == len(seg) {continue}
+		bind := map[string][]format.Value{}
+		if match(unwrap(seg[:i]), unwrap(vs), bind, role) {return subst(unwrap(seg[i+1:]), bind, role), true, nil}}; return vs, false, nil}
 _, fr := in.prepOf("rescr")
-for _, seg := range segments(b.pred[0].Items) {
-	if err := in.step(); err != nil {return none, err}
-	i := 0
-	for i < len(seg) && !isModel(seg[i]) {i++}
-	if i == len(seg) {continue}
-	bind := map[string][]format.Value{}
-	if !match(unwrap(seg[:i]), s.a[1].Items, bind, role) {continue}
-	if fr != nil {in.use(fr)}; return format.Value{Kind: format.Array, Items: subst(unwrap(seg[i+1:]), bind, role)}, nil}
-if pb := b.params[format.Key("Idem")]; pb != nil && len(pb.pred) == 1 && pb.pred[0].Kind == format.Literal && pb.pred[0].Text == "@true" {
-	if fr != nil {in.use(fr)}; return s.a[1], nil}
-return fail(fmt.Sprintf("— ни одно правило «%s» не подошло к %s", name, format.Canon([]format.Value{s.a[1]}))) }
+cur, done, err := once(s.a[1].Items)
+if err != nil {return none, err}
+if !done {
+	if !flag("Idem") {return fail(fmt.Sprintf("— ни одно правило «%s» не подошло к %s", name, format.Canon([]format.Value{s.a[1]})))}
+	cur = s.a[1].Items}
+for done && flag("Iterum") {if cur, done, err = once(cur); err != nil {return none, err}}
+if fr != nil {in.use(fr)}
+if flag("Agit") {v, _, err := in.block(cur, env); return v, err}
+return format.Value{Kind: format.Array, Items: cur}, nil }
 // unwrap: слот из одной группы ( … ) — её содержимое: скобки только группируют слот
 func unwrap(vs []format.Value) []format.Value {
 if len(vs) == 1 && vs[0].Kind == format.Expr {return vs[0].Items}; return vs }

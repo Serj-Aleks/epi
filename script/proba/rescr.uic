@@ -9,3 +9,12 @@
 [ rescr Simplex [ A.B - A.C ] ] -> ? "ни одно правило"
 [ Simplex.Idem : @true ] -> @none
 [ rescr Simplex [ A.B - A.C ] ] -> [ A.B - A.C ]
+[ Simplex.Idem : @false ] -> @none
+[ rescr Simplex [ ( A.B + 0 ) * 1 ] ] -> [ ( A.B + 0 ) ]
+[ Simplex.Iterum : @true ] -> @none
+[ rescr Simplex [ ( A.B + 0 ) * 1 ] ] -> [ A.B ]
+[ rescr Simplex [ ( ( A.B * 1 ) + 0 ) * 1 ] ] -> [ A.B ]
+[ X.B : 5 . Simplex.Agit : @true ] -> @none
+[ rescr Simplex [ ( X.B + 0 ) * 1 ] ] -> 5
+[ rescr Simplex [ cauda 1 2 3 ] ] -> [ 2 3 ]
+[ rescr Simplex [ ( X.B * 2 ) - ( X.B * 2 ) ] ] -> 0
