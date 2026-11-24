@@ -1,0 +1,11 @@
+[ Simplex.In : [ X ] . Simplex.Conseq : [ Y ] ] -> @none
+[ Simplex : [ ( Simplex.X + 0 ) -> Simplex.X . ( Simplex.X * 1 ) -> Simplex.X . ( Simplex.X - Simplex.X ) -> 0 . ( caput Simplex.X Simplex.Y ) -> Simplex.X . ( cauda Simplex.X Simplex.Y ) -> [ Simplex.Y ] ] ] -> @none
+[ rescr Simplex [ A.B + 0 ] ] -> [ A.B ]
+[ rescr Simplex [ ( 2 + 3 ) * 1 ] ] -> [ ( 2 + 3 ) ]
+[ rescr Simplex [ A.B - A.B ] ] -> [ 0 ]
+[ rescr Simplex [ caput 1 2 3 ] ] -> [ 1 ]
+[ rescr Simplex [ cauda 1 2 3 ] ] -> [ [ 2 3 ] ]
+[ rescr Simplex [ cauda 1 ] ] -> [ [] ]
+[ rescr Simplex [ A.B - A.C ] ] -> ? "ни одно правило"
+[ Simplex.Idem : @true ] -> @none
+[ rescr Simplex [ A.B - A.C ] ] -> [ A.B - A.C ]

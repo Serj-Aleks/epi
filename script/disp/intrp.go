@@ -82,7 +82,8 @@ lnrfm := map[string]Prep{
 	{Name: "qwizt", Kernel: map[string]Prep{"qwizt": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "import", Kernel: map[string]Prep{"import": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "union", Kernel: map[string]Prep{"union": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
-	{Name: "radix", Kernel: map[string]Prep{"radix": func(a, b *format.Value) (format.Value, bool) {return none, false}}}} }
+	{Name: "radix", Kernel: map[string]Prep{"radix": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
+	{Name: "rescr", Kernel: map[string]Prep{"rescr": func(a, b *format.Value) (format.Value, bool) {return none, false}}}} }
 // flagOf: значение — флаг @true / @false
 func flagOf(v *format.Value) (bool, bool) {
 if v == nil || v.Kind != format.Literal {return false, false}

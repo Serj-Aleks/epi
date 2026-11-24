@@ -18,7 +18,8 @@ for src, want := range cases {
 	got, _, _, err := runText(t, src, 100)
 	if err != nil || got != want {t.Errorf("%q: %q %v, ожидалось %q", src, got, err, want)}} }
 // TestScripta: заскриптованные функции — файлы *.uic папки proba, каждый в своём контексте; строка «[ предикация ] -> ответ»,
-// ответ — канонический текст интерпретации, «! "текст"» — ошибка, в сообщении которой есть этот текст
+// ответ — канонический текст интерпретации, «! "текст"» — ошибка, в сообщении которой есть этот текст,
+// «? "текст"» — не распознано: вопрос «записать?», в котором есть этот текст
 func TestScripta(t *testing.T) {
 files, _ := filepath.Glob("*.uic")
 if len(files) == 0 {t.Fatal("нет файлов *.uic")}
@@ -26,12 +27,18 @@ for _, f := range files {
 	b, err := os.ReadFile(f)
 	if err != nil {t.Fatal(err)}
 	in, env := disp.New(10000, nil), disp.NewEnv(nil)
+	var asked []string
+	in.Ask = func(q string) bool {asked = append(asked, q); return false}
 	for n, line := range strings.Split(string(b), "\n") {
 		if strings.TrimSpace(line) == "" {continue}
 		pred, want, ok := casus(line)
 		if !ok {t.Errorf("%s:%d: строка не вида «[ предикация ] -> ответ»", f, n+1); continue}
+		asked = nil
 		v, err := in.Run(pred, env)
 		switch {
+		case strings.HasPrefix(want, "?"):
+			w := strings.Trim(strings.TrimSpace(strings.TrimPrefix(want, "?")), `"`)
+			if len(asked) == 0 || !strings.Contains(strings.Join(asked, " "), w) {t.Errorf("%s:%d: %s = %v %v, ждём вопрос «%s», вопросы: %v", f, n+1, pred, v, err, w, asked)}
 		case strings.HasPrefix(want, "!"):
 			w := strings.Trim(strings.TrimSpace(strings.TrimPrefix(want, "!")), `"`)
 			if err == nil || !strings.Contains(err.Error(), w) {t.Errorf("%s:%d: %s = %v %v, ждём ошибку «%s»", f, n+1, pred, v, err, w)}
