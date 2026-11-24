@@ -1,0 +1,15 @@
+[ Maximum.In : [ A B ] ] -> @none
+[ Maximum : [ ( Maximum.A >= Maximum.B ) -> Maximum.A . Maximum.B ] ] -> @none
+[ max : Maximum ] -> @none
+[ 7 max 3 ] -> 7
+[ 2 max 9 ] -> 9
+[ ( 1 + 2 ) max ( 2 * 2 ) ] -> 4
+[ ( 7 max 3 ) max 10 ] -> 10
+[ maximus : max ] -> @none
+[ 4 maximus 5 ] -> 5
+[ Maximum [ 7 3 ] ] -> 7
+[ Opposit.In : [ X ] . Opposit : [ 0 - Opposit.X ] . neg : Opposit ] -> @none
+[ neg 5 ] -> -5
+[ 3 neg 4 ] -> ! "подано значений 2, ролей 1"
+[ Duplum : [ 1 ] . dupl : Duplum ] -> @none
+[ 3 dupl 4 ] -> ? "у фрейма с ролями In"

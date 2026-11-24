@@ -67,7 +67,7 @@ if in.Ask != nil && in.Ask(fmt.Sprintf("предикация «%s» %s. Запи
 // Unreadable: текст не прочитан — тоже предикация без обработчика: вопрос «записать?» и запись в базу
 func (in *Interp) Unreadable(text string, err error) {
 if in.Ask != nil && in.Ask(fmt.Sprintf("предикация «%s» не прочитана: %v. Записать её?", text, err)) {in.Unknown = append(in.Unknown, text)} }
-// resolve: препозиция-токен — символ (sym) или фрейм-интерпретатор (frame); алиасы раскрываются, неопределённый терм — ядра (sin, ln)
+// resolve: препозиция-токен — символ (sym) или фрейм-интерпретатор (frame); алиасы раскрываются, неопределённый терм — ядра (sin, ln); алиас на объект-фрейм — этот фрейм
 func resolve(v format.Value, env *Env) (sym string, frame *binding) {
 for depth := 0; depth < 16; depth++ {
 	if v.Kind == format.Op {return v.Text, nil}
@@ -78,10 +78,13 @@ for depth := 0; depth < 16; depth++ {
 	case w.Kind == format.Array: return "", b
 	case isPrepTok(w):
 		v = w
+	case w.Kind == format.Term:
+		if fb, _ := env.findFrame(w.Text); fb != nil && len(fb.pred) == 1 && fb.pred[0].Kind == format.Array {return "", fb}; return "", nil
 	default: return "", nil}}; return "", nil }
 // evalSlot: интерпретация слота; right — правый слот модели, блок в нём интерпретируется
 // определение: Фрейм.Параметр : значение, ( ) — вычислить сейчас, параметры фрейма сохраняются
-// recur — цикл, rescr — переписывание, Raw — операнд без вычисления, препозиция-фрейм — только в начале, аргументы — объектный блок
+// recur — цикл, rescr — переписывание, Raw — операнд без вычисления, препозиция-фрейм — в начале с объектным блоком;
+// фрейм с ролями In (алиас препозиции на объект-фрейм) — и «A п B», «п A»: значения по порядку ролей
 func (in *Interp) evalSlot(s *slot, env *Env, right bool) (format.Value, error) {
 if s.def != nil {
 	d := *s
@@ -113,7 +116,15 @@ if r := in.Raw[sym]; frame == nil && r != nil {
 	if !ok {in.unknown(s.toks(), "— «"+sym+"» не интерпретирует такой операнд"); return none, nil}
 	if fr != nil {in.use(fr)}; return v, nil}
 if frame != nil {
-	if s.prefix == nil || s.a[0].Kind != format.Object {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует только «%s { … }»", ptok.Text, ptok.Text)); return none, nil}; return in.call(ptok.Text, frame, s.a[0], env)}
+	if s.prefix != nil && s.op == nil && len(s.a) == 1 && s.a[0].Kind == format.Object {return in.call(ptok.Text, frame, s.a[0], env)}
+	if roleNames(frame, "In") == nil || (s.prefix != nil && s.op != nil) {in.unknown(s.toks(), fmt.Sprintf("— «%s» интерпретирует «%s { … }»; запись «A %s B» и «%s A» — у фрейма с ролями In", ptok.Text, ptok.Text, ptok.Text, ptok.Text)); return none, nil}
+	args := format.Value{Kind: format.Array}
+	for _, side := range [][]format.Value{s.a, s.b} {
+		if len(side) == 0 {continue}
+		v, err := in.evalOperand(side, env, false)
+		if err != nil {return none, err}
+		args.Items = append(args.Items, v)}
+	return in.call(ptok.Text, frame, args, env)}
 a, err := in.evalOperand(s.a, env, false)
 if err != nil {return none, err}
 pa, pb := &a, (*format.Value)(nil)

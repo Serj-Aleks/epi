@@ -17,13 +17,15 @@ vs := r.vs
 if i >= len(vs) || vs[i].Kind == format.Op || r.isPrep(i) || format.IsDef(vs, i) {return nil, i, false}
 if vs[i].Kind == format.Term && i+1 < len(vs) && (vs[i+1].Kind == format.Object || vs[i+1].Kind == format.Array && upperFirst(vs[i].Text) == vs[i].Text) {return vs[i : i+2], i + 2, true}; return vs[i : i+1], i + 1, true }
 // readSlot: слот с позиции i — определение (значение с препозиции — алиас препозиции), препозиция в начале или между операндами
-// у Raw-препозиции слово со строчной — операнд (qwest numer); в слоте одна препозиция; «Ключ :» в конце — пустое значение
+// у Raw-препозиции слово со строчной — операнд (qwest numer); в слоте одна препозиция; «Ключ :» в конце — пустое значение;
+// «п : Фрейм» — алиас препозиции на объект-фрейм
 func (r reader) readSlot(i int) (*slot, int) {
 vs := r.vs
 if format.IsDef(vs, i) {
 	key := vs[i]
 	if i+2 >= len(vs) {return &slot{def: &key, ok: true}, i + 2}
 	if r.isPrep(i + 2) {return &slot{def: &key, a: vs[i+2 : i+3], alias: true, ok: true}, i + 3}
+	if format.IsPrepTerm(key.Text) && i+3 == len(vs) && vs[i+2].Kind == format.Term && !format.IsPrepTerm(vs[i+2].Text) {return &slot{def: &key, a: vs[i+2 : i+3], alias: true, ok: true}, i + 3}
 	inner, j := r.readSlot(i + 2)
 	inner.def = &key; return inner, j}
 s := &slot{}
