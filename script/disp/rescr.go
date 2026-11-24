@@ -6,7 +6,7 @@ import ("fmt"; "strings"; "epi/script/format")
 // роль In — одно значение, роль Conseq — последовательность (в том числе пустая), роль дважды — одно и то же;
 // терм без пометки — буквально; результат — замена блоком [ … ]; не совпало — вопрос, у фрейма с Idem : @true — предикация как есть
 func (in *Interp) rescr(s *slot, env *Env) (format.Value, error) {
-fail := func(why string) (format.Value, error) {in.unknown(s.toks(), "— rescr "+why); return none, nil}
+fail := func(why string) (format.Value, error) {in.unknown(s.toks(), "— rescr: "+strings.TrimPrefix(why, "— ")); return none, nil}
 if s.prefix == nil || s.op != nil || len(s.a) != 2 || s.a[0].Kind != format.Term || s.a[1].Kind != format.Array {return fail("пишется «rescr Фрейм [ предикация ]»")}
 name := s.a[0].Text
 b, _ := env.findFrame(name)
