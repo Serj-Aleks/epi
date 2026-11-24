@@ -1,0 +1,12 @@
+[ Analog.In : [ A B D ] ] -> @none
+[ Analog : [ ( ( ( dstnz Analog.A ) < Analog.D ) | ( ( dstnz Analog.B ) < Analog.D ) ) -> ( Analog.A = Analog.B ) . ( Analog.A front Analog.D ) = ( Analog.B front Analog.D ) ] ] -> @none
+[ Analog [ "угол" "углами" 3 ] ] -> @false
+[ Analog [ "угол" "угл" 3 ] ] -> @false
+[ Analog [ "ум" "ум" 3 ] ] -> @true
+[ Analog [ "ум" "умный" 3 ] ] -> @false
+[ Analog [ "Квадрат" "квадраты" 3 ] ] -> @true
+[ Analog [ "кот" "кит" 3 ] ] -> @false
+[ Analog [ "модель" "модели" 5 ] ] -> @true
+[ Analog [ "модель" "модели" 6 ] ] -> @false
+[ Analog [ "a" "b" 1 ] ] -> @false
+[ Analog [ "словарь" "слово" 4 ] ] -> @true

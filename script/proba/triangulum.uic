@@ -1,0 +1,12 @@
+[ Existens.In : [ A B C ] ] -> @none
+[ Existens : [ ( ( ( Existens.A + Existens.B ) > Existens.C ) & ( ( Existens.A + Existens.C ) > Existens.B ) ) & ( ( Existens.B + Existens.C ) > Existens.A ) ] ] -> @none
+[ Triangulum.In : [ A B C ] ] -> @none
+[ Triangulum : [ ( Existens [ Triangulum.A Triangulum.B Triangulum.C ] ) = @false -> 'nullum . ( ( Triangulum.A = Triangulum.B ) & ( Triangulum.B = Triangulum.C ) ) -> 'aequilaterum . ( ( ( Triangulum.A = Triangulum.B ) | ( Triangulum.B = Triangulum.C ) ) | ( Triangulum.A = Triangulum.C ) ) -> 'isosceles . 'scalenum ] ] -> @none
+[ Signum.In : [ 3 ] . Signum : [ 1 ] ] -> @none
+[ Triangulum [ 1 2 10 ] ] -> nullum
+[ Triangulum [ 5 5 5 ] ] -> aequilaterum
+[ Triangulum [ 5 5 8 ] ] -> isosceles
+[ Triangulum [ 3 4 5 ] ] -> scalenum
+[ Triangulum [ 3 4 ] ] -> ! "нет значения роли C"
+[ Triangulum [ 3 4 5 6 ] ] -> ! "подано значений 4, ролей 3"
+[ Signum [ 1 ] ] -> ! "в In имена ролей"

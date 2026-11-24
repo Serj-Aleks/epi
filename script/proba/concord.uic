@@ -1,0 +1,24 @@
+[ Analog.In : [ A B D ] ] -> @none
+[ Analog : [ ( ( ( dstnz Analog.A ) < Analog.D ) | ( ( dstnz Analog.B ) < Analog.D ) ) -> ( Analog.A = Analog.B ) . ( Analog.A front Analog.D ) = ( Analog.B front Analog.D ) ] ] -> @none
+[ Verb.In : [ S ] . Verb.Ex : Verb ] -> @none
+[ Verb : [ Verb.Verb : [] . Verb.W : "" . Verb.T : ( cnvrg Verb.S ) . recur { In : ( dstnz Verb.T ) As : Verb.I Corpus : [ Verb.C : ( Verb.T elmnt Verb.I ) . ( ( ( Verb.C = " " ) | ( Verb.C = "-" ) ) | ( Verb.C = "_" ) ) -> [ ( Verb.W <> "" ) -> [ Verb.Verb : ( Verb.Verb cnctn Verb.W ) . Verb.W : "" ] ] . Verb.W : ( Verb.W cnctn Verb.C ) ] } . ( Verb.W <> "" ) -> [ Verb.Verb : ( Verb.Verb cnctn Verb.W ) ] ] ] -> @none
+[ Concord.In : [ A B D ] . Concord.Ex : Concord ] -> @none
+[ Concord : [ Concord.Concord : @false . recur { In : Concord.A As : Concord.X Corpus : [ recur { In : Concord.B As : Concord.Y Corpus : [ recur { In : Concord.X As : Concord.S Corpus : [ recur { In : Concord.Y As : Concord.T Corpus : [ ( Analog [ Concord.S Concord.T Concord.D ] ) -> [ Concord.Concord : @true ] ] } ] } ] } ] } ] ] -> @none
+[ Verb [ "Cards-js" ] ] -> [ "cards" "js" ]
+[ Verb [ "I-sort  Rank" ] ] -> [ "i" "sort" "rank" ]
+[ Verb [ "Gloria" ] ] -> [ "gloria" ]
+[ Verb [ "Num_ber x" ] ] -> [ "num" "ber" "x" ]
+[ Verb [ "-a-" ] ] -> [ "a" ]
+[ Verb [ "Ум" ] ] -> [ "ум" ]
+[ Verb [ "" ] ] -> []
+[ Concord [ [ [ "glotta" ] ] [ [ "glossa" ] [ "lexika" ] ] 3 ] ] -> @true
+[ Concord [ [ [ "glotta" ] ] [ [ "glossa" ] [ "lexika" ] ] 4 ] ] -> @false
+[ Concord [ [ [ "ум" ] ] [ [ "ум" "x" ] ] 3 ] ] -> @true
+[ Concord [ [ [ "dict" ] [ "lexika" ] ] [ [ "dictionary" ] ] 4 ] ] -> @true
+[ Concord [ [ [ "nun" ] ] [ [ "num" ] ] 3 ] ] -> @false
+[ Concord [ [ [ "cards" "js" ] ] [ [ "nexus" "js" ] ] 3 ] ] -> @true
+[ P.A : ( Verb [ "Cards-js" ] ) . P.B : ( Verb [ "Nexus-js" ] ) . P.C : ( Verb [ "Glotta" ] ) . P.D : ( Verb [ "Glossa Lexika" ] ) ] -> @none
+[ Concord [ [ P.A ] [ P.B ] 3 ] ] -> @true
+[ Concord [ [ P.C ] [ P.D ] 3 ] ] -> @true
+[ Concord [ [ P.C ] [ P.D ] 4 ] ] -> @false
+[ Concord [ [ P.C ] [ P.A P.B ] 2 ] ] -> @false

@@ -1,0 +1,16 @@
+[ Existens.In : [ A B C ] ] -> @none
+[ Existens : [ ( ( ( Existens.A + Existens.B ) > Existens.C ) & ( ( Existens.A + Existens.C ) > Existens.B ) ) & ( ( Existens.B + Existens.C ) > Existens.A ) ] ] -> @none
+[ Triangulum.In : [ A B C ] ] -> @none
+[ Triangulum : [ ( ( Triangulum.A = Triangulum.B ) & ( Triangulum.B = Triangulum.C ) ) -> 'aequilaterum . ( ( ( Triangulum.A = Triangulum.B ) | ( Triangulum.B = Triangulum.C ) ) | ( Triangulum.A = Triangulum.C ) ) -> 'isosceles . 'scalenum ] ] -> @none
+[ Rectus.In : [ A B C ] ] -> @none
+[ Rectus : [ ( ( ( ( Rectus.A * Rectus.A ) + ( Rectus.B * Rectus.B ) ) = ( Rectus.C * Rectus.C ) ) | ( ( ( Rectus.A * Rectus.A ) + ( Rectus.C * Rectus.C ) ) = ( Rectus.B * Rectus.B ) ) ) | ( ( ( Rectus.B * Rectus.B ) + ( Rectus.C * Rectus.C ) ) = ( Rectus.A * Rectus.A ) ) ] ] -> @none
+[ Classis.In : [ A B C ] ] -> @none
+[ Classis : [ ( Existens [ Classis.A Classis.B Classis.C ] ) = @false -> 'nullum . ( Rectus [ Classis.A Classis.B Classis.C ] ) -> 'rectangulum . Triangulum [ Classis.A Classis.B Classis.C ] ] ] -> @none
+[ Factorialis.In : [ N ] ] -> @none
+[ Factorialis : [ ( Factorialis.N <= 1 ) -> 1 . ( Factorialis.N * Factorialis [ ( Factorialis.N - 1 ) ] ) ] ] -> @none
+[ Classis [ 3 4 5 ] ] -> rectangulum
+[ Classis [ 5 5 8 ] ] -> isosceles
+[ Classis [ 1 2 10 ] ] -> nullum
+[ Classis [ 6 6 6 ] ] -> aequilaterum
+[ Factorialis [ 5 ] ] -> 120
+[ Factorialis [ 10 ] ] -> 3628800
