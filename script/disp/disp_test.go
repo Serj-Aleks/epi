@@ -268,7 +268,8 @@ for _, c := range []struct{ a, b string; d int; want bool }{{"угол", "угл
 	{"кот", "кит", 3, false}, {"модель", "модели", 5, true}, {"модель", "модели", 6, false}, {"a", "b", 1, false}, {"словарь", "слово", 4, true}} {
 	v, err := in.Run(fmt.Sprintf("Analog [ %q %q %d ]", c.a, c.b, c.d), env)
 	if err != nil || v.String() != flag(c.want).String() {t.Errorf("Analog [ %s %s %d ] = %v %v, wordEq — %v", c.a, c.b, c.d, v, err, c.want)}}}
-// TestConcord: tokens и overlap (infra/nexus.go, темы на графе) фреймами Verb и Concord; Concord зовёт Analog; ожидания — ответы tokens и overlap
+// TestConcord: tokens и overlap (infra/nexus.go, темы на графе) фреймами Verb и Concord; Concord зовёт Analog; ожидания — ответы tokens и overlap;
+// цепочка Verb → Concord — через имена: в списке имя списка (P.A), его значение берётся при обращении
 func TestConcord(t *testing.T) {
 in := New(10000, nil); env := NewEnv(nil)
 for _, s := range []string{"Analog.In : [ A B D ]", "Analog : [ ( ( ( dstnz Analog.A ) < Analog.D ) | ( ( dstnz Analog.B ) < Analog.D ) ) -> ( Analog.A = Analog.B ) . ( Analog.A front Analog.D ) = ( Analog.B front Analog.D ) ]",
@@ -279,5 +280,7 @@ for _, s := range []string{"Analog.In : [ A B D ]", "Analog : [ ( ( ( dstnz Anal
 	if _, err := in.Run(s, env); err != nil {t.Fatal(s, err)}}
 for _, c := range []struct{ src, want string }{{`Verb [ "Cards-js" ]`, `[ "cards" "js" ]`}, {`Verb [ "I-sort  Rank" ]`, `[ "i" "sort" "rank" ]`}, {`Verb [ "Gloria" ]`, `[ "gloria" ]`}, {`Verb [ "Num_ber x" ]`, `[ "num" "ber" "x" ]`}, {`Verb [ "-a-" ]`, `[ "a" ]`}, {`Verb [ "Ум" ]`, `[ "ум" ]`}, {`Verb [ "" ]`, `[]`},
 	{`Concord [ [ [ "glotta" ] ] [ [ "glossa" ] [ "lexika" ] ] 3 ]`, "@true"}, {`Concord [ [ [ "glotta" ] ] [ [ "glossa" ] [ "lexika" ] ] 4 ]`, "@false"}, {`Concord [ [ [ "ум" ] ] [ [ "ум" "x" ] ] 3 ]`, "@true"},
-	{`Concord [ [ [ "dict" ] [ "lexika" ] ] [ [ "dictionary" ] ] 4 ]`, "@true"}, {`Concord [ [ [ "nun" ] ] [ [ "num" ] ] 3 ]`, "@false"}, {`Concord [ [ [ "cards" "js" ] ] [ [ "nexus" "js" ] ] 3 ]`, "@true"}} {
+	{`Concord [ [ [ "dict" ] [ "lexika" ] ] [ [ "dictionary" ] ] 4 ]`, "@true"}, {`Concord [ [ [ "nun" ] ] [ [ "num" ] ] 3 ]`, "@false"}, {`Concord [ [ [ "cards" "js" ] ] [ [ "nexus" "js" ] ] 3 ]`, "@true"},
+	{`P.A : ( Verb [ "Cards-js" ] ) . P.B : ( Verb [ "Nexus-js" ] ) . P.C : ( Verb [ "Glotta" ] ) . P.D : ( Verb [ "Glossa Lexika" ] ) . Concord [ [ P.A ] [ P.B ] 3 ]`, "@true"},
+	{`Concord [ [ P.C ] [ P.D ] 3 ]`, "@true"}, {`Concord [ [ P.C ] [ P.D ] 4 ]`, "@false"}, {`Concord [ [ P.C ] [ P.A P.B ] 2 ]`, "@false"}} {
 	if v, err := in.Run(c.src, env); err != nil || v.String() != c.want {t.Errorf("%s = %v %v, ждём %s", c.src, v, err, c.want)}}}
