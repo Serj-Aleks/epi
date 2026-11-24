@@ -40,7 +40,7 @@ if len(pat) == 0 {return len(vs) == 0}
 p := pat[0]
 if k, seq, ok := role(p); ok {
 	if got, done := bind[k]; done {
-		if len(got) > len(vs) || !same(got, vs[:len(got)]) {return false}; return match(pat[1:], vs[len(got):], bind, role)}
+		if len(got) > len(vs) || !aequa(got, vs[:len(got)]) {return false}; return match(pat[1:], vs[len(got):], bind, role)}
 	lo, hi := 1, 1
 	if seq {lo, hi = 0, len(vs)}
 	for n := lo; n <= hi && n <= len(vs); n++ {
@@ -56,10 +56,10 @@ case format.Array, format.Object, format.Expr:
 	for k, x := range bind {saved[k] = x}
 	if !match(p.Items, v.Items, bind, role) {for k := range bind {if _, ok := saved[k]; !ok {delete(bind, k)}}; return false}
 default:
-	if !same([]format.Value{p}, []format.Value{v}) {return false}}
+	if !aequa([]format.Value{p}, []format.Value{v}) {return false}}
 return match(pat[1:], vs[1:], bind, role) }
-// same: значения равны — термы без учёта регистра (кроме первой литеры), остальное — каноническим текстом
-func same(a, b []format.Value) bool {
+// aequa: значения равны — термы без учёта регистра (кроме первой литеры), остальное — каноническим текстом
+func aequa(a, b []format.Value) bool {
 if len(a) != len(b) {return false}
 for i := range a {
 	if (a[i].Kind == format.Term || a[i].Kind == format.Field) && a[i].Kind == b[i].Kind {if !format.SameTerm(a[i].Text, b[i].Text) {return false}; continue}
