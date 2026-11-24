@@ -84,7 +84,7 @@ for depth := 0; depth < 16; depth++ {
 // evalSlot: интерпретация слота; right — правый слот модели, блок в нём интерпретируется
 // определение: Фрейм.Параметр : значение, ( ) — вычислить сейчас, параметры фрейма сохраняются
 // recur — цикл, rescr — переписывание, Raw — операнд без вычисления, препозиция-фрейм — в начале с объектным блоком;
-// фрейм с ролями In (алиас препозиции на объект-фрейм) — и «A п B», «п A»: значения по порядку ролей
+// фрейм с ролями In (алиас препозиции на объект-фрейм) — и «A п B», «п A»: значения по порядку ролей; в Used — имя объект-фрейма
 func (in *Interp) evalSlot(s *slot, env *Env, right bool) (format.Value, error) {
 if s.def != nil {
 	d := *s
@@ -124,6 +124,9 @@ if frame != nil {
 		v, err := in.evalOperand(side, env, false)
 		if err != nil {return none, err}
 		args.Items = append(args.Items, v)}
+	t := *ptok
+	for depth := 0; depth < 16; depth++ {b, _ := env.find(t.Text); if b == nil || len(b.pred) != 1 || b.pred[0].Kind != format.Term {break}; t = b.pred[0]}
+	if !format.IsPrepTerm(t.Text) {in.use(&Frame{Name: t.Text})}
 	return in.call(ptok.Text, frame, args, env)}
 a, err := in.evalOperand(s.a, env, false)
 if err != nil {return none, err}

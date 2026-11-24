@@ -80,3 +80,10 @@ for _, c := range []struct{ src, want string }{
 }{ v, err := in.Run(c.src, env); got := ""; if err == nil {got = format.Canon([]format.Value{v})} else {got = err.Error()}; t.Logf("%s => %s", c.src, got); if c.want != "" && got != c.want {t.Errorf("%s: %s, ждём %s", c.src, got, c.want)}}
 if w := strings.Join(wrote, " "); w != "Gradus.In Gradus.Ex Gradus.Basis Gradus.Exponens Summa.In Summa.Ex" {t.Errorf("в файл записано: %s", w)}
 if v, _ := in.Run("Gradus.I", env); v.String() != "@none" {t.Errorf("Gradus.I после вызова = %v", v)} }
+// TestUsedActive: в пометке — и заскриптованный фрейм: по имени, вызовом и через алиас препозиции
+func TestUsedActive(t *testing.T) {
+in := disp.New(10000, nil); env := disp.NewEnv(nil)
+in.Run("Maximum.In : [ A B ] . Maximum : [ ( Maximum.A >= Maximum.B ) -> Maximum.A . Maximum.B ] . max : Maximum . maximus : max", env)
+for _, c := range []struct{ src, want string }{{"7 max 3", "Maximum logic"}, {"4 maximus 5", "Maximum logic"}, {"Maximum [ 1 2 ]", "Maximum logic"}, {"( 1 + 2 ) max 4", "arifm Maximum logic"}} {
+	in.Used = nil
+	if _, err := in.Run(c.src, env); err != nil || strings.Join(in.Used, " ") != c.want {t.Errorf("%s: %v %v, ждём %s", c.src, in.Used, err, c.want)}}}

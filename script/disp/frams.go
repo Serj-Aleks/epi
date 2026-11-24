@@ -2,11 +2,12 @@
 // frams: фреймы — аппликация и вызов (роли In, результат Ex), параметры «Фрейм.Параметр», синонимы
 package disp
 import ("fmt"; "sort"; "strings"; "unicode"; "epi/script/format")
-// apply: аппликация объекта по имени, с аргументами или без; модель «имя -> предикация» интерпретируется при обращении
+// apply: аппликация объекта по имени, с аргументами или без; модель «имя -> предикация» интерпретируется при обращении; фрейм с телом отмечается в Used, как интерпретатор
 func (in *Interp) apply(a []format.Value, env *Env) (format.Value, error) {
 b, _ := env.findFrame(a[0].Text)
 if b == nil {in.unknown(a, "— имя не определено"); return none, nil}
 if len(b.pred) == 1 && b.pred[0].Kind == format.Array {
+	in.use(&Frame{Name: a[0].Text})
 	if len(a) == 2 {return in.call(a[0].Text, b, a[1], env)}; return in.call(a[0].Text, b, format.Value{Kind: format.Object}, env)}
 if len(b.pred) == 0 {return frameValue(b), nil}
 if len(a) == 2 {in.unknown(a, "— «"+a[0].Text+"» не фрейм"); return none, nil}
