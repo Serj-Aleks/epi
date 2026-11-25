@@ -34,11 +34,12 @@ in.steps, in.allowed = 0, in.Limit
 vs, err := format.Parse(text)
 if err != nil {return none, err}
 v, _, err := in.block(vs, env); return v, err }
-// block: предикации по порядку; модель с истинным левым слотом завершает блок интерпретацией правого, с ложным — дальше
+// block: предикация с препозицией из Forma фрейма — его правила (rescr.go: forma); предикации по порядку; модель с истинным левым слотом завершает блок интерпретацией правого, с ложным — дальше
 // иначе результат — последняя
 func (in *Interp) block(vs []format.Value, env *Env) (format.Value, bool, error) {
 res := none
 for _, seg := range segments(vs) {
+	if v, ok, err := in.forma(seg, env); err != nil {return none, false, err} else if ok {res = v; continue}
 	p := readPred(seg, in.rawNames())
 	if err := in.step(); err != nil {return none, false, err}
 	if !p.ok {

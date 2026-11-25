@@ -13,30 +13,13 @@ if s.prefix == nil || s.op != nil || len(s.a) != 2 || s.a[0].Kind != format.Term
 name := s.a[0].Text
 b, _ := env.findFrame(name)
 if b == nil || len(b.pred) != 1 || b.pred[0].Kind != format.Array {return fail("— у «" + name + "» нет тела с правилами")}
-vars := map[string]bool{}
-for _, r := range roleNames(b, "In") {vars[format.Key(r)] = false}
-for _, r := range roleNames(b, "Conseq") {vars[format.Key(r)] = true}
-role := func(v format.Value) (string, bool, bool) {
-	if v.Kind != format.Field {return "", false, false}
-	f, r, ok := strings.Cut(v.Text, ".")
-	if !ok || !format.SameTerm(f, name) {return "", false, false}
-	seq, ok := vars[format.Key(r)]; return format.Key(r), seq, ok}
 flag := func(k string) bool {pb := b.params[format.Key(k)]; return pb != nil && len(pb.pred) == 1 && pb.pred[0].Kind == format.Literal && pb.pred[0].Text == "@true"}
-once := func(vs []format.Value) ([]format.Value, bool, error) {
-	for _, seg := range segments(b.pred[0].Items) {
-		if err := in.step(); err != nil {return nil, false, err}
-		i := 0
-		for i < len(seg) && !isModel(seg[i]) {i++}
-		if i == len(seg) {continue}
-		bind := map[string][]format.Value{}
-		if match(unwrap(seg[:i]), unwrap(vs), bind, role) {return subst(unwrap(seg[i+1:]), bind, role), true, nil}}; return vs, false, nil}
 _, fr := in.prepOf("rescr")
-cur, done, err := once(s.a[1].Items)
+cur, done, err := in.rewrite(name, b, s.a[1].Items)
 if err != nil {return none, err}
 if !done {
 	if !flag("Idem") {return fail(fmt.Sprintf("— ни одно правило «%s» не подошло к %s", name, format.Canon([]format.Value{s.a[1]})))}
 	cur = s.a[1].Items}
-for done && flag("Iterum") {if cur, done, err = once(cur); err != nil {return none, err}}
 if fr != nil {in.use(fr)}
 if flag("Agit") {v, _, err := in.block(cur, env); return v, err}
 return format.Value{Kind: format.Array, Items: cur}, nil }
@@ -80,3 +63,49 @@ for _, v := range vs {
 	if k, _, ok := role(v); ok {if got, done := bind[k]; done {out = append(out, got...); continue}}
 	if v.Kind == format.Array || v.Kind == format.Object || v.Kind == format.Expr {v.Items = subst(v.Items, bind, role)}
 	out = append(out, v)}; return out }
+// rewrite: правила тела фрейма name к значениям vs — первое совпавшее; у фрейма с Iterum : @true — снова до нормальной формы; done — хоть одно подошло
+func (in *Interp) rewrite(name string, b *binding, vs []format.Value) ([]format.Value, bool, error) {
+vars := map[string]bool{}
+for _, r := range roleNames(b, "In") {vars[format.Key(r)] = false}
+for _, r := range roleNames(b, "Conseq") {vars[format.Key(r)] = true}
+role := func(v format.Value) (string, bool, bool) {
+	if v.Kind != format.Field {return "", false, false}
+	f, r, ok := strings.Cut(v.Text, ".")
+	if !ok || !format.SameTerm(f, name) {return "", false, false}
+	seq, ok := vars[format.Key(r)]; return format.Key(r), seq, ok}
+once := func(vs []format.Value) ([]format.Value, bool, error) {
+	for _, seg := range segments(b.pred[0].Items) {
+		if err := in.step(); err != nil {return nil, false, err}
+		i := 0
+		for i < len(seg) && !isModel(seg[i]) {i++}
+		if i == len(seg) {continue}
+		bind := map[string][]format.Value{}
+		if match(unwrap(seg[:i]), unwrap(vs), bind, role) {return subst(unwrap(seg[i+1:]), bind, role), true, nil}}; return vs, false, nil}
+pb := b.params[format.Key("Iterum")]
+again := pb != nil && len(pb.pred) == 1 && pb.pred[0].Kind == format.Literal && pb.pred[0].Text == "@true"
+cur, done, err := once(vs)
+if err != nil || !done {return cur, done, err}
+for more := true; more && again; {if cur, more, err = once(cur); err != nil {return nil, false, err}}; return cur, true, nil }
+// forma: предикация seg с препозицией, у которой нет интерпретатора, — правила фрейма, объявившего её в Forma : [ … ],
+// результат выполняется; ok — правило подошло; препозицию объявили два фрейма — ошибка
+func (in *Interp) forma(seg []format.Value, env *Env) (format.Value, bool, error) {
+for _, t := range seg {
+	if t.Kind != format.Term || !format.IsPrepTerm(t.Text) || in.Raw[t.Text] != nil {continue}
+	if sym, fr := resolve(t, env); fr != nil || sym != t.Text {continue} else if f, _ := in.prepOf(sym); f != nil {continue}
+	if b, _ := env.find(t.Text); b != nil {continue}
+	var name string
+	var fb *binding
+	for e := env; e != nil; e = e.parent {
+		for k, b := range e.vars {
+			pb := b.params[format.Key("Forma")]
+			if pb == nil || len(pb.pred) != 1 || pb.pred[0].Kind != format.Array || len(b.pred) != 1 || b.pred[0].Kind != format.Array {continue}
+			for _, p := range pb.pred[0].Items {
+				if p.Text != t.Text {continue}
+				if fb != nil && fb != b {return none, false, fmt.Errorf("препозицию «%s» объявили в Forma два фрейма: %s и %s", t.Text, name, k)}
+				name, fb = k, b}}}
+	if fb == nil {continue}
+	cur, done, err := in.rewrite(name, fb, seg)
+	if err != nil || !done {return none, false, err}
+	in.use(&Frame{Name: name})
+	v, _, err := in.block(cur, env); return v, true, err}
+return none, false, nil }
