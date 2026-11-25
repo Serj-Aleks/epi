@@ -14,6 +14,8 @@ let hist = [], hpos = 0, writable = false, last = null;
 let mode = null;
 // ответ на вопрос trans — имя концепта
 let conceptDone = null;
+// asking: вопрос диспетчера ждёт ответа — блок вопроса в ленте; пока он есть, предикации не отправляются
+let asking = null;
 // линзы карточки: включена или нет
 const lens = { graph: true, taxon: false, rank: false, tabs: false, process: false, content: true, corpus: false, slots: false };
 // карточка: имя, таймер, источник клона, поколение сборки, найденное внутри концепта { name, ext, q }

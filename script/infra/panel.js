@@ -41,7 +41,7 @@ if (!st.current) { const o = document.createElement("option"); o.textContent = "
 for (const s of st.seanses || []) { const o = document.createElement("option"); o.value = s.name; o.textContent = s.name.replace(/^seans-/, "").replace(/\.uic$/, "") + (s.closed ? " ■" : ""); o.selected = s.name === st.current; sel.append(o); }
 writable = !!st.current && !st.closed;
 document.getElementById("close").disabled = !writable;
-log.innerHTML = ""; hist = [];
+log.innerHTML = ""; hist = []; asking = null;
 for (const turn of st.turns || []) { const t = addPred(turn.pred, true); addAnswer(t, turn, true); hist.push(turn.pred); }
 if (cardBox.hidden) { const n = (st.turns || []).filter(t => !t.error && /^nexus \S+$/.test(t.pred)).pop(); if (n) cardShow(n.pred.slice(6)); }
 scroll(); hpos = hist.length;
@@ -54,11 +54,12 @@ async function act(path, body) { try { show(await api(path, body)); } catch (e) 
 // при выборе темы имя концепта можно поправить (форма слова — синоним); preposit — само слово или препозиция; numer — число
 function respond(t, rep) {
 if (rep.turns) {
+  asking = null;
   rep.turns.forEach((turn, i) => { const tt = i === 0 ? t : addPred(turn.pred); if (i === 0) tt.querySelector(".pred").textContent = turn.pred; addAnswer(tt, turn); });
   if (!rep.turns.length) t.remove();
   inp.disabled = !writable; inp.focus(); return; }
 if (rep.options) {
-  const q = el("q", rep.question); t.append(q); scroll();
+  const q = el("q", rep.question); t.append(q); asking = q; scroll();
   const word = (rep.question.match(/«([^»]+)»/) || [])[1] || "";
   const choose = async (c, label) => {
     q.querySelectorAll("button").forEach(b => b.remove()); q.append(el("f", label));
@@ -73,7 +74,7 @@ if (rep.options) {
       inp.placeholder = (o === "numer" ? "число" : o === "preposit" ? "препозиция — само слово, синоним — препозиция (+), определение — тире" : "имя концепта темы " + o) + " (Enter — принять, Esc — пропустить)"; inp.focus();
       conceptDone = (name) => choose(name ? pre + name : "✕", name ? o + ": " + name : "✕"); }; });
   return; }
-const q = el("q", rep.question);
+const q = el("q", rep.question); asking = q;
 const yes = document.createElement("button"); yes.textContent = "✓"; yes.title = "yes (y)";
 const no = document.createElement("button"); no.textContent = "✕"; no.title = "no (n)";
 q.append(yes, no); t.append(q); scroll(); yes.focus();
@@ -81,8 +82,9 @@ const answer = async (v) => { document.removeEventListener("keydown", key); yes.
 const key = (e) => { if (e.key === "y") answer(true); if (e.key === "n") answer(false); };
 yes.onclick = () => answer(true); no.onclick = () => answer(false);
 document.addEventListener("keydown", key); }
-// runPred: предикация в протокол, как ввод в строке; true — выполнена, без сеанса — подсказка
+// runPred: предикация в протокол, как ввод в строке; true — выполнена, без сеанса — подсказка; вопрос ждёт ответа — показать его
 async function runPred(text) {
+if (asking) { asking.scrollIntoView({ block: "center" }); const b = asking.querySelector("button"); if (b) b.focus(); note.textContent = "сначала ответьте на вопрос в ленте"; return false; }
 if (!writable) { note.textContent = "сеанс закрыт — откройте сеанс ＋"; inp.value = text; return false; }
 hist.push(text); hpos = hist.length; inp.disabled = true;
 const t = addPred(text);
