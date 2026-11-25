@@ -83,7 +83,7 @@ for depth := 0; depth < 16; depth++ {
 	default: return "", nil}}; return "", nil }
 // evalSlot: интерпретация слота; right — правый слот модели, блок в нём интерпретируется
 // определение: Фрейм.Параметр : значение, ( ) — вычислить сейчас, параметры фрейма сохраняются
-// recur — цикл, rescr — переписывание, Raw — операнд без вычисления, препозиция-фрейм — в начале с объектным блоком;
+// recur — цикл, rescr — переписывание, reduc — список вычисленных значений, Raw — операнд без вычисления, препозиция-фрейм — в начале с объектным блоком;
 // фрейм с ролями In (алиас препозиции на объект-фрейм) — и «A п B», «п A»: значения по порядку ролей; в Used — имя объект-фрейма
 func (in *Interp) evalSlot(s *slot, env *Env, right bool) (format.Value, error) {
 if s.def != nil {
@@ -108,6 +108,7 @@ if s.prefix != nil {ptok = s.prefix}
 sym, frame := resolve(*ptok, env)
 if frame == nil && sym == "recur" {return in.recur(s, env)}
 if frame == nil && sym == "rescr" {return in.rescr(s, env)}
+if frame == nil && sym == "reduc" {return in.reduc(s, env)}
 if r := in.Raw[sym]; frame == nil && r != nil {
 	_, fr := in.prepOf(sym)
 	if s.prefix == nil || s.op != nil || len(s.a) != 1 {in.unknown(s.toks(), "— «"+sym+"» пишется в начале с одним операндом"); return none, nil}

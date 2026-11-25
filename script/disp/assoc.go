@@ -2,7 +2,7 @@
 // assoc: интерпретатор ассоциативных массивов — объектный блок { Ключ : значение }: valor, clavs, parad; равенство без учёта порядка пар
 package disp
 import ("strings"; "epi/script/format")
-// assocFrame: фрейм assoc; ключ — строка или терм-значение ('B), ключа нет — @none; parad — новый объект, исходный не меняется
+// assocFrame: фрейм assoc; ключ — строка или терм-значение ('B), ключа нет — @none; parad — новый объект, исходный не меняется; parad — объект или пара [ K V ]
 func assocFrame() *Frame {
 key := func(b *format.Value) (string, bool) {
 	if b == nil || (b.Kind != format.String && b.Kind != format.Term) {return "", false}; return b.Text, true}
@@ -17,7 +17,12 @@ k := map[string]Prep{
 		out := format.Value{Kind: format.Array, Items: []format.Value{}}
 		for _, e := range b.Entries() {out.Items = append(out.Items, format.Value{Kind: format.String, Text: e.Key.Text})}; return out, true},
 	"parad": func(a, b *format.Value) (format.Value, bool) {
-		if a == nil || b == nil || a.Kind != format.Object || b.Kind != format.Object {return none, false}
+		if a == nil || b == nil || a.Kind != format.Object {return none, false}
+		if b.Kind == format.Array {
+			kk, ok := key(func() *format.Value {if len(b.Items) == 2 {return &b.Items[0]}; return nil}())
+			if !ok || kk == "" {return none, false}
+			p := format.Value{Kind: format.Object, Items: []format.Value{{Kind: format.Term, Text: kk}, {Kind: format.Op, Text: ":"}, b.Items[1]}}; b = &p}
+		if b.Kind != format.Object {return none, false}
 		es := a.Entries()
 		for _, n := range b.Entries() {
 			found := false

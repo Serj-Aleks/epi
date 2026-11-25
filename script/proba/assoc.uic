@@ -13,3 +13,10 @@
 [ { A : { C : 1 D : 2 } } = { A : { D : 2 C : 1 } } ] -> @true
 [ X.S : 0 . recur { In : ( clavs { A : 1 B : 2 C : 3 } ) As : X.K Corpus : [ X.S : ( X.S + ( { A : 1 B : 2 C : 3 } valor X.K ) ) ] } . X.S ] -> 6
 [ 5 valor 'A ] -> ? "не интерпретирует"
+[ X.C : "н" . X.I : 3 ] -> @none
+[ reduc [ X.C ( X.I - 1 ) 7 ] ] -> [ "н" 2 7 ]
+[ X.O parad ( reduc [ X.C ( X.I - 1 ) ] ) ] -> { A : 1 B : [ 2 3 ] C : 4 н : 2 }
+[ X.O parad [ "B" 5 ] ] -> { A : 1 B : 5 C : 4 }
+[ X.M : {} . recur { In : ( dstnz "abc" ) As : X.J Corpus : [ X.M : ( X.M parad ( reduc [ ( "abc" elmnt X.J ) X.J ] ) ) ] } . X.M ] -> { a : 1 b : 2 c : 3 }
+[ X.M valor "b" ] -> 2
+[ reduc 5 ] -> ? "reduc пишется"

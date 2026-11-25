@@ -1,5 +1,5 @@
 // epi/script/disp/serie.go
-// serie: интерпретатор рядов — строка (ряд литер) и список (ряд элементов): dstnz, front, post, elmnt, cnctn, cnvrg
+// serie: интерпретатор рядов — строка (ряд литер) и список (ряд элементов): dstnz, front, post, elmnt, cnctn, cnvrg, reduc
 package disp
 import ("strconv"; "strings"; "epi/script/format")
 // serieOf: ряд значения — литеры строки или элементы списка; str — строка
@@ -39,6 +39,16 @@ k := map[string]Prep{
 		if !ok1 {return none, false}
 		if y, ys, ok2 := serieOf(b); ok2 && xs == ys {return serieVal(append(append([]format.Value{}, x...), y...), xs), true}
 		if xs || b == nil {return none, false}; return serieVal(append(append([]format.Value{}, x...), *b), false), true},
+	"reduc": func(a, b *format.Value) (format.Value, bool) {return none, false},
 	"cnvrg": func(a, b *format.Value) (format.Value, bool) {
 		if a != nil || b == nil || (b.Kind != format.String && b.Kind != format.LongString) {return none, false}; return format.Value{Kind: format.String, Text: strings.ToLower(b.Text)}, true},}
 return &Frame{Name: "serie", Kernel: k} }
+// reduc: «reduc [ … ]» — список из значений элементов блока, каждый вычислен в контексте вызова (как reduce в Ребол)
+func (in *Interp) reduc(s *slot, env *Env) (format.Value, error) {
+if s.prefix == nil || s.op != nil || len(s.a) != 1 || s.a[0].Kind != format.Array {in.unknown(s.toks(), "— reduc пишется «reduc [ … ]»"); return none, nil}
+out := format.Value{Kind: format.Array, Items: []format.Value{}}
+for _, it := range s.a[0].Items {
+	v, err := in.evalOperand([]format.Value{it}, env, false)
+	if err != nil {return none, err}
+	out.Items = append(out.Items, v)}
+if _, fr := in.prepOf("reduc"); fr != nil {in.use(fr)}; return out, nil }
