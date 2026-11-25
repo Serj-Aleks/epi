@@ -3,7 +3,7 @@
 // препозиции — символы (+, >) и термы со строчной, объекты — с прописной, «Ключ : значение» — определение
 // нераспознанная предикация — не ошибка, она предлагается к записи в базу
 package disp
-import ("fmt"; "epi/script/format")
+import ("fmt"; "strings"; "epi/script/format")
 // Error: текст остановки по лимиту
 func (s Stopped) Error() string {return fmt.Sprintf("остановлено пользователем после %d шагов", s.Steps) }
 // FrameOf: фрейм-интерпретатор по имени
@@ -81,7 +81,7 @@ for depth := 0; depth < 16; depth++ {
 	case w.Kind == format.Term:
 		if fb, _ := env.findFrame(w.Text); fb != nil && len(fb.pred) == 1 && fb.pred[0].Kind == format.Array {return "", fb}; return "", nil
 	default: return "", nil}}; return "", nil }
-// evalSlot: интерпретация слота; right — правый слот модели, блок в нём интерпретируется
+// evalSlot: интерпретация слота; right — правый слот модели, блок в нём интерпретируется; алиас, ведущий к самому себе (цикл), — ошибка
 // определение: Фрейм.Параметр : значение, ( ) — вычислить сейчас, параметры фрейма сохраняются
 // recur — цикл, rescr — переписывание, reduc — список вычисленных значений, order — сортировка, Raw — операнд без вычисления, препозиция-фрейм — в начале с объектным блоком;
 // фрейм с ролями In (алиас препозиции на объект-фрейм) — и «A п B», «п A»: значения по порядку ролей; в Used — имя объект-фрейма
@@ -97,6 +97,14 @@ if s.def != nil {
 		v, err := in.evalOperand(toks, env, false)
 		if err != nil {return none, err}
 		toks = []format.Value{v}}
+	if s.alias {
+		chain, t := []string{s.def.Text}, toks[0]
+		for depth := 0; depth < 64; depth++ {
+			chain = append(chain, t.Text)
+			if t.Text == s.def.Text || (!format.IsPrepTerm(t.Text) && format.SameTerm(t.Text, s.def.Text)) {return none, fmt.Errorf("цикл алиасов: %s — алиас не может вести к самому себе", strings.Join(chain, " → "))}
+			b, _ := env.find(t.Text)
+			if b == nil || len(b.pred) != 1 || (b.pred[0].Kind != format.Term && b.pred[0].Kind != format.Op) {break}
+			t = b.pred[0]}}
 	nb := &binding{pred: toks, env: env}
 	if old, _ := env.find(s.def.Text); old != nil && !format.IsPrepTerm(s.def.Text) {nb.params = old.params}
 	env.set(s.def.Text, nb)
