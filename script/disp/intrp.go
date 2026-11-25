@@ -18,7 +18,7 @@ if !strings.Contains(s, ".") {s += ".0"}; return format.Value{Kind: format.Decim
 // flag: флаг @true или @false
 func flag(b bool) format.Value {
 if b {return vtrue}; return vfals }
-// baseFrames: фреймы-интерпретаторы системы (serie — serie.go); минус в начале предикации — унарный, функция одного аргумента — в начале
+// baseFrames: фреймы-интерпретаторы системы (serie — serie.go, assoc — assoc.go); минус в начале предикации — унарный, функция одного аргумента — в начале
 // recur, trans, nexus, qwest, qwizt, clone, rename, import, union — ядро задаёт среда (Interp.recur, Interp.Raw, словари)
 func baseFrames() []*Frame {
 arith := func(op func(x, y float64) (float64, bool)) Prep {return func(a, b *format.Value) (format.Value, bool) {
@@ -36,7 +36,7 @@ eq := func(neg bool) Prep {return func(a, b *format.Value) (format.Value, bool) 
 		if a == nil {return none, false}
 		x, _, ok1 := num(a)
 		y, _, ok2 := num(b)
-		e := ok1 && ok2 && x == y || !(ok1 && ok2) && a.Kind == b.Kind && strings.EqualFold(a.String(), b.String()); return flag(e != neg), true}}
+		e := ok1 && ok2 && x == y || !(ok1 && ok2) && congr(*a, *b); return flag(e != neg), true}}
 plusOnlyInfix := func(p Prep) Prep {return func(a, b *format.Value) (format.Value, bool) {if a == nil {return none, false}; return p(a, b)}}
 arifm := map[string]Prep{
 	"+": plusOnlyInfix(arith(func(x, y float64) (float64, bool) { return x + y, true })),
@@ -72,7 +72,7 @@ trgnm := map[string]Prep{
 lnrfm := map[string]Prep{
 	"ln":  unary(func(x float64) (float64, bool) { return math.Log(x), x > 0 }),
 	"exp": unary(all(math.Exp)),}; return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic},
-	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm}, serieFrame(),
+	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm}, serieFrame(), assocFrame(),
 	{Name: "zycle", Kernel: map[string]Prep{"recur": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "trans", Kernel: map[string]Prep{"trans": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "nexus", Kernel: map[string]Prep{"nexus": func(a, b *format.Value) (format.Value, bool) {return none, false}}},

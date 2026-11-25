@@ -1,0 +1,15 @@
+[ X.O : { A : 1 B : [ 2 3 ] } ] -> @none
+[ X.O valor 'B ] -> [ 2 3 ]
+[ X.O valor "A" ] -> 1
+[ X.O valor 'C ] -> @none
+[ clavs X.O ] -> [ "A" "B" ]
+[ X.O parad { C : 4 } ] -> { A : 1 B : [ 2 3 ] C : 4 }
+[ X.O parad { A : 9 } ] -> { A : 9 B : [ 2 3 ] }
+[ X.O ] -> { A : 1 B : [ 2 3 ] }
+[ X.O : ( X.O parad { C : 4 } ) . X.O valor 'C ] -> 4
+[ { A : 1 B : 2 } = { B : 2 A : 1 } ] -> @true
+[ { A : 1 B : 2 } = { A : 1 B : 3 } ] -> @false
+[ [ 1 2 ] = [ 2 1 ] ] -> @false
+[ { A : { C : 1 D : 2 } } = { A : { D : 2 C : 1 } } ] -> @true
+[ X.S : 0 . recur { In : ( clavs { A : 1 B : 2 C : 3 } ) As : X.K Corpus : [ X.S : ( X.S + ( { A : 1 B : 2 C : 3 } valor X.K ) ) ] } . X.S ] -> 6
+[ 5 valor 'A ] -> ? "не интерпретирует"
