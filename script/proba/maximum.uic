@@ -13,3 +13,10 @@
 [ 3 neg 4 ] -> ! "подано значений 2, ролей 1"
 [ Duplum : [ 1 ] . dupl : Duplum ] -> @none
 [ 3 dupl 4 ] -> ? "у фрейма с ролями In"
+[ Minimum.In : [ A B ] ] -> @none
+[ Minimum : [ ( Minimum.A <= Minimum.B ) -> Minimum.A . Minimum.B ] ] -> @none
+[ min : Minimum ] -> @none
+[ 7 min 3 ] -> 3
+[ 2 min 9 ] -> 2
+[ ( 7 max 3 ) min 5 ] -> 5
+[ ( 2 min 9 ) max ( 4 min 8 ) ] -> 4
