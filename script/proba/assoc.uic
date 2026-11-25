@@ -20,3 +20,9 @@
 [ X.M : {} . recur { In : ( dstnz "abc" ) As : X.J Corpus : [ X.M : ( X.M parad ( reduc [ ( "abc" elmnt X.J ) X.J ] ) ) ] } . X.M ] -> { a : 1 b : 2 c : 3 }
 [ X.M valor "b" ] -> 2
 [ reduc 5 ] -> ? "reduc пишется"
+[ { A : 1 B : 2 C : 3 } annul 'B ] -> { A : 1 C : 3 }
+[ { A : 1 B : 2 } annul "A" ] -> { B : 2 }
+[ { A : 1 } annul 'Z ] -> { A : 1 }
+[ X.P : { A : 1 B : 2 } . X.P annul 'A . X.P ] -> { A : 1 B : 2 }
+[ X.P : ( X.P annul 'A ) . X.P ] -> { B : 2 }
+[ { A : 1 } annul 5 ] -> ? "не интерпретирует"
