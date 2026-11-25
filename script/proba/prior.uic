@@ -1,0 +1,31 @@
+[ Alphabetum.S : "nmlrhgkcsztdbpfvwuoaeiyjqxнмлркхгжщчшсзцтдбпфвюуоёэеиыйяаьъ" ] -> @none
+[ Alphabetum.Ordo : {} . recur { In : ( dstnz Alphabetum.S ) As : Alphabetum.I Corpus : [ Alphabetum.Ordo : ( Alphabetum.Ordo parad ( reduc [ ( Alphabetum.S elmnt Alphabetum.I ) ( Alphabetum.I - 1 ) ] ) ) ] } ] -> @none
+[ Alphabetum.Ordo valor "n" ] -> 0
+[ Alphabetum.Ordo valor "ъ" ] -> 58
+[ Ordinal.In : [ C ] . Ordinal.Ex : Ordinal ] -> @none
+[ Ordinal : [ Ordinal.V : ( Alphabetum.Ordo valor Ordinal.C ) . ( ( ( Ordinal.C = " " ) | ( Ordinal.C = "-" ) ) | ( Ordinal.C = "," ) ) -> [ Ordinal.Ordinal : -1 ] . ( Ordinal.V = @none ) -> [ Ordinal.Ordinal : 10000 ] . Ordinal.Ordinal : Ordinal.V ] ] -> @none
+[ Ordinal [ "м" ] ] -> 27
+[ Ordinal [ "-" ] ] -> -1
+[ Ordinal [ "1" ] ] -> 10000
+[ Prior.In : [ A B ] . Prior.Ex : Prior ] -> @none
+[ Prior : [ Prior.D : @false . Prior.Prior : @false . Prior.X : ( cnvrg Prior.A ) . Prior.Y : ( cnvrg Prior.B ) . recur { In : ( dstnz Prior.X ) As : Prior.I Corpus : [ ( Prior.D | ( Prior.I > ( dstnz Prior.Y ) ) ) -> @none . Prior.P : ( Ordinal [ ( Prior.X elmnt Prior.I ) ] ) . Prior.Q : ( Ordinal [ ( Prior.Y elmnt Prior.I ) ] ) . ( Prior.P <> Prior.Q ) -> [ Prior.D : @true . Prior.Prior : ( Prior.P < Prior.Q ) ] ] } . Prior.D -> @none . Prior.Prior : ( ( dstnz Prior.X ) < ( dstnz Prior.Y ) ) ] ] -> @none
+[ Prior [ "Num" "Nun" ] ] -> @false
+[ Prior [ "Nun" "Num" ] ] -> @true
+[ Prior [ "Nor" "Num" ] ] -> @false
+[ Prior [ "Gloria" "Glossa" ] ] -> @true
+[ Prior [ "Re" "Rep" ] ] -> @true
+[ Prior [ "Rep" "Re" ] ] -> @false
+[ Prior [ "Ren" "Rel" ] ] -> @true
+[ Prior [ "Rel" "Reg" ] ] -> @true
+[ Prior [ "Num" "num" ] ] -> @false
+[ Prior [ "Квадрат" "Ромб" ] ] -> @false
+[ Prior [ "Ромб" "Квадрат" ] ] -> @true
+[ Prior [ "ёж" "еж" ] ] -> @true
+[ Prior [ "I-sort" "Isort" ] ] -> @true
+[ Prior [ "A1" "A2" ] ] -> @false
+[ Prior [ "Num" "Nummer" ] ] -> @true
+[ [ "Num" "Nun" "Nor" "Re" "Rep" "Rel" "Квадрат" "Ромб" ] order Prior ] -> [ "Nun" "Num" "Nor" "Re" "Rel" "Rep" "Ромб" "Квадрат" ]
+[ Lt.In : [ A B ] . Lt : [ Lt.A < Lt.B ] ] -> @none
+[ [ 3 1 2 ] order Lt ] -> [ 1 2 3 ]
+[ [ 3 1 2 ] order Nihil ] -> ? "фрейм сравнения"
+[ [ 3 1 2 ] order Ordinal ] -> ? "фрейм сравнения"

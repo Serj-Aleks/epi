@@ -1,7 +1,7 @@
 // epi/script/disp/serie.go
-// serie: интерпретатор рядов — строка (ряд литер) и список (ряд элементов): dstnz, front, post, elmnt, cnctn, cnvrg, reduc
+// serie: интерпретатор рядов — строка (ряд литер) и список (ряд элементов): dstnz, front, post, elmnt, cnctn, cnvrg, reduc, order
 package disp
-import ("strconv"; "strings"; "epi/script/format")
+import ("sort"; "strconv"; "strings"; "epi/script/format")
 // serieOf: ряд значения — литеры строки или элементы списка; str — строка
 func serieOf(v *format.Value) (items []format.Value, str bool, ok bool) {
 if v == nil {return nil, false, false}
@@ -40,6 +40,7 @@ k := map[string]Prep{
 		if y, ys, ok2 := serieOf(b); ok2 && xs == ys {return serieVal(append(append([]format.Value{}, x...), y...), xs), true}
 		if xs || b == nil {return none, false}; return serieVal(append(append([]format.Value{}, x...), *b), false), true},
 	"reduc": func(a, b *format.Value) (format.Value, bool) {return none, false},
+	"order": func(a, b *format.Value) (format.Value, bool) {return none, false},
 	"cnvrg": func(a, b *format.Value) (format.Value, bool) {
 		if a != nil || b == nil || (b.Kind != format.String && b.Kind != format.LongString) {return none, false}; return format.Value{Kind: format.String, Text: strings.ToLower(b.Text)}, true},}
 return &Frame{Name: "serie", Kernel: k} }
@@ -52,3 +53,26 @@ for _, it := range s.a[0].Items {
 	if err != nil {return none, err}
 	out.Items = append(out.Items, v)}
 if _, fr := in.prepOf("reduc"); fr != nil {in.use(fr)}; return out, nil }
+// order: «L order Фрейм» — список L, упорядоченный фреймом сравнения с двумя ролями In: @true — первый раньше второго;
+// порядок равных сохраняется; фрейм дал не флаг — не распознано
+func (in *Interp) order(s *slot, env *Env) (format.Value, error) {
+fail := func(why string) (format.Value, error) {in.unknown(s.toks(), "— order: "+why); return none, nil}
+if s.prefix != nil || s.op == nil || len(s.b) != 1 || s.b[0].Kind != format.Term {return fail("пишется «Список order Фрейм»")}
+name := s.b[0].Text
+fb, _ := env.findFrame(name)
+if fb == nil || len(roleNames(fb, "In")) != 2 {return fail("«" + name + "» — нужен фрейм сравнения с двумя ролями In")}
+l, err := in.evalOperand(s.a, env, false)
+if err != nil {return none, err}
+if l.Kind != format.Array {return fail("слева нужен список")}
+items := append([]format.Value{}, l.Items...)
+var bad error
+notFlag := false
+sort.SliceStable(items, func(i, j int) bool {
+	if bad != nil || notFlag {return false}
+	v, err := in.call(name, fb, format.Value{Kind: format.Array, Items: []format.Value{items[i], items[j]}}, env)
+	if err != nil {bad = err; return false}
+	if v.Kind != format.Literal || (v.Text != "@true" && v.Text != "@false") {notFlag = true; return false}
+	return v.Text == "@true"})
+if bad != nil {return none, bad}
+if notFlag {return fail("«" + name + "» дал не флаг")}
+if _, fr := in.prepOf("order"); fr != nil {in.use(fr)}; return format.Value{Kind: format.Array, Items: items}, nil }
