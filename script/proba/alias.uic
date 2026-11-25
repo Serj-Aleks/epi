@@ -1,0 +1,10 @@
+[ aa : + ] -> @none
+[ bb : aa ] -> @none
+[ 2 bb 3 ] -> 5
+[ aa : bb ] -> ! "цикл алиасов: aa → bb → aa"
+[ 2 aa 3 ] -> 5
+[ cc : cc ] -> ! "цикл алиасов: cc → cc"
+[ Maximum.In : [ A B ] . Maximum : [ ( Maximum.A >= Maximum.B ) -> Maximum.A . Maximum.B ] . max : Maximum ] -> @none
+[ mx : max ] -> @none
+[ max : mx ] -> ! "цикл алиасов: max → mx → max"
+[ 7 mx 3 ] -> 7
