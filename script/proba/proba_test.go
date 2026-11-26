@@ -17,7 +17,7 @@ t.Helper()
 for src, want := range cases {
 	got, _, _, err := runText(t, src, 100)
 	if err != nil || got != want {t.Errorf("%q: %q %v, ожидалось %q", src, got, err, want)}} }
-// TestScripta: заскриптованные функции — файлы *.uic папки proba, каждый в своём контексте; строка «[ предикация ] -> ответ»,
+// TestScripta: заскриптованные функции — файлы *.uic папки proba, каждый в своём контексте и со своей пустой папкой данных (scrin); строка «[ предикация ] -> ответ»,
 // ответ — канонический текст интерпретации, «! "текст"» — ошибка, в сообщении которой есть этот текст,
 // «? "текст"» — не распознано: вопрос «записать?», в котором есть этот текст
 func TestScripta(t *testing.T) {
@@ -27,6 +27,7 @@ for _, f := range files {
 	b, err := os.ReadFile(f)
 	if err != nil {t.Fatal(err)}
 	in, env := disp.New(10000, nil), disp.NewEnv(nil)
+	in.Root = t.TempDir()
 	var asked []string
 	in.Ask = func(q string) bool {asked = append(asked, q); return false}
 	for n, line := range strings.Split(string(b), "\n") {

@@ -1,0 +1,20 @@
+[ lectu "thema/T/prtcl/seans-2026-11-01.uic" ] -> @none
+[ "thema/T/prtcl/seans-2026-11-01.uic" scrib "[ 2 + 3 ] -> 5" ] -> @true
+[ lectu "thema/T/prtcl/seans-2026-11-01.uic" ] -> "[ 2 + 3 ] -> 5"
+[ "thema/T/prtcl/seans-2026-11-21.uic" scrib "" . "thema/T/prtcl/seans-2026-11-16.uic" scrib "" . "thema/T/prtcl/ignor.uic" scrib "" ] -> @true
+[ catal "thema/T/prtcl" ] -> [ "ignor.uic" "seans-2026-11-01.uic" "seans-2026-11-16.uic" "seans-2026-11-21.uic" ]
+[ catal "thema/T" ] -> [ "prtcl/" ]
+[ catal "thema/Z" ] -> @none
+[ "thema/T/prtcl/ignor.uic" migra "thema/T/ignor.uic" ] -> @true
+[ catal "thema/T" ] -> [ "ignor.uic" "prtcl/" ]
+[ "thema/T/ignor.uic" migra "thema/T/prtcl/seans-2026-11-01.uic" ] -> ! "уже есть"
+[ "lexic/x.uic" scrib "x" ] -> ! "только в темах"
+[ lectu "/etc/passwd" ] -> ! "без «/» в начале"
+[ lectu "thema/../../x" ] -> ! "«..» в пути"
+[ "b" > "a" ] -> @true
+[ "seans-2026-11-21.uic" > "seans-2026-11-16.uic" ] -> @true
+[ Gt.In : [ A B ] . Gt : [ Gt.A > Gt.B ] ] -> @none
+[ Seans.In : [ T ] . Seans.Ex : Seans ] -> @none
+[ Seans : [ Seans.Seans : [] . Seans.L : ( catal ( ( "thema/" cnctn Seans.T ) cnctn "/prtcl" ) ) . ( Seans.L = @none ) -> [] . recur { In : Seans.L As : Seans.N Corpus : [ ( ( ( Seans.N front 6 ) = "seans-" ) & ( ( Seans.N post ( ( dstnz Seans.N ) - 4 ) ) = ".uic" ) ) -> [ Seans.Seans : ( Seans.Seans cnctn Seans.N ) ] ] } . Seans.Seans : ( Seans.Seans order Gt ) ] ] -> @none
+[ Seans [ "T" ] ] -> [ "seans-2026-11-21.uic" "seans-2026-11-16.uic" "seans-2026-11-01.uic" ]
+[ Seans [ "Z" ] ] -> []

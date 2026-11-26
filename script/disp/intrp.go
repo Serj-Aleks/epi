@@ -18,7 +18,7 @@ if !strings.Contains(s, ".") {s += ".0"}; return format.Value{Kind: format.Decim
 // flag: флаг @true или @false
 func flag(b bool) format.Value {
 if b {return vtrue}; return vfals }
-// baseFrames: фреймы-интерпретаторы системы (serie — serie.go, assoc — assoc.go); минус в начале предикации — унарный, функция одного аргумента — в начале
+// baseFrames: фреймы-интерпретаторы системы (serie — serie.go, assoc — assoc.go); минус в начале предикации — унарный, функция одного аргумента — в начале; сравнение строк — по порядку литер (как в Go)
 // recur, trans, nexus, qwest, qwizt, clone, rename, import, union — ядро задаёт среда (Interp.recur, Interp.Raw, словари)
 func baseFrames() []*Frame {
 arith := func(op func(x, y float64) (float64, bool)) Prep {return func(a, b *format.Value) (format.Value, bool) {
@@ -29,6 +29,7 @@ arith := func(op func(x, y float64) (float64, bool)) Prep {return func(a, b *for
 		r, ok := op(x, y)
 		if !ok {return none, false}; return number(r, xi && yi), true}}
 cmp := func(op func(x, y float64) bool) Prep {return func(a, b *format.Value) (format.Value, bool) {
+		if s, ok1 := text(a); ok1 {if t, ok2 := text(b); ok2 {return flag(op(float64(strings.Compare(s, t)), 0)), true}}
 		x, _, ok1 := num(a)
 		y, _, ok2 := num(b)
 		if !ok1 || !ok2 {return none, false}; return flag(op(x, y)), true}}

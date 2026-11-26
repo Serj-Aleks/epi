@@ -15,7 +15,9 @@ type Interp struct {
 	OnFrame func(name string, body []format.Value)
 	// Raw: препозиции ядра, получающие операнд без вычисления (nexus Цвет — имя концепта)
 	Raw map[string]func(arg format.Value) (format.Value, bool)
-	RawErr error // причина отказа Raw: ответ — ошибка, а не «не распознана — записать?»
+	RawErr error // причина отказа Raw и препозиции ядра: ответ — ошибка, а не «не распознана — записать?»
+	// Root: папка данных для scrin (пути — от неё; писать — только в thema/); пусто — файлы недоступны
+	Root string
 	Limit   int // лимит шагов
 	Ask     func(q string) bool
 	Unknown []string // база нераспознанных предикаций (канонический текст)

@@ -17,7 +17,9 @@ func (in *Interp) use(f *Frame) {
 for _, n := range in.Used {if n == f.Name {return}}
 in.Used = append(in.Used, f.Name) }
 // New: среда с фреймами-интерпретаторами (имена — пять литер)
-func New(limit int, ask func(string) bool) *Interp {return &Interp{Frames: baseFrames(), Limit: limit, Ask: ask, allowed: limit} }
+func New(limit int, ask func(string) bool) *Interp {
+in := &Interp{Frames: baseFrames(), Limit: limit, Ask: ask, allowed: limit}
+in.Frames = append(in.Frames, in.scrinFrame()); return in }
 // NewEnv: контекст, дочерний к parent
 func NewEnv(parent *Env) *Env { return &Env{vars: map[string]*binding{}, parent: parent} }
 // find: связь имени в иерархии контекстов и её контекст
@@ -149,6 +151,7 @@ if s.prefix != nil {pa, pb = nil, &a} else {
 f, fr := in.prepOf(sym)
 if f == nil {in.unknown(s.toks(), fmt.Sprintf("— нет интерпретатора препозиции «%s»", ptok.Text)); return none, nil}
 v, ok := f(pa, pb)
+if err := in.RawErr; !ok && err != nil {in.RawErr = nil; return none, err}
 if !ok {in.unknown(s.toks(), fmt.Sprintf("— «%s» (%s) не интерпретирует такие аргументы", ptok.Text, fr.Name)); return none, nil}
 in.use(fr); return v, nil }
 // evalOperand: значение операнда — ( ) вычисляется, [ ] справа — блок, 'терм, :терм, терм — аппликация, поле — параметр
