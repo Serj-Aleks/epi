@@ -73,7 +73,7 @@ trgnm := map[string]Prep{
 lnrfm := map[string]Prep{
 	"ln":  unary(func(x float64) (float64, bool) { return math.Log(x), x > 0 }),
 	"exp": unary(all(math.Exp)),}; return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic},
-	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm}, serieFrame(), assocFrame(),
+	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm}, serieFrame(), assocFrame(), exmplFrame(),
 	{Name: "zycle", Kernel: map[string]Prep{"recur": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "trans", Kernel: map[string]Prep{"trans": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "nexus", Kernel: map[string]Prep{"nexus": func(a, b *format.Value) (format.Value, bool) {return none, false}}},

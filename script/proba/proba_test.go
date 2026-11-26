@@ -44,13 +44,15 @@ for _, f := range files {
 			w := strings.Trim(strings.TrimSpace(strings.TrimPrefix(want, "!")), `"`)
 			if err == nil || !strings.Contains(err.Error(), w) {t.Errorf("%s:%d: %s = %v %v, ждём ошибку «%s»", f, n+1, pred, v, err, w)}
 		case err != nil || v.String() != want: t.Errorf("%s:%d: %s = %v %v, ждём %s", f, n+1, pred, v, err, want)}}}}
-// casus: строка теста — предикация внутри внешних [ ] и ответ после « -> »
+// casus: строка теста — предикация внутри внешних [ ] и ответ после « -> »; скобки внутри "…" и ''…'' не считаются
 func casus(line string) (string, string, bool) {
 line = strings.TrimSpace(line)
 if !strings.HasPrefix(line, "[") {return "", "", false}
-depth, str := 0, false
+depth, str, long := 0, false, false
 for i, c := range line {
 	switch {
+	case !str && strings.HasPrefix(line[i:], "''"): long = !long
+	case long:
 	case c == '"': str = !str
 	case str:
 	case c == '[' || c == '(' || c == '{': depth++
