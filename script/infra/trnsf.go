@@ -2,7 +2,7 @@
 package main
 import ("fmt"; "os"; "path/filepath"; "strconv"; "strings"; "epi/script/disp"; "epi/script/format")
 // трансформации концептов: clone, rename, import, union — файлы, спутники и связи
-// clone: clone [ Исходный Новый ] — файл, спутники и img/<имя>.* под новым именем в папку исходного; у активного фрейма имя исходного в теле и параметрах — новое (cloneBody)
+// clone: clone [ Исходный Новый ] — файл, спутники и img/<имя>.* под новым именем в папку исходного; у активного фрейма имя исходного в теле и параметрах — новое (swapBody)
 // прямые списки — те же, у целей клон в обратных, обратные клона пусты; ответ — имя клона
 func (q *Medium) clone(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
@@ -14,10 +14,10 @@ dst := filepath.Join(filepath.Dir(src), strings.ToLower(name)+".uic")
 files := conceptFiles(src, dst)
 for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
 for _, f := range files {if err := copyFile(f[0], f[1]); err != nil {return format.Value{}, false}}
-if err := cloneBody(dst, arg.Items[0].Text, name); err != nil {q.in.RawErr = err; return format.Value{}, false}
+if err := swapBody(dst, arg.Items[0].Text, name); err != nil {q.in.RawErr = err; return format.Value{}, false}
 q.adopt(name, dst); return format.Value{Kind: format.Term, Text: name}, true }
-// cloneBody: у клона активного фрейма (есть Corpus) имя исходного в теле и параметрах — новое: Old.X → New.X, Old → New (вызов себя, Ex); строки не меняются
-func cloneBody(path, old, name string) error {
+// swapBody: у активного фрейма (есть Corpus) имя old в теле и параметрах — новое: Old.X → New.X, Old → New (вызов, Ex); строки не меняются; clone — у клона, rename — у всех фреймов темы (swapBodies)
+func swapBody(path, old, name string) error {
 body, ok := readCorpus(path)
 if !ok {return nil}
 for i, l := range body {if vs, err := format.Parse(l); err == nil {body[i] = format.Canon(swapName(vs, old, name))}}
@@ -74,7 +74,7 @@ for _, r := range roots {
 			if err != nil {continue}
 			if v := mark(string(sb)); v != string(sb) {if err := os.WriteFile(sp, []byte(v), 0644); err != nil {return err}}}; return nil})
 	if err != nil {return err}}; return nil }
-// rename: rename [ Старое Новое ] — файлы концепта, спутников и img/<имя>.* под новым именем
+// rename: rename [ Старое Новое ] — файлы концепта, спутников и img/<имя>.* под новым именем; в телах активных фреймов темы — новое имя (swapBodies)
 // в той же папке, имя заменяется во всех связях и в контенте, контекст темы заново; ответ — новое имя; концепта в теме нет — корень лексикона
 func (q *Medium) rename(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
@@ -89,9 +89,16 @@ if dst != src {
 	for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
 	for _, f := range files {if err := os.Rename(f[0], f[1]); err != nil {return format.Value{}, false}}}
 if err := q.replaceRefs(old, name, false); err != nil {return format.Value{}, false}
+if err := q.swapBodies(old, name); err != nil {q.in.RawErr = err; return format.Value{}, false}
 q.indexConcepts()
 q.env = disp.NewEnv(nil)
 if q.loadAliases() != nil || q.loadConcepts() != nil {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: name}, true }
+// swapBodies: имя old → name в телах и параметрах активных фреймов темы (вызовы, полные имена)
+func (q *Medium) swapBodies(old, name string) error {
+return filepath.WalkDir(q.themaDir(), func(path string, d os.DirEntry, err error) error {
+	if err != nil {return nil}
+	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
+	if d.IsDir() || !strings.HasSuffix(path, ".uic") {return nil}; return swapBody(path, old, name)}) }
 // conceptFiles: пары «откуда → куда» для концепта src → dst — файл, спутники, img/<имя>.*
 func conceptFiles(src, dst string) [][2]string {
 sb, db := strings.TrimSuffix(src, ".uic"), strings.TrimSuffix(dst, ".uic")
