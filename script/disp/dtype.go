@@ -24,7 +24,11 @@ type Interp struct {
 	steps   int
 	allowed int
 	// calls: фреймы в вызове — их параметры живут на время вызова и в файл не пишутся
-	calls map[*binding]int}
+	calls map[*binding]int
+	// caveo: глубина cavet — нераспознанное внутри не вопрос, а ошибка (caught)
+	caveo int}
+// caught: нераспознанное внутри cavet — прерывает вычисление до cavet, текст — ошибка в паре
+type caught struct{ msg string }
 // Stopped: пользователь не разрешил продолжать после исчерпания лимита
 type Stopped struct{ Steps int }
 // Frame: фрейм-интерпретатор, Kernel — препозиции, которые он интерпретирует (история — в протоколе)

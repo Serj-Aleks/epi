@@ -63,9 +63,10 @@ for _, seg := range segments(vs) {
 func (in *Interp) step() error {
 in.steps++
 if in.Limit > 0 && in.steps > in.allowed {if in.Ask != nil && in.Ask(fmt.Sprintf("исчерпан лимит %d шагов. Продолжать?", in.Limit)) {in.allowed += in.Limit; return nil}; return Stopped{in.steps - 1}}; return nil }
-// unknown: нераспознанная предикация — вопрос «записать?» и запись в базу
+// unknown: нераспознанная предикация — вопрос «записать?» и запись в базу; внутри cavet — ошибка в паре cavet, без вопроса
 func (in *Interp) unknown(toks []format.Value, why string) {
 text := format.Canon(toks)
+if in.caveo > 0 {panic(caught{fmt.Sprintf("предикация «%s» %s", text, why)})}
 if in.Ask != nil && in.Ask(fmt.Sprintf("предикация «%s» %s. Записать её?", text, why)) {in.Unknown = append(in.Unknown, text)} }
 // Unreadable: текст не прочитан — тоже предикация без обработчика: вопрос «записать?» и запись в базу
 func (in *Interp) Unreadable(text string, err error) {
@@ -86,7 +87,7 @@ for depth := 0; depth < 16; depth++ {
 	default: return "", nil}}; return "", nil }
 // evalSlot: интерпретация слота; right — правый слот модели, блок в нём интерпретируется; алиас, ведущий к самому себе (цикл), — ошибка
 // определение: Фрейм.Параметр : значение, ( ) — вычислить сейчас, параметры фрейма сохраняются
-// recur — цикл, rescr — переписывание, reduc — список вычисленных значений, order — сортировка, vicis — замена по шаблону, Raw — операнд без вычисления, препозиция-фрейм — в начале с объектным блоком;
+// recur — цикл, rescr — переписывание, reduc — список вычисленных значений, order — сортировка, vicis — замена по шаблону, errat и cavet — ошибки, Raw — операнд без вычисления, препозиция-фрейм — в начале с объектным блоком;
 // фрейм с ролями In (алиас препозиции на объект-фрейм) — и «A п B», «п A»: значения по порядку ролей; в Used — имя объект-фрейма
 func (in *Interp) evalSlot(s *slot, env *Env, right bool) (format.Value, error) {
 if s.def != nil {
@@ -122,6 +123,8 @@ if frame == nil && sym == "rescr" {return in.rescr(s, env)}
 if frame == nil && sym == "reduc" {return in.reduc(s, env)}
 if frame == nil && sym == "order" {return in.order(s, env)}
 if frame == nil && sym == "vicis" {return in.vicis(s, env)}
+if frame == nil && sym == "errat" {return in.errat(s, env)}
+if frame == nil && sym == "cavet" {return in.cavet(s, env)}
 if r := in.Raw[sym]; frame == nil && r != nil {
 	_, fr := in.prepOf(sym)
 	if s.prefix == nil || s.op != nil || len(s.a) != 1 {in.unknown(s.toks(), "— «"+sym+"» пишется в начале с одним операндом"); return none, nil}

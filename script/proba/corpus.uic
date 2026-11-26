@@ -1,6 +1,6 @@
 [ Lege.In : [ T ] . Lege : [ ( Lege.T = @none ) -> {} . jsnin Lege.T ] ] -> @none
 [ Pone.In : [ M P ] . Pone : [ ( Pone.P = [] ) -> ( Pone.M annul "Corpus" ) . Pone.M parad ( reduc [ "Corpus" Pone.P ] ) ] ] -> @none
-[ Scribo.In : [ V P ] . Scribo : [ Scribo.T : ( lectu Scribo.V ) . Scribo.M : ( Pone [ ( Lege [ Scribo.T ] ) Scribo.P ] ) . ( ( Scribo.M = {} ) & ( Scribo.T = @none ) ) -> @false . Scribo.V scrib ( injsn Scribo.M ) ] ] -> @none
+[ Scribo.In : [ V P ] . Scribo : [ Scribo.T : ( lectu Scribo.V ) . Scribo.R : ( cavet [ Lege [ Scribo.T ] ] ) . ( ( Scribo.R elmnt 2 ) <> @none ) -> errat ( Scribo.V cnctn ": json не читается" ) . Scribo.M : ( Pone [ ( Scribo.R elmnt 1 ) Scribo.P ] ) . ( ( Scribo.M = {} ) & ( Scribo.T = @none ) ) -> @false . Scribo.V scrib ( injsn Scribo.M ) ] ] -> @none
 [ Scribo [ "thema/T/gradus.json" [] ] ] -> @false
 [ lectu "thema/T/gradus.json" ] -> @none
 [ Scribo [ "thema/T/gradus.json" [ "A > B -> 1" "-1" ] ] ] -> @true
@@ -11,4 +11,4 @@
 [ Scribo [ "thema/T/signum.json" [] ] ] -> @true
 [ lectu "thema/T/signum.json" ] -> "{\n  \"7\": 2,\n  \"Nomen\": \"Signum\"\n}"
 [ "thema/T/fractum.json" scrib "{ не json" ] -> @true
-[ Scribo [ "thema/T/fractum.json" [ "1" ] ] ] -> ? "не интерпретирует"
+[ Scribo [ "thema/T/fractum.json" [ "1" ] ] ] -> ! "thema/T/fractum.json: json не читается"

@@ -16,7 +16,11 @@
 [ "abc" aptus ''['' ] -> ? "не интерпретирует"
 [ Lt.In : [ A B ] . Lt : [ Lt.A < Lt.B ] ] -> @none
 [ Nomina.In : [ T ] . Nomina.Ex : Nomina ] -> @none
-[ Nomina : [ Nomina.Nomina : [] . recur { In : ( ( Nomina.T vicis [ ''(?s)```.*?```'' "" ] ) inven ''\[\[([^\]]+)\]\]'' ) As : Nomina.M Corpus : [ Nomina.N : ( clean ( Nomina.M elmnt 2 ) ) . ( ( Nomina.N <> "" ) & ( ( Nomina.Nomina index Nomina.N ) = 0 ) ) -> [ Nomina.Nomina : ( Nomina.Nomina cnctn Nomina.N ) ] ] } . Nomina.Nomina : ( Nomina.Nomina order Lt ) ] ] -> @none
+[ Nomina : [ Nomina.Nomina : [] . recur { In : ( ( Nomina.T vicis [ ''(?ms)^```[^\n]*\n.*?^```[ \t]*$'' "" ] ) inven ''\[\[([^\]]+)\]\]'' ) As : Nomina.M Corpus : [ Nomina.N : ( clean ( Nomina.M elmnt 2 ) ) . ( ( Nomina.N <> "" ) & ( non ( Nomina.N aptus ''\pL[\pL\pN_?!*+~&|-]*'' ) ) ) -> errat ( "ссылка «" cnctn ( ( Nomina.M elmnt 1 ) cnctn "» — не имя концепта: в [[ ]] только имя, проверьте скобки" ) ) . ( ( Nomina.N <> "" ) & ( ( Nomina.Nomina index Nomina.N ) = 0 ) ) -> [ Nomina.Nomina : ( Nomina.Nomina cnctn Nomina.N ) ] ] } . Nomina.Nomina : ( Nomina.Nomina order Lt ) ] ] -> @none
 [ Nomina [ "Вызывает [[Entries]] и [[JsonAny]] (рекурсия), снова [[entries]].\n```\nx := m[[0]]\n```\n[[ Clavis ]] [[]] [[Flag]]\n" ] ] -> [ "Clavis" "Entries" "Flag" "JsonAny" ]
 [ Nomina [ "Ссылок нет\n" ] ] -> []
 [ Nomina [ "[[Zeta]] [[alpha]] [[Beta]]\n" ] ] -> [ "Beta" "Zeta" "alpha" ]
+[ Nomina [ "см. [[Entries[[ [[JsonAny]] и [[Flag]]" ] ] -> ! "ссылка «[[Entries[[ [[JsonAny]]» — не имя концепта"
+[ Nomina [ "[[A.B]]" ] ] -> ! "ссылка «[[A.B]]» — не имя концепта"
+[ cavet [ Nomina [ "[[Beta]] [[ ]]" ] ] ] -> [ [ "Beta" ] @none ]
+[ Nomina [ "[[A]]\n```\nx := \"``` [[0]] ```\"\n```\n[[B]]" ] ] -> [ "A" "B" ]
