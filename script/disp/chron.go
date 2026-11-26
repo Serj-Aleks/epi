@@ -2,8 +2,6 @@
 // chron: интерпретатор времени — nunc N: момент сейчас со сдвигом N дней (0 — сейчас, -1 — сутки назад), дата-время ASON «2026-11-26/17:31:05+1:00»
 package disp
 import ("fmt"; "time"; "epi/script/format")
-// Nunc: часы интерпретатора; в тестах подменяются
-var Nunc = time.Now
 // chronFrame: фрейм chron
 func chronFrame() *Frame {
 return &Frame{Name: "chron", Kernel: map[string]Prep{"nunc": func(a, b *format.Value) (format.Value, bool) {

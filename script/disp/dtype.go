@@ -1,6 +1,6 @@
 // epi/script/disp/dtype.go
 package disp
-import ("epi/script/format")
+import ("time"; "epi/script/format")
 // Prep: интерпретатор препозиции; ok=false — для таких аргументов интерпретации нет (в базу нераспознанных)
 type Prep func(a, b *format.Value) (format.Value, bool)
 // Interp: среда интерпретации
@@ -43,7 +43,9 @@ type binding struct {
 var (
 	none  = format.Value{Kind: format.Literal, Text: "@none"}
 	vtrue = format.Value{Kind: format.Literal, Text: "@true"}
-	vfals = format.Value{Kind: format.Literal, Text: "@false"})
+	vfals = format.Value{Kind: format.Literal, Text: "@false"}
+	// Nunc: часы интерпретатора (nunc, chron.go); в тестах подменяются
+	Nunc = time.Now)
 type slot struct {
 	def    *format.Value  // ключ определения «Ключ : …»
 	alias  bool           // «имя : препозиция» — алиас препозиции
