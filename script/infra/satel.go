@@ -36,8 +36,9 @@ seen := map[string]bool{}
 var ns []string
 for _, m := range reRefs.FindAllStringSubmatch(reFence.ReplaceAllString(text, ""), -1) {
 	n := strings.TrimSpace(m[1])
+	if n == "" {continue}
 	if vs, err := format.Parse(n); err != nil || len(vs) != 1 || vs[0].Kind != format.Term {return fmt.Errorf("ссылка «%s» — не имя концепта: в [[ ]] только имя, проверьте скобки; md записан, Links не изменены", m[0])}
-	if k := strings.ToLower(n); n != "" && !seen[k] {seen[k] = true; ns = append(ns, n)}}
+	if k := strings.ToLower(n); !seen[k] {seen[k] = true; ns = append(ns, n)}}
 sort.Strings(ns)
 var pred []format.Value
 for _, n := range ns {pred = append(pred, format.Value{Kind: format.Term, Text: n})}; return q.writeLink(conceptName(q.conceptFile(name), ""), "Links", pred, q.themaDir(), true) }
