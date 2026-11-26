@@ -34,7 +34,7 @@ expect(t, map[string]string{
 	`major : > . 10 major 3 -> 'ok`:       "ok",
 	`F.X : (- 5) . F.X`:                   "-5",
 	`plus : + . plus : - . 7 plus 2`:      "5",})
-_, in, _, err := runText(t, `pow : // . 2 pow 3`, 100, true)
+_, in, _, err := runText(t, `pow : foo . 2 pow 3`, 100, true)
 if err != nil || len(in.Unknown) != 1 || in.Unknown[0] != "2 pow 3" {t.Errorf("алиас без интерпретатора: %v %v", in.Unknown, err)} }
 // Синоним концепта — параметр Alias: чтение через синоним, если своего фрейма нет; запись — в свой фрейм
 func TestAliasParam(t *testing.T) {

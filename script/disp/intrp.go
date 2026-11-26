@@ -18,7 +18,7 @@ if !strings.Contains(s, ".") {s += ".0"}; return format.Value{Kind: format.Decim
 // flag: флаг @true или @false
 func flag(b bool) format.Value {
 if b {return vtrue}; return vfals }
-// baseFrames: фреймы-интерпретаторы системы (serie — serie.go, assoc — assoc.go); минус в начале предикации — унарный, функция одного аргумента — в начале; сравнение строк — по порядку литер (как в Go)
+// baseFrames: фреймы-интерпретаторы системы (serie — serie.go, assoc — assoc.go, exmpl — exmpl.go, chron — chron.go); // и % — целые (как в Go), non — отрицание флага; минус в начале предикации — унарный, функция одного аргумента — в начале; сравнение строк — по порядку литер (как в Go)
 // recur, trans, nexus, qwest, qwizt, clone, rename, import, union — ядро задаёт среда (Interp.recur, Interp.Raw, словари)
 func baseFrames() []*Frame {
 arith := func(op func(x, y float64) (float64, bool)) Prep {return func(a, b *format.Value) (format.Value, bool) {
@@ -38,6 +38,11 @@ eq := func(neg bool) Prep {return func(a, b *format.Value) (format.Value, bool) 
 		x, _, ok1 := num(a)
 		y, _, ok2 := num(b)
 		e := ok1 && ok2 && x == y || !(ok1 && ok2) && congr(*a, *b); return flag(e != neg), true}}
+whole := func(op func(x, y int64) int64) Prep {return func(a, b *format.Value) (format.Value, bool) {
+		if a == nil || b == nil || a.Kind != format.Integer || b.Kind != format.Integer {return none, false}
+		x, err1 := strconv.ParseInt(a.Text, 10, 64)
+		y, err2 := strconv.ParseInt(b.Text, 10, 64)
+		if err1 != nil || err2 != nil || y == 0 {return none, false}; return format.Value{Kind: format.Integer, Text: strconv.FormatInt(op(x, y), 10)}, true}}
 plusOnlyInfix := func(p Prep) Prep {return func(a, b *format.Value) (format.Value, bool) {if a == nil {return none, false}; return p(a, b)}}
 arifm := map[string]Prep{
 	"+": plusOnlyInfix(arith(func(x, y float64) (float64, bool) { return x + y, true })),
@@ -46,7 +51,9 @@ arifm := map[string]Prep{
 	"/": plusOnlyInfix(func(a, b *format.Value) (format.Value, bool) {
 		x, _, ok1 := num(a)
 		y, _, ok2 := num(b)
-		if !ok1 || !ok2 || y == 0 {return none, false}; return number(x/y, false), true}),}
+		if !ok1 || !ok2 || y == 0 {return none, false}; return number(x/y, false), true}),
+	"//": plusOnlyInfix(whole(func(x, y int64) int64 {return x / y})),
+	"%": plusOnlyInfix(whole(func(x, y int64) int64 {return x % y})),}
 logic := map[string]Prep{
 	"<":  plusOnlyInfix(cmp(func(x, y float64) bool { return x < y })),
 	">":  plusOnlyInfix(cmp(func(x, y float64) bool { return x > y })),
@@ -60,6 +67,7 @@ boolean := func(op func(x, y bool) bool) Prep {return func(a, b *format.Value) (
 		if !ok1 || !ok2 {return none, false}; return flag(op(x, y)), true}}
 logic["&"] = boolean(func(x, y bool) bool { return x && y })
 logic["|"] = boolean(func(x, y bool) bool { return x || y })
+logic["non"] = func(a, b *format.Value) (format.Value, bool) {x, ok := flagOf(b); if a != nil || !ok {return none, false}; return flag(!x), true}
 unary := func(fn func(x float64) (float64, bool)) Prep {return func(a, b *format.Value) (format.Value, bool) {
 		x, _, ok := num(b)
 		if a != nil || !ok {return none, false}
@@ -73,7 +81,7 @@ trgnm := map[string]Prep{
 lnrfm := map[string]Prep{
 	"ln":  unary(func(x float64) (float64, bool) { return math.Log(x), x > 0 }),
 	"exp": unary(all(math.Exp)),}; return []*Frame{{Name: "arifm", Kernel: arifm}, {Name: "logic", Kernel: logic},
-	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm}, serieFrame(), assocFrame(), exmplFrame(),
+	{Name: "trgnm", Kernel: trgnm}, {Name: "lnrfm", Kernel: lnrfm}, serieFrame(), assocFrame(), exmplFrame(), chronFrame(),
 	{Name: "zycle", Kernel: map[string]Prep{"recur": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "trans", Kernel: map[string]Prep{"trans": func(a, b *format.Value) (format.Value, bool) {return none, false}}},
 	{Name: "nexus", Kernel: map[string]Prep{"nexus": func(a, b *format.Value) (format.Value, bool) {return none, false}}},

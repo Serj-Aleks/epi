@@ -1,6 +1,6 @@
 // epi/script/disp/serie.go
 // serie: интерпретатор рядов — строка (ряд литер) и список (ряд элементов): dstnz, front, post, elmnt, cnctn, cnvrg, reduc, order;
-// строки: index (и в списке), quant, combi, clean, mutnt, divrg; число ↔ текст: nitxt, txnin
+// строки: index (и в списке), quant, combi, clean, mutnt, divrg; число ↔ текст: nitxt (и дата, время), txnin
 package disp
 import ("sort"; "strconv"; "strings"; "unicode/utf8"; "epi/script/format")
 // serieOf: ряд значения — литеры строки или элементы списка; str — строка
@@ -69,7 +69,7 @@ k := map[string]Prep{
 		s, ok := text(b)
 		if a != nil || !ok {return none, false}; return format.Value{Kind: format.String, Text: strings.ToUpper(s)}, true},
 	"nitxt": func(a, b *format.Value) (format.Value, bool) {
-		if a != nil || b == nil || (b.Kind != format.Integer && b.Kind != format.Decimal) {return none, false}; return format.Value{Kind: format.String, Text: b.Text}, true},
+		if a != nil || b == nil || (b.Kind != format.Integer && b.Kind != format.Decimal && b.Kind != format.Date && b.Kind != format.Time) {return none, false}; return format.Value{Kind: format.String, Text: b.Text}, true},
 	"txnin": func(a, b *format.Value) (format.Value, bool) {
 		s, ok := text(b)
 		if a != nil || !ok {return none, false}
