@@ -2,7 +2,7 @@
 package main
 import ("fmt"; "os"; "path/filepath"; "strconv"; "strings"; "epi/script/disp"; "epi/script/format")
 // трансформации концептов: clone, rename, import, union — файлы, спутники и связи
-// clone: clone [ Исходный Новый ] — файл, спутники и img/<имя>.* под новым именем в папку исходного
+// clone: clone [ Исходный Новый ] — файл, спутники и img/<имя>.* под новым именем в папку исходного; у активного фрейма имя исходного в теле и параметрах — новое (cloneBody)
 // прямые списки — те же, у целей клон в обратных, обратные клона пусты; ответ — имя клона
 func (q *Medium) clone(arg format.Value) (format.Value, bool) {
 if q.theme == "" || arg.Kind != format.Array || len(arg.Items) != 2 || arg.Items[0].Kind != format.Term || arg.Items[1].Kind != format.Term {return format.Value{}, false}
@@ -14,7 +14,36 @@ dst := filepath.Join(filepath.Dir(src), strings.ToLower(name)+".uic")
 files := conceptFiles(src, dst)
 for _, f := range files {if exists(f[1]) {return format.Value{}, false}}
 for _, f := range files {if err := copyFile(f[0], f[1]); err != nil {return format.Value{}, false}}
+if err := cloneBody(dst, arg.Items[0].Text, name); err != nil {q.in.RawErr = err; return format.Value{}, false}
 q.adopt(name, dst); return format.Value{Kind: format.Term, Text: name}, true }
+// cloneBody: у клона активного фрейма (есть Corpus) имя исходного в теле и параметрах — новое: Old.X → New.X, Old → New (вызов себя, Ex); строки не меняются
+func cloneBody(path, old, name string) error {
+body, ok := readCorpus(path)
+if !ok {return nil}
+for i, l := range body {if vs, err := format.Parse(l); err == nil {body[i] = format.Canon(swapName(vs, old, name))}}
+if err := writeCorpus(path, body); err != nil {return err}
+b, err := os.ReadFile(path)
+if err != nil {return err}
+lines, err := conceptLines(b)
+if err != nil {return err}
+for _, l := range lines {
+	if !isParam(l) {continue}
+	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
+	if err != nil {continue}
+	if nv := swapName(vs, old, name); format.Canon(nv) != format.Canon(vs) {if err := writeParam(path, lineKey(l), nv); err != nil {return err}}}; return nil }
+// swapName: значения с именем old заменой на name — терм целиком и каждая часть поля (Old.Old → New.New); вглубь блоков
+func swapName(vs []format.Value, old, name string) []format.Value {
+out := make([]format.Value, len(vs))
+for i, v := range vs {
+	switch v.Kind {
+	case format.Term: if format.SameTerm(v.Text, old) {v.Text = name}
+	case format.Field, format.GetField:
+		p := strings.TrimPrefix(v.Text, ":")
+		parts := strings.Split(p, ".")
+		for j := range parts {if format.SameTerm(parts[j], old) {parts[j] = name}}
+		v.Text = strings.TrimSuffix(v.Text, p) + strings.Join(parts, ".")
+	case format.Array, format.Object, format.Expr: v.Items = swapName(v.Items, old, name)}
+	out[i] = v}; return out }
 // replaceRefs: имя old → name во всех концептах темы (all — всех тем) и лексикона корней (radix) — в значениях refKeys,
 // ссылках и трансклюзиях текстовых спутников
 func (q *Medium) replaceRefs(old, name string, all bool) error {

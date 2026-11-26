@@ -7,7 +7,7 @@ import ("encoding/json"; "fmt"; "io"; "os"; "path/filepath"; "sort"; "strings"; 
 func (q *Medium) satFile(name, ext string) string {
 p := q.conceptPath(name)
 if p == "" || !has(satTypes, ext) {return ""}; return strings.TrimSuffix(p, ".uic") + "." + ext }
-// card: карточка концепта — имя, картинка, цвет, тип по умолчанию, спутники (нет — пустой список), строки, место (Locus)
+// card: карточка концепта — имя, картинка, цвет, тип по умолчанию, спутники (нет — пустой список), строки, место (Locus), есть ли тело (corpus — линза E)
 func (q *Medium) card(name string) map[string]any {
 p := q.conceptPath(name)
 if p == "" {return map[string]any{"found": false}}
@@ -17,8 +17,9 @@ ct := strings.ToLower(setting(p, "Content"))
 if ct == "" {ct = "md"}
 lines := []string{}
 if b, err := os.ReadFile(p); err == nil {lines, _ = conceptLines(b)}
-if c, ok := readCorpus(p); ok {lines = append(lines, c...)}
-c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color"), "locus": q.locus(p)}
+body, hasBody := readCorpus(p)
+lines = append(lines, body...)
+c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color"), "locus": q.locus(p), "corpus": hasBody && len(body) > 0}
 if q.iconFile(name) != "" {c["icon"] = "/api/icon?name=" + name}; return c }
 // writeSat: записать спутник; прямой список Links — ссылки [[ ]] спутников md и html вместе (в ссылке не имя концепта — ошибка, Links не меняются), обратные у целей ведёт writeLink; json проверяется на читаемость и перечитывает контекст темы (тело Corpus)
 func (q *Medium) writeSat(name, ext, text string) error {
