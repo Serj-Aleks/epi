@@ -119,18 +119,20 @@ for {
 // IsDef: на позиции i начинается определение «Ключ : …»
 func IsDef(items []Value, i int) bool {return i+1 < len(items) && (items[i].Kind == Term || items[i].Kind == Field) &&
 	items[i+1].Kind == Op && items[i+1].Text == ":" }
-// checkObject: объектный блок — определения «Ключ : значение», значение — до следующего определения
+// isKey: ключ объектного блока — терм, поле или строка («"7" : …», 26.11: ключи json)
+func isKey(items []Value, i int) bool {return IsDef(items, i) || i+1 < len(items) && items[i].Kind == String && items[i+1].Kind == Op && items[i+1].Text == ":" }
+// checkObject: объектный блок — определения «Ключ : значение» (ключ — терм, поле или строка), значение — до следующего определения
 func checkObject(items []Value, line, col int) error {
-if len(items) > 0 && !IsDef(items, 0) {return &Error{items[0].Line, items[0].Col, "объектный блок должен начинаться с определения «Ключ : значение»"}}
+if len(items) > 0 && !isKey(items, 0) {return &Error{items[0].Line, items[0].Col, "объектный блок должен начинаться с определения «Ключ : значение»"}}
 for i := 0; i < len(items); i++ {
-	if IsDef(items, i) {
-		if i+2 == len(items) || IsDef(items, i+2) {return &Error{items[i].Line, items[i].Col, fmt.Sprintf("у «%s» нет значения", items[i].Text)}}
+	if isKey(items, i) {
+		if i+2 == len(items) || isKey(items, i+2) {return &Error{items[i].Line, items[i].Col, fmt.Sprintf("у «%s» нет значения", items[i].Text)}}
 		i++}}; return nil }
 // Entries: объектный блок на пары «ключ — значение»
 func (v Value) Entries() []Entry {
 var es []Entry
 for i := 0; i < len(v.Items); i++ {
-	if IsDef(v.Items, i) {
+	if isKey(v.Items, i) {
 		es = append(es, Entry{Key: v.Items[i]})
 		i++} else if len(es) > 0 {es[len(es)-1].Value = append(es[len(es)-1].Value, v.Items[i])}}; return es }
 // Canon: значения в канонический текст; перевод строки между значениями сохраняется (отделяет предикации)

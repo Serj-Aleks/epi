@@ -1,0 +1,12 @@
+[ jsnin ''{"Nomen": "Gradus", "In": ["A", "B"], "Pondus": 2.5, "Liber": true, "Nihil": null}'' ] -> { Nomen : "Gradus" In : [ "A" "B" ] Pondus : 2.5 Liber : @true Nihil : @none }
+[ jsnin ''{"7": "Кошка на Коврик", "Кошка": 1}'' ] -> { "7" : "Кошка на Коврик" Кошка : 1 }
+[ ( jsnin ''{"7": "Кошка на Коврик"}'' ) valor "7" ] -> "Кошка на Коврик"
+[ clavs ( jsnin ''{"7": 1, "A": 2}'' ) ] -> [ "7" "A" ]
+[ ( jsnin ''{"7": 1, "A": 2}'' ) annul "7" ] -> { A : 2 }
+[ ( jsnin ''{"7": 1}'' ) parad [ "8" 2 ] ] -> { "7" : 1 "8" : 2 }
+[ { "7" : 1 A : 2 } = ( jsnin ''{"A": 2, "7": 1}'' ) ] -> @true
+[ jsnin ''[1, [2, 3], {}]'' ] -> [ 1 [ 2 3 ] {} ]
+[ injsn { B : 1 A : [ "x" @true @none ] } ] -> "{\n  \"A\": [\n    \"x\",\n    true,\n    null\n  ],\n  \"B\": 1\n}"
+[ jsnin ( injsn { Corpus : [ "A > 0 -> 1" ] "7" : 2.5 } ) ] -> { "7" : 2.5 Corpus : [ "A > 0 -> 1" ] }
+[ jsnin "{ не json" ] -> ? "не интерпретирует"
+[ injsn { A : ( 1 + 2 ) } ] -> ? "не интерпретирует"
