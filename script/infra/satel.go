@@ -20,7 +20,7 @@ if b, err := os.ReadFile(p); err == nil {lines, _ = conceptLines(b)}
 if c, ok := readCorpus(p); ok {lines = append(lines, c...)}
 c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color"), "locus": q.locus(p)}
 if q.iconFile(name) != "" {c["icon"] = "/api/icon?name=" + name}; return c }
-// writeSat: записать спутник; прямой список Links — ссылки [[ ]] спутников md и html вместе, обратные у целей ведёт writeLink; json проверяется на читаемость и перечитывает контекст темы (тело Corpus)
+// writeSat: записать спутник; прямой список Links — ссылки [[ ]] спутников md и html вместе (в ссылке не имя концепта — ошибка, Links не меняются), обратные у целей ведёт writeLink; json проверяется на читаемость и перечитывает контекст темы (тело Corpus)
 func (q *Medium) writeSat(name, ext, text string) error {
 p := q.satFile(name, ext)
 if p == "" {return os.ErrNotExist}
@@ -36,6 +36,7 @@ seen := map[string]bool{}
 var ns []string
 for _, m := range reRefs.FindAllStringSubmatch(reFence.ReplaceAllString(text, ""), -1) {
 	n := strings.TrimSpace(m[1])
+	if vs, err := format.Parse(n); err != nil || len(vs) != 1 || vs[0].Kind != format.Term {return fmt.Errorf("ссылка «%s» — не имя концепта: в [[ ]] только имя, проверьте скобки; md записан, Links не изменены", m[0])}
 	if k := strings.ToLower(n); n != "" && !seen[k] {seen[k] = true; ns = append(ns, n)}}
 sort.Strings(ns)
 var pred []format.Value
