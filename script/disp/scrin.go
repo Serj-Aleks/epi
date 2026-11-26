@@ -46,6 +46,7 @@ k := map[string]Prep{
 		if !ok {return none, false}
 		to, ok := in.scrinPath(b, true)
 		if !ok {return none, false}
+		if _, err := os.Stat(from); err != nil {in.RawErr = fmt.Errorf("scrin: «%s» — такого файла или папки нет", a.Text); return none, false}
 		if _, err := os.Stat(to); err == nil {in.RawErr = fmt.Errorf("scrin: «%s» уже есть", b.Text); return none, false}
 		if err := os.MkdirAll(filepath.Dir(to), 0755); err != nil {in.RawErr = err; return none, false}
 		if err := os.Rename(from, to); err != nil {in.RawErr = err; return none, false}; return format.Value{Kind: format.Literal, Text: "@true"}, true},}

@@ -18,3 +18,4 @@
 [ Seans : [ Seans.Seans : [] . Seans.L : ( catal ( ( "thema/" cnctn Seans.T ) cnctn "/prtcl" ) ) . ( Seans.L = @none ) -> [] . recur { In : Seans.L As : Seans.N Corpus : [ ( ( ( Seans.N front 6 ) = "seans-" ) & ( ( Seans.N post ( ( dstnz Seans.N ) - 4 ) ) = ".uic" ) ) -> [ Seans.Seans : ( Seans.Seans cnctn Seans.N ) ] ] } . Seans.Seans : ( Seans.Seans order Gt ) ] ] -> @none
 [ Seans [ "T" ] ] -> [ "seans-2026-11-21.uic" "seans-2026-11-16.uic" "seans-2026-11-01.uic" ]
 [ Seans [ "Z" ] ] -> []
+[ "thema/T/a" migra "thema/T/b" ] -> ! "такого файла или папки нет"
