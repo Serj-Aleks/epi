@@ -57,8 +57,8 @@ var qwestTypes = []string{"md", "html", "json", "xml", "txt"}
 var reTags, reMarks, reSpace = regexp.MustCompile(`<[^>]*>`), regexp.MustCompile("[#*_`\\[\\]{}|>]+"), regexp.MustCompile(`\s+`)
 // satTypes: типы спутников концепта
 var satTypes = []string{"md", "json", "svg", "css", "xml", "html", "txt"}
-// reRefs: ссылки [[Имя]] в контенте (вне блоков кода)
-var reRefs, reFence = regexp.MustCompile(`\[\[([^\]]+)\]\]`), regexp.MustCompile("(?s)```.*?```")
+// reRefs: ссылки [[Имя]] в контенте (вне блоков кода); reFence — блок кода: строка, начатая ```, до строки ``` (``` внутри строки — не граница)
+var reRefs, reFence = regexp.MustCompile(`\[\[([^\]]+)\]\]`), regexp.MustCompile("(?ms)^```[^\n]*\n.*?^```[ \t]*$")
 // reIncl: трансклюзия {{Имя}} в контенте (вне блоков кода)
 var reIncl = regexp.MustCompile(`\{\{([^{}]+)\}\}`)
 // refKeys: параметры концепта, в значениях которых — имена концептов

@@ -26,7 +26,7 @@ function refLinks(s) { return s.replace(/\[\[([^\]]+)\]\]/g, (_, n) => `<a href=
 // mdHtml: md в html — заголовки, списки, таблицы, код, ссылки; картинка файл — из img концепта, /img/файл — из img темы; ячейки таблицы делятся по «|» вне кода
 function mdHtml(md, name) {
 const code = [];
-md = md.replace(/```([\s\S]+?)```/g, (_, c) => { code.push("<pre><code>" + esc(c.replace(/^\n/, "").replace(/\n$/, "")) + "</code></pre>"); return `\x00C${code.length - 1}\x00`; });
+md = md.replace(/^```[^\n]*\n([\s\S]*?)^```[ \t]*$/gm, (_, c) => { code.push("<pre><code>" + esc(c.replace(/\n$/, "")) + "</code></pre>"); return `\x00C${code.length - 1}\x00`; });
 const inl = s => refLinks(s)
   .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => `<img src="${/^\/img\/[^/]+$/.test(src) ? "/api/img?f=" + encodeURIComponent(src.slice(5)) : /^(https?:\/)?\//.test(src) ? src : "/api/img?name=" + encodeURIComponent(name) + "&f=" + encodeURIComponent(src)}" alt="${esc(alt)}" style="max-width:100%">`)
   .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
@@ -56,7 +56,7 @@ ext = ext || c.content;
 const raw = (await api("/api/sat?name=" + encodeURIComponent(name) + "&ext=" + ext)).text || "";
 if (!raw.trim()) return "";
 const inc = [], vis = new Set(seen).add(c.name.toLowerCase());
-const marked = raw.split(/(```[\s\S]*?```)/).map((p, i) => i % 2 ? p : p.replace(/\{\{([^{}]+)\}\}/g, (_, n) => { inc.push(n.trim()); return `\x00I${inc.length - 1}\x00`; })).join("");
+const marked = raw.split(/(^```[^\n]*\n[\s\S]*?^```[ \t]*$)/m).map((p, i) => i % 2 ? p : p.replace(/\{\{([^{}]+)\}\}/g, (_, n) => { inc.push(n.trim()); return `\x00I${inc.length - 1}\x00`; })).join("");
 const html = ext === "md" ? mdHtml(marked, c.name) : ext === "html" ? refLinks(marked) : ext === "svg" ? marked : "<pre>" + esc(marked) + "</pre>";
 const parts = await Promise.all(inc.map(n => vis.has(n.toLowerCase()) ? null : cardRender(n, "", vis).catch(() => null)));
 return html.replace(/\x00I(\d+)\x00/g, (_, i) => parts[i] == null ? esc("{{" + inc[i] + "}}") : `<div class="cinc" title="${esc(inc[i])}">${parts[i]}</div>`); }
