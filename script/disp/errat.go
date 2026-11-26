@@ -7,8 +7,8 @@ import ("errors"; "epi/script/format")
 func erratFrame() *Frame {
 stub := func(a, b *format.Value) (format.Value, bool) {return none, false}
 return &Frame{Name: "errat", Kernel: map[string]Prep{"errat": stub, "cavet": stub}} }
-// errat: «errat T» — ошибка с текстом T (строка)
-func (in *Interp) errat(s *slot, env *Env) (format.Value, error) {
+// raise: «errat T» — ошибка с текстом T (строка); имя не errat — занято errAt (format, правило 25)
+func (in *Interp) raise(s *slot, env *Env) (format.Value, error) {
 if s.prefix == nil || s.op != nil {in.unknown(s.toks(), "— errat пишется в начале: errat \"что не так и что делать\""); return none, nil}
 v, err := in.evalOperand(s.a, env, false)
 if err != nil {return none, err}

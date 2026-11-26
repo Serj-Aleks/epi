@@ -123,7 +123,7 @@ if frame == nil && sym == "rescr" {return in.rescr(s, env)}
 if frame == nil && sym == "reduc" {return in.reduc(s, env)}
 if frame == nil && sym == "order" {return in.order(s, env)}
 if frame == nil && sym == "vicis" {return in.vicis(s, env)}
-if frame == nil && sym == "errat" {return in.errat(s, env)}
+if frame == nil && sym == "errat" {return in.raise(s, env)}
 if frame == nil && sym == "cavet" {return in.cavet(s, env)}
 if r := in.Raw[sym]; frame == nil && r != nil {
 	_, fr := in.prepOf(sym)
