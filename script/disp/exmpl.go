@@ -62,4 +62,5 @@ for _, ix := range re.FindAllStringSubmatchIndex(str, -1) {
 	out.WriteString(str[last:ix[0]] + t)
 	last = ix[1]}
 out.WriteString(str[last:])
+in.use(&Frame{Name: name})
 use(); return format.Value{Kind: format.String, Text: out.String()}, nil }

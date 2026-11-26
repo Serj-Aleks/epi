@@ -112,6 +112,7 @@ sort.SliceStable(items, func(i, j int) bool {
 	return v.Text == "@true"})
 if bad != nil {return none, bad}
 if notFlag {return fail("«" + name + "» дал не флаг")}
+in.use(&Frame{Name: name})
 if _, fr := in.prepOf("order"); fr != nil {in.use(fr)}; return format.Value{Kind: format.Array, Items: items}, nil }
 // text: текст строки (обычной или длинной)
 func text(v *format.Value) (string, bool) {

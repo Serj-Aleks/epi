@@ -87,3 +87,10 @@ in.Run("Maximum.In : [ A B ] . Maximum : [ ( Maximum.A >= Maximum.B ) -> Maximum
 for _, c := range []struct{ src, want string }{{"7 max 3", "Maximum logic"}, {"4 maximus 5", "Maximum logic"}, {"Maximum [ 1 2 ]", "Maximum logic"}, {"( 1 + 2 ) max 4", "arifm Maximum logic"}} {
 	in.Used = nil
 	if _, err := in.Run(c.src, env); err != nil || strings.Join(in.Used, " ") != c.want {t.Errorf("%s: %v %v, ждём %s", c.src, in.Used, err, c.want)}}}
+// TestUsedCalled: пометка показывает и фрейм, вызванный из order и vicis
+func TestUsedCalled(t *testing.T) {
+for src, want := range map[string]string{
+	"Lt.In : [ A B ] . Lt : [ Lt.A < Lt.B ] . [ 3 1 2 ] order Lt": "Lt",
+	"Up.In : [ M ] . Up : [ divrg Up.M ] . \"ab\" vicis [ ''b'' Up ]": "Up"} {
+	_, in, _, err := runText(t, src, 100)
+	if err != nil || !strings.Contains(strings.Join(in.Used, " "), want) {t.Errorf("%q: пометка %v %v, ждём %s", src, in.Used, err, want)}} }
