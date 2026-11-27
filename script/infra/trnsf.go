@@ -300,3 +300,14 @@ if exists(dst) {if err := os.Remove(src); err != nil {return err}} else {
 	if err := os.Rename(src, dst); err != nil {return err}}
 root := filepath.Join(q.dir, "lexic", "preposit")
 for d := filepath.Dir(src); d != root && os.Remove(d) == nil; d = filepath.Dir(d) {}; return nil }
+// renewAll: все концепты (lexic/constans, все темы, кроме prtcl) — по renewFile, алиасы lexic/preposit — по renewAlias; при запуске, до загрузки темы
+func (q *Medium) renewAll() error {
+walk := func(root string, f func(string) error) error {return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	if os.IsNotExist(err) && path == root {return nil}
+	if err != nil {return err}
+	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
+	if d.IsDir() || !strings.HasSuffix(path, ".uic") {return nil}
+	if err := f(path); err != nil {return fmt.Errorf("%s: %w", path, err)}; return nil})}
+alias := func(path string) error {b, err := os.ReadFile(path); if err == nil {renewAlias(path, string(b))}; return err}
+if err := walk(filepath.Join(q.dir, "lexic", "preposit"), alias); err != nil {return err}
+if err := walk(filepath.Join(q.dir, "lexic", "constans"), renewFile); err != nil {return err}; return walk(q.themaRoot(), renewFile) }

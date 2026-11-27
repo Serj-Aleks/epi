@@ -4,7 +4,7 @@ import ("encoding/json"; "flag"; "log"; "net/http"; "os"; "path/filepath"; "runt
 // сервер панели — интерфейс среды: строка предикаций в браузере, ответ диспетчера — следующей строкой диалога
 // данные в папке script: lexic — системный лексикон, thema — темы автора (концепты и протокол prtcl)
 // запуск из папки script: go run ./infra [-addr localhost:5832]
-// open: среда — фреймы-интерпретаторы lexic/preposit (файл с прежним именем — по moveFrameFile), транслятор trans, препозиции без вычисления операнда
+// open: среда — фреймы-интерпретаторы lexic/preposit (файл с прежним именем — по moveFrameFile; прежние имена в концептах и алиасах — по renewAll), транслятор trans, препозиции без вычисления операнда
 // (nexus, qwest, qwizt, clone, rename, import, union); фреймы автора — в теме, алиасы препозиций — общие
 // для всех тем (имя интерпретатора не алиас); контекст — системные алиасы и концепты темы
 func open(dir string) (*Medium, error) {
@@ -21,6 +21,7 @@ q.in.OnAlias = func(name, target string) {
 	if q.in.FrameOf(name) != nil {return}
 	if err := writeLines(q.frameFile("preposit", name), []string{name + " : " + target}); err != nil {log.Print(err)}}
 q.env = disp.NewEnv(nil)
+if err := q.renewAll(); err != nil {return nil, err}
 if err := q.loadAliases(); err != nil {return nil, err}
 if err := q.startTheme(); err != nil {return nil, err}; return q, nil }
 // serve: запросы панели /api/…; Choice — ответ на вопрос с выбором, Ext — тип спутника

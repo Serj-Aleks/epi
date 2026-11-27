@@ -113,14 +113,13 @@ q.in.OnParam, q.in.OnFrame, q.in.Ask = nil, nil, nil
 defer func() {q.in.OnParam, q.in.OnFrame, q.in.Ask = on, of, ak}()
 if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {return err}
 if t, ok := q.themeExists(sysTheme); ok && !format.SameTerm(t, q.theme) {if err := q.loadConceptsIn(filepath.Join(q.themaRoot(), t)); err != nil {return err}}; return q.loadConceptsIn(q.themaDir()) }
-// loadConceptsIn: концепты в папке root — имя из пути; прежние препозиции и 'B — по renewFile; у связи в контекст — только прямой список; тело — Corpus json,
+// loadConceptsIn: концепты в папке root — имя из пути; у связи в контекст — только прямой список; тело — Corpus json,
 // тело строками файла концепта (прежняя запись) один раз переносится в Corpus
 func (q *Medium) loadConceptsIn(root string) error {return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 	if os.IsNotExist(err) && path == root {return nil}
 	if err != nil {return err}
 	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
 	if d.IsDir() || !strings.HasSuffix(path, ".uic") {return nil}
-	if err := renewFile(path); err != nil {return fmt.Errorf("%s: %w", path, err)}
 	b, err := os.ReadFile(path)
 	if err != nil {return err}
 	name := conceptName(path, root)
