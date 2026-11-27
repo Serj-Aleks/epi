@@ -90,7 +90,3 @@ type dicts struct{ obj map[string]string }
 var reImg = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)\)|<img[^>]*\ssrc="([^"]+)"`)
 // sysParams: параметры, которые понимает система — связи, роль и вид карточки, оси и списки графа, место
 var sysParams = []string{"Taxon", "Links", "Attrib", "Preposit", "Radix", "Alias", "Rank", "Tabs", "I-sort", "Process", "I-process", "Content", "Color", "Defs", "Deep", "N-west", "West", "S-west", "Nord", "Graph", "List", "Locus"}
-// prepRenames: пересмотр имён 27.11.2026 — прежние препозиции → новые (тела и параметры концептов, файлы алиасов переписываются при загрузке; протокол — история, не переписывается)
-var prepRenames = map[string]string{"errat": "mistk", "clean": "clear", "valor": "valut", "clavs": "lkeis", "lectu": "lecfl", "scrib": "notfl", "catal": "ctlog", "migra": "migrt", "aptus": "analg", "inven": "total", "vicis": "vecsl", "nunc": "nun", "cavet": "fixer", "cauda": "final"}
-// frameRenames: пересмотр имён 27.11.2026 — прежние имена интерпретаторов → новые (файл в lexic/preposit переносится при запуске)
-var frameRenames = map[string]string{"errat": "erros"}
