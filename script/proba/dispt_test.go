@@ -5,12 +5,12 @@ import ("errors"; "strings"; "testing"; "epi/script/disp")
 // Модель: истинный левый слот — правый слот и конец блока; ложный — дальше
 func TestModel(t *testing.T) {
 expect(t, map[string]string{
-	`10 > 3 -> 'ok`:                                 "ok",
-	`1 > 3 -> 'a . 2 > 3 -> 'b . 'c`:                "c",
-	`1 > 3 -> 'a . 5 > 3 -> 'b . 'c`:                "b",
+	`10 > 3 -> "ok"`:                                 `"ok"`,
+	`1 > 3 -> "a" . 2 > 3 -> "b" . "c"`:                `"c"`,
+	`1 > 3 -> "a" . 5 > 3 -> "b" . "c"`:                `"b"`,
 	`X.A : 2 . X.A > 1 -> [ X.B : 10 . X.B + X.A ]`: "12",
 	`X.A : 2 . X.A > 1 -> X.B : 7 . X.B`:            "@none",})
-_, _, _, err := runText(t, `5 -> 'a`, 100)
+_, _, _, err := runText(t, `5 -> "a"`, 100)
 if err == nil || !strings.Contains(err.Error(), "не флаг") {t.Errorf("левый слот не флаг: %v", err)} }
 // Связывание без вычисления: живая формула и алиас
 func TestBinding(t *testing.T) {
@@ -29,7 +29,8 @@ cases := map[string]string{
 	`1 / 0`:                     "1 / 0",
 	`print`:                     "print",     // препозиция без операнда
 	`x : 5`:                     "x : 5",     // препозиция определяется алиасом или фреймом
-	`dupla : [ X ] . 1 dupla 2`: "1 dupla 2",} // фрейм-препозиция — только в начале
+	`dupla : [ X ] . 1 dupla 2`: "1 dupla 2", // фрейм-препозиция — только в начале
+	`'ok`:                       "'ok",} // терм как значение — строкой: "ok" (27.11.2026)
 for src, rec := range cases {
 	_, in, asked, err := runText(t, src, 100, true)
 	if err != nil || len(asked) != 1 || len(in.Unknown) != 1 || in.Unknown[0] != rec {t.Errorf("%q: записано %q, вопросы %q, ошибка %v", src, in.Unknown, asked, err)}}
@@ -57,6 +58,6 @@ for src, want := range map[string]string{
 	`2 + 3`:         "arifm",
 	`2 > 3`:         "logic",
 	`( 2 + 3 ) > 4`: "arifm logic",
-	`'a`:            "",} {
+	`"a"`:            "",} {
 	if _, err := in.Run(src, disp.NewEnv(nil)); err != nil {t.Fatal(err)}
 	if got := strings.Join(in.Used, " "); got != want {t.Errorf("%q: %q, ожидалось %q", src, got, want)}} }

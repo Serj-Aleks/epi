@@ -4,5 +4,5 @@
 [ [ 3 1 2 ] order Gt ] -> [ 3 2 1 ]
 [ Brevior.In : [ A B ] . Brevior : [ ( dstnz Brevior.A ) < ( dstnz Brevior.B ) ] ] -> @none
 [ [ "Квадрат" "Ромб" "Угол" ] order Brevior ] -> [ "Ромб" "Угол" "Квадрат" ]
-[ Latera.In : [ A B ] . Latera : [ ( Latera.A valor 'L ) < ( Latera.B valor 'L ) ] ] -> @none
+[ Latera.In : [ A B ] . Latera : [ ( Latera.A valut "L" ) < ( Latera.B valut "L" ) ] ] -> @none
 [ [ { N : "Квадрат" L : 4 } { N : "Треугольник" L : 3 } { N : "Пятиугольник" L : 5 } ] order Latera ] -> [ { N : "Треугольник" L : 3 } { N : "Квадрат" L : 4 } { N : "Пятиугольник" L : 5 } ]

@@ -14,7 +14,7 @@ for p := range f.Kernel {preps = append(preps, p)}
 sort.Strings(preps)
 line := "Preposit : [ " + strings.Join(preps, " ") + " ]"
 if strings.TrimSpace(string(b)) == line {return nil}; return writeLines(path, []string{line}) }
-// loadAliases: файлы препозиций, кроме интерпретаторов, — предикации (plus : +) в общем контексте; вопросов при загрузке нет
+// loadAliases: файлы препозиций, кроме интерпретаторов, — предикации (plus : +) в общем контексте, прежние препозиции — по renewAlias; вопросов при загрузке нет
 func (q *Medium) loadAliases() error {
 on, ak := q.in.OnAlias, q.in.Ask
 q.in.OnAlias, q.in.Ask = nil, nil
@@ -26,5 +26,5 @@ root := filepath.Join(q.dir, "lexic", "preposit"); return filepath.WalkDir(root,
 	if err != nil || d.IsDir() || !strings.HasSuffix(path, ".uic") || frames[d.Name()] {return err}
 	b, err := os.ReadFile(path)
 	if err != nil {return err}
-	text := string(b)
+	text := renewAlias(path, string(b))
 	if _, err := q.in.Run(text, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}; return nil}) }

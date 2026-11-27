@@ -25,9 +25,9 @@ type Interp struct {
 	allowed int
 	// calls: фреймы в вызове — их параметры живут на время вызова и в файл не пишутся
 	calls map[*binding]int
-	// caveo: глубина cavet — нераспознанное внутри не вопрос, а ошибка (caught)
+	// caveo: глубина fixer — нераспознанное внутри не вопрос, а ошибка (caught)
 	caveo int}
-// caught: нераспознанное внутри cavet — прерывает вычисление до cavet, текст — ошибка в паре
+// caught: нераспознанное внутри fixer — прерывает вычисление до fixer, текст — ошибка в паре
 type caught struct{ msg string }
 // Stopped: пользователь не разрешил продолжать после исчерпания лимита
 type Stopped struct{ Steps int }
@@ -48,8 +48,8 @@ var (
 	none  = format.Value{Kind: format.Literal, Text: "@none"}
 	vtrue = format.Value{Kind: format.Literal, Text: "@true"}
 	vfals = format.Value{Kind: format.Literal, Text: "@false"}
-	// Nunc: часы интерпретатора (nunc, chron.go); в тестах подменяются
-	Nunc = time.Now)
+	// Nun: часы интерпретатора (nun, chron.go); в тестах подменяются
+	Nun = time.Now)
 type slot struct {
 	def    *format.Value  // ключ определения «Ключ : …»
 	alias  bool           // «имя : препозиция» — алиас препозиции

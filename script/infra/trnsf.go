@@ -259,3 +259,44 @@ if dst != src {
 if err := q.replaceRefs(old, name, true); err != nil {return format.Value{}, false}
 q.env = disp.NewEnv(nil)
 if q.loadAliases() != nil || q.loadConcepts() != nil {return format.Value{}, false}; return format.Value{Kind: format.Term, Text: name}, true }
+// renewValues: прежние препозиции (prepRenames) — новые, терм как значение 'B — строка "B"; вглубь блоков; changed — было ли что менять
+func renewValues(vs []format.Value) (out []format.Value, changed bool) {
+out = make([]format.Value, len(vs))
+for i, v := range vs {
+	switch v.Kind {
+	case format.Term: if n, ok := prepRenames[v.Text]; ok {v.Text, changed = n, true}
+	case format.LitTerm: v, changed = format.Value{Kind: format.String, Text: v.Text[1:]}, true
+	case format.Array, format.Object, format.Expr: var c bool; v.Items, c = renewValues(v.Items); changed = changed || c}
+	out[i] = v}; return out, changed }
+// renewFile: концепт path — тело Corpus и значения параметров по renewValues; файлы меняются, только если было что менять
+func renewFile(path string) error {
+if body, ok := readCorpus(path); ok {
+	changed := false
+	for i, l := range body {if vs, err := format.Parse(l); err == nil {if nv, c := renewValues(vs); c {body[i], changed = format.Canon(nv), true}}}
+	if changed {if err := writeCorpus(path, body); err != nil {return err}}}
+b, err := os.ReadFile(path)
+if err != nil {return err}
+lines, err := conceptLines(b)
+if err != nil {return nil}
+for _, l := range lines {
+	if !isParam(l) {continue}
+	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
+	if err != nil {continue}
+	if nv, c := renewValues(vs); c {if err := writeParam(path, lineKey(l), nv); err != nil {return err}}}; return nil }
+// renewAlias: файл алиаса lexic/preposit — цель по renewValues («x : vicis» → «x : vecsl»)
+func renewAlias(path string, text string) string {
+vs, err := format.Parse(text)
+if err != nil {return text}
+nv, c := renewValues(vs)
+if !c {return text}
+t := format.Canon(nv)
+if writeLines(path, []string{t}) != nil {return text}; return t }
+// moveFrameFile: файл интерпретатора с прежним именем (frameRenames) — на место нового; пустые папки букв убираются
+func (q *Medium) moveFrameFile(old, name string) error {
+src, dst := q.frameFile("preposit", old), q.frameFile("preposit", name)
+if !exists(src) {return nil}
+if exists(dst) {if err := os.Remove(src); err != nil {return err}} else {
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {return err}
+	if err := os.Rename(src, dst); err != nil {return err}}
+root := filepath.Join(q.dir, "lexic", "preposit")
+for d := filepath.Dir(src); d != root && os.Remove(d) == nil; d = filepath.Dir(d) {}; return nil }

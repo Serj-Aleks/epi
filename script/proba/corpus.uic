@@ -1,14 +1,14 @@
-[ Lege.In : [ T ] . Lege : [ ( Lege.T = @none ) -> {} . jsnin Lege.T ] ] -> @none
-[ Pone.In : [ M P ] . Pone : [ ( Pone.P = [] ) -> ( Pone.M annul "Corpus" ) . Pone.M parad ( reduc [ "Corpus" Pone.P ] ) ] ] -> @none
-[ Scribo.In : [ V P ] . Scribo : [ Scribo.T : ( lectu Scribo.V ) . Scribo.R : ( cavet [ Lege [ Scribo.T ] ] ) . ( ( Scribo.R elmnt 2 ) <> @none ) -> errat ( Scribo.V cnctn ": json не читается" ) . Scribo.M : ( Pone [ ( Scribo.R elmnt 1 ) Scribo.P ] ) . ( ( Scribo.M = {} ) & ( Scribo.T = @none ) ) -> @false . Scribo.V scrib ( injsn Scribo.M ) ] ] -> @none
-[ Scribo [ "thema/T/gradus.json" [] ] ] -> @false
-[ lectu "thema/T/gradus.json" ] -> @none
-[ Scribo [ "thema/T/gradus.json" [ "A > B -> 1" "-1" ] ] ] -> @true
-[ lectu "thema/T/gradus.json" ] -> "{\n  \"Corpus\": [\n    \"A \\u003e B -\\u003e 1\",\n    \"-1\"\n  ]\n}"
-[ "thema/T/signum.json" scrib ''{"Nomen": "Signum", "7": 2}'' ] -> @true
-[ Scribo [ "thema/T/signum.json" [ "X > 0 -> 1" ] ] ] -> @true
-[ lectu "thema/T/signum.json" ] -> "{\n  \"7\": 2,\n  \"Corpus\": [\n    \"X \\u003e 0 -\\u003e 1\"\n  ],\n  \"Nomen\": \"Signum\"\n}"
-[ Scribo [ "thema/T/signum.json" [] ] ] -> @true
-[ lectu "thema/T/signum.json" ] -> "{\n  \"7\": 2,\n  \"Nomen\": \"Signum\"\n}"
-[ "thema/T/fractum.json" scrib "{ не json" ] -> @true
-[ Scribo [ "thema/T/fractum.json" [ "1" ] ] ] -> ! "thema/T/fractum.json: json не читается"
+[ Leg.In : [ T ] . Leg : [ ( Leg.T = @none ) -> {} . jsnin Leg.T ] ] -> @none
+[ Phon.In : [ M P ] . Phon : [ ( Phon.P = [] ) -> ( Phon.M annul "Corpus" ) . Phon.M parad ( reduc [ "Corpus" Phon.P ] ) ] ] -> @none
+[ Scrib.In : [ V P ] . Scrib : [ Scrib.T : ( lecfl Scrib.V ) . Scrib.R : ( fixer [ Leg [ Scrib.T ] ] ) . ( ( Scrib.R elmnt 2 ) <> @none ) -> mistk ( Scrib.V cnctn ": json не читается" ) . Scrib.M : ( Phon [ ( Scrib.R elmnt 1 ) Scrib.P ] ) . ( ( Scrib.M = {} ) & ( Scrib.T = @none ) ) -> @false . Scrib.V notfl ( injsn Scrib.M ) ] ] -> @none
+[ Scrib [ "thema/T/gradus.json" [] ] ] -> @false
+[ lecfl "thema/T/gradus.json" ] -> @none
+[ Scrib [ "thema/T/gradus.json" [ "A > B -> 1" "-1" ] ] ] -> @true
+[ lecfl "thema/T/gradus.json" ] -> "{\n  \"Corpus\": [\n    \"A \\u003e B -\\u003e 1\",\n    \"-1\"\n  ]\n}"
+[ "thema/T/signum.json" notfl ''{"Nomen": "Signum", "7": 2}'' ] -> @true
+[ Scrib [ "thema/T/signum.json" [ "X > 0 -> 1" ] ] ] -> @true
+[ lecfl "thema/T/signum.json" ] -> "{\n  \"7\": 2,\n  \"Corpus\": [\n    \"X \\u003e 0 -\\u003e 1\"\n  ],\n  \"Nomen\": \"Signum\"\n}"
+[ Scrib [ "thema/T/signum.json" [] ] ] -> @true
+[ lecfl "thema/T/signum.json" ] -> "{\n  \"7\": 2,\n  \"Nomen\": \"Signum\"\n}"
+[ "thema/T/fractum.json" notfl "{ не json" ] -> @true
+[ Scrib [ "thema/T/fractum.json" [ "1" ] ] ] -> ! "thema/T/fractum.json: json не читается"

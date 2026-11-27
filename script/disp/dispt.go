@@ -63,7 +63,7 @@ for _, seg := range segments(vs) {
 func (in *Interp) step() error {
 in.steps++
 if in.Limit > 0 && in.steps > in.allowed {if in.Ask != nil && in.Ask(fmt.Sprintf("исчерпан лимит %d шагов. Продолжать?", in.Limit)) {in.allowed += in.Limit; return nil}; return Stopped{in.steps - 1}}; return nil }
-// unknown: нераспознанная предикация — вопрос «записать?» и запись в базу; внутри cavet — ошибка в паре cavet, без вопроса
+// unknown: нераспознанная предикация — вопрос «записать?» и запись в базу; внутри fixer — ошибка в паре fixer, без вопроса
 func (in *Interp) unknown(toks []format.Value, why string) {
 text := format.Canon(toks)
 if in.caveo > 0 {panic(caught{fmt.Sprintf("предикация «%s» %s", text, why)})}
@@ -87,7 +87,7 @@ for depth := 0; depth < 16; depth++ {
 	default: return "", nil}}; return "", nil }
 // evalSlot: интерпретация слота; right — правый слот модели, блок в нём интерпретируется; алиас, ведущий к самому себе (цикл), — ошибка
 // определение: Фрейм.Параметр : значение, ( ) — вычислить сейчас, параметры фрейма сохраняются
-// recur — цикл, rescr — переписывание, reduc — список вычисленных значений, order — сортировка, vicis — замена по шаблону, errat и cavet — ошибки, Raw — операнд без вычисления, препозиция-фрейм — в начале с объектным блоком;
+// recur — цикл, rescr — переписывание, reduc — список вычисленных значений, order — сортировка, vecsl — замена по шаблону, mistk и fixer — ошибки, Raw — операнд без вычисления, препозиция-фрейм — в начале с объектным блоком;
 // фрейм с ролями In (алиас препозиции на объект-фрейм) — и «A п B», «п A»: значения по порядку ролей; в Used — имя объект-фрейма
 func (in *Interp) evalSlot(s *slot, env *Env, right bool) (format.Value, error) {
 if s.def != nil {
@@ -122,9 +122,9 @@ if frame == nil && sym == "recur" {return in.recur(s, env)}
 if frame == nil && sym == "rescr" {return in.rescr(s, env)}
 if frame == nil && sym == "reduc" {return in.reduc(s, env)}
 if frame == nil && sym == "order" {return in.order(s, env)}
-if frame == nil && sym == "vicis" {return in.vicis(s, env)}
-if frame == nil && sym == "errat" {return in.raise(s, env)}
-if frame == nil && sym == "cavet" {return in.cavet(s, env)}
+if frame == nil && sym == "vecsl" {return in.vecsl(s, env)}
+if frame == nil && sym == "mistk" {return in.raise(s, env)}
+if frame == nil && sym == "fixer" {return in.fixer(s, env)}
 if r := in.Raw[sym]; frame == nil && r != nil {
 	_, fr := in.prepOf(sym)
 	if s.prefix == nil || s.op != nil || len(s.a) != 1 {in.unknown(s.toks(), "— «"+sym+"» пишется в начале с одним операндом"); return none, nil}
@@ -158,7 +158,7 @@ v, ok := f(pa, pb)
 if err := in.RawErr; !ok && err != nil {in.RawErr = nil; return none, err}
 if !ok {in.unknown(s.toks(), fmt.Sprintf("— «%s» (%s) не интерпретирует такие аргументы", ptok.Text, fr.Name)); return none, nil}
 in.use(fr); return v, nil }
-// evalOperand: значение операнда — ( ) вычисляется, [ ] справа — блок, 'терм, :терм, терм — аппликация, поле — параметр
+// evalOperand: значение операнда — ( ) вычисляется, [ ] справа — блок, 'терм — не распознано (терм как значение — строкой), :терм, терм — аппликация, поле — параметр
 func (in *Interp) evalOperand(a []format.Value, env *Env, right bool) (format.Value, error) {
 v := a[0]
 switch v.Kind {
@@ -166,7 +166,7 @@ case format.Expr:
 	r, _, err := in.block(v.Items, env); return r, err
 case format.Array:
 	if right {r, _, err := in.block(v.Items, NewEnv(env)); return r, err}; return v, nil
-case format.LitTerm: return format.Value{Kind: format.Term, Text: v.Text[1:]}, nil
+case format.LitTerm: in.unknown(a, fmt.Sprintf("— терм как значение пишется строкой: \"%s\"", v.Text[1:])); return none, nil
 case format.GetTerm:
 	b, _ := env.find(v.Text[1:])
 	if b == nil || len(b.pred) != 1 {in.unknown(a, "— имя не определено"); return none, nil}; return b.pred[0], nil

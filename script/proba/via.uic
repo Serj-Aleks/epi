@@ -1,8 +1,0 @@
-[ Via.In : [ S ] . Via.Ex : Via ] -> @none
-[ Via : [ Via.Via : ( ( ( divrg Via.S ) quant "" ) combi "/" ) ] ] -> @none
-[ Via [ "Num" ] ] -> "N/U/M"
-[ Via [ "Gradus" ] ] -> "G/R/A/D/U/S"
-[ Via [ "Cards-js" ] ] -> "C/A/R/D/S/-/J/S"
-[ Via [ "Ёж" ] ] -> "Ё/Ж"
-[ Via [ "Nummer" ] ] -> "N/U/M/M/E/R"
-[ Via [ "A" ] ] -> "A"

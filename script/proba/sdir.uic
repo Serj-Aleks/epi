@@ -1,0 +1,8 @@
+[ Sdir.In : [ S ] . Sdir.Ex : Sdir ] -> @none
+[ Sdir : [ Sdir.Sdir : ( ( ( divrg Sdir.S ) quant "" ) combi "/" ) ] ] -> @none
+[ Sdir [ "Num" ] ] -> "N/U/M"
+[ Sdir [ "Gradus" ] ] -> "G/R/A/D/U/S"
+[ Sdir [ "Cards-js" ] ] -> "C/A/R/D/S/-/J/S"
+[ Sdir [ "Ёж" ] ] -> "Ё/Ж"
+[ Sdir [ "Nummer" ] ] -> "N/U/M/M/E/R"
+[ Sdir [ "A" ] ] -> "A"

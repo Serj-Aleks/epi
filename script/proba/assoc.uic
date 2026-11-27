@@ -1,28 +1,28 @@
 [ X.O : { A : 1 B : [ 2 3 ] } ] -> @none
-[ X.O valor 'B ] -> [ 2 3 ]
-[ X.O valor "A" ] -> 1
-[ X.O valor 'C ] -> @none
-[ clavs X.O ] -> [ "A" "B" ]
+[ X.O valut "B" ] -> [ 2 3 ]
+[ X.O valut "A" ] -> 1
+[ X.O valut "C" ] -> @none
+[ lkeis X.O ] -> [ "A" "B" ]
 [ X.O parad { C : 4 } ] -> { A : 1 B : [ 2 3 ] C : 4 }
 [ X.O parad { A : 9 } ] -> { A : 9 B : [ 2 3 ] }
 [ X.O ] -> { A : 1 B : [ 2 3 ] }
-[ X.O : ( X.O parad { C : 4 } ) . X.O valor 'C ] -> 4
+[ X.O : ( X.O parad { C : 4 } ) . X.O valut "C" ] -> 4
 [ { A : 1 B : 2 } = { B : 2 A : 1 } ] -> @true
 [ { A : 1 B : 2 } = { A : 1 B : 3 } ] -> @false
 [ [ 1 2 ] = [ 2 1 ] ] -> @false
 [ { A : { C : 1 D : 2 } } = { A : { D : 2 C : 1 } } ] -> @true
-[ X.S : 0 . recur { In : ( clavs { A : 1 B : 2 C : 3 } ) As : X.K Corpus : [ X.S : ( X.S + ( { A : 1 B : 2 C : 3 } valor X.K ) ) ] } . X.S ] -> 6
-[ 5 valor 'A ] -> ? "не интерпретирует"
+[ X.S : 0 . recur { In : ( lkeis { A : 1 B : 2 C : 3 } ) As : X.K Corpus : [ X.S : ( X.S + ( { A : 1 B : 2 C : 3 } valut X.K ) ) ] } . X.S ] -> 6
+[ 5 valut "A" ] -> ? "не интерпретирует"
 [ X.C : "н" . X.I : 3 ] -> @none
 [ reduc [ X.C ( X.I - 1 ) 7 ] ] -> [ "н" 2 7 ]
 [ X.O parad ( reduc [ X.C ( X.I - 1 ) ] ) ] -> { A : 1 B : [ 2 3 ] C : 4 н : 2 }
 [ X.O parad [ "B" 5 ] ] -> { A : 1 B : 5 C : 4 }
 [ X.M : {} . recur { In : ( dstnz "abc" ) As : X.J Corpus : [ X.M : ( X.M parad ( reduc [ ( "abc" elmnt X.J ) X.J ] ) ) ] } . X.M ] -> { a : 1 b : 2 c : 3 }
-[ X.M valor "b" ] -> 2
+[ X.M valut "b" ] -> 2
 [ reduc 5 ] -> ? "reduc пишется"
-[ { A : 1 B : 2 C : 3 } annul 'B ] -> { A : 1 C : 3 }
+[ { A : 1 B : 2 C : 3 } annul "B" ] -> { A : 1 C : 3 }
 [ { A : 1 B : 2 } annul "A" ] -> { B : 2 }
-[ { A : 1 } annul 'Z ] -> { A : 1 }
-[ X.P : { A : 1 B : 2 } . X.P annul 'A . X.P ] -> { A : 1 B : 2 }
-[ X.P : ( X.P annul 'A ) . X.P ] -> { B : 2 }
+[ { A : 1 } annul "Z" ] -> { A : 1 }
+[ X.P : { A : 1 B : 2 } . X.P annul "A" . X.P ] -> { A : 1 B : 2 }
+[ X.P : ( X.P annul "A" ) . X.P ] -> { B : 2 }
 [ { A : 1 } annul 5 ] -> ? "не интерпретирует"

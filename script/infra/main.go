@@ -4,12 +4,13 @@ import ("encoding/json"; "flag"; "log"; "net/http"; "os"; "path/filepath"; "runt
 // сервер панели — интерфейс среды: строка предикаций в браузере, ответ диспетчера — следующей строкой диалога
 // данные в папке script: lexic — системный лексикон, thema — темы автора (концепты и протокол prtcl)
 // запуск из папки script: go run ./infra [-addr localhost:5832]
-// open: среда — фреймы-интерпретаторы lexic/preposit, транслятор trans, препозиции без вычисления операнда
+// open: среда — фреймы-интерпретаторы lexic/preposit (файл с прежним именем — по moveFrameFile), транслятор trans, препозиции без вычисления операнда
 // (nexus, qwest, qwizt, clone, rename, import, union); фреймы автора — в теме, алиасы препозиций — общие
 // для всех тем (имя интерпретатора не алиас); контекст — системные алиасы и концепты темы
 func open(dir string) (*Medium, error) {
 q := &Medium{dir: dir}
 q.in = disp.New(limit, func(string) bool { return false })
+for old, name := range frameRenames {if err := q.moveFrameFile(old, name); err != nil {return nil, err}}
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 q.in.FrameOf("trans").Kernel["trans"] = q.trans
 q.in.Root = q.dir

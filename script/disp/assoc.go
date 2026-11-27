@@ -1,19 +1,19 @@
 // epi/script/disp/assoc.go
-// assoc: интерпретатор ассоциативных массивов — объектный блок { Ключ : значение }: valor, clavs, parad, annul; равенство без учёта порядка пар;
+// assoc: интерпретатор ассоциативных массивов — объектный блок { Ключ : значение }: valut, lkeis, parad, annul; равенство без учёта порядка пар;
 // json: jsnin — текст json в значение, injsn — значение в текст json
 package disp
 import ("encoding/json"; "strings"; "epi/script/format")
-// assocFrame: фрейм assoc; ключ — строка или терм-значение ('B), ключа нет — @none; parad — новый объект, исходный не меняется; parad — объект или пара [ K V ]; annul — новый объект без пары, ключа нет — объект как есть
+// assocFrame: фрейм assoc; ключ — строка ("B"), ключа нет — @none; parad — новый объект, исходный не меняется; parad — объект или пара [ K V ]; annul — новый объект без пары, ключа нет — объект как есть
 func assocFrame() *Frame {
 key := func(b *format.Value) (string, bool) {
 	if b == nil || (b.Kind != format.String && b.Kind != format.Term) {return "", false}; return b.Text, true}
 k := map[string]Prep{
-	"valor": func(a, b *format.Value) (format.Value, bool) {
+	"valut": func(a, b *format.Value) (format.Value, bool) {
 		kk, ok := key(b)
 		if a == nil || a.Kind != format.Object || !ok {return none, false}
 		for _, e := range a.Entries() {if format.SameTerm(e.Key.Text, kk) {
 			if len(e.Value) == 1 {return e.Value[0], true}; return format.Value{Kind: format.Expr, Items: e.Value}, true}}; return none, true},
-	"clavs": func(a, b *format.Value) (format.Value, bool) {
+	"lkeis": func(a, b *format.Value) (format.Value, bool) {
 		if a != nil || b == nil || b.Kind != format.Object {return none, false}
 		out := format.Value{Kind: format.Array, Items: []format.Value{}}
 		for _, e := range b.Entries() {out.Items = append(out.Items, format.Value{Kind: format.String, Text: e.Key.Text})}; return out, true},

@@ -7,7 +7,7 @@ import ("strings"; "testing"; "epi/script/disp"; "epi/script/format")
 func TestFrames(t *testing.T) {
 expect(t, map[string]string{
 	"dupla : [ X * 2 ]\nF.N : 4\ndupla { X : F.N + 1 }": "10",
-	`Twice : [ X * 2 ] . Twice { X : 21 }`:              "42",}) }
+	`Dubl : [ X * 2 ] . Dubl { X : 21 }`:              "42",}) }
 // Параметры фрейма: «Фрейм.Параметр»; параметров вне фрейма нет; «Фрейм.Параметр :» — пустое значение
 func TestParams(t *testing.T) {
 expect(t, map[string]string{
@@ -15,7 +15,7 @@ expect(t, map[string]string{
 	`X.A : 5 . X.B : 7 . X`:                      "{ A : 5 B : 7 }",
 	`X.A : 2 . X.B : X.A * 3 . X.A : 10 . X.B`:   "30",
 	`X.A : 2 . X.B : (X.A * 3) . X.A : 10 . X.B`: "6",
-	`Q.A : 2 . Q.A > 1 -> 'ok`:                   "ok",})
+	`Q.A : 2 . Q.A > 1 -> "ok"`:                   `"ok"`,})
 for src, rec := range map[string]string{
 	`X : 5`:         "X : 5",
 	`X.B`:           "X.B",
@@ -31,7 +31,7 @@ expect(t, map[string]string{
 	`plus : + . 2 plus 3`:                 "5",
 	`minus : - . minus 4`:                 "-4",
 	`plus : + . summa : plus . 2 summa 3`: "5",
-	`major : > . 10 major 3 -> 'ok`:       "ok",
+	`major : > . 10 major 3 -> "ok"`:       `"ok"`,
 	`F.X : (- 5) . F.X`:                   "-5",
 	`plus : + . plus : - . 7 plus 2`:      "5",})
 _, in, _, err := runText(t, `pow : foo . 2 pow 3`, 100, true)
@@ -87,10 +87,10 @@ in.Run("Maximum.In : [ A B ] . Maximum : [ ( Maximum.A >= Maximum.B ) -> Maximum
 for _, c := range []struct{ src, want string }{{"7 max 3", "Maximum logic"}, {"4 maximus 5", "Maximum logic"}, {"Maximum [ 1 2 ]", "Maximum logic"}, {"( 1 + 2 ) max 4", "arifm Maximum logic"}} {
 	in.Used = nil
 	if _, err := in.Run(c.src, env); err != nil || strings.Join(in.Used, " ") != c.want {t.Errorf("%s: %v %v, ждём %s", c.src, in.Used, err, c.want)}}}
-// TestUsedCalled: пометка показывает и фрейм, вызванный из order и vicis
+// TestUsedCalled: пометка показывает и фрейм, вызванный из order и vecsl
 func TestUsedCalled(t *testing.T) {
 for src, want := range map[string]string{
 	"Lt.In : [ A B ] . Lt : [ Lt.A < Lt.B ] . [ 3 1 2 ] order Lt": "Lt",
-	"Up.In : [ M ] . Up : [ divrg Up.M ] . \"ab\" vicis [ ''b'' Up ]": "Up"} {
+	"Up.In : [ M ] . Up : [ divrg Up.M ] . \"ab\" vecsl [ ''b'' Up ]": "Up"} {
 	_, in, _, err := runText(t, src, 100)
 	if err != nil || !strings.Contains(strings.Join(in.Used, " "), want) {t.Errorf("%q: пометка %v %v, ждём %s", src, in.Used, err, want)}} }

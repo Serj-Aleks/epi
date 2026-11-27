@@ -1,11 +1,11 @@
-[ Caput.In : [ X ] . Caput.Conseq : [ Y ] . Caput.Forma : [ caput cauda ] ] -> @none
-[ Caput : [ ( caput Caput.X Caput.Y ) -> Caput.X . ( cauda Caput.X Caput.Y ) -> [ Caput.Y ] ] ] -> @none
+[ Caput.In : [ X ] . Caput.Conseq : [ Y ] . Caput.Forma : [ caput final ] ] -> @none
+[ Caput : [ ( caput Caput.X Caput.Y ) -> Caput.X . ( final Caput.X Caput.Y ) -> [ Caput.Y ] ] ] -> @none
 [ caput 1 2 3 ] -> 1
-[ cauda 1 2 3 ] -> [ 2 3 ]
+[ final 1 2 3 ] -> [ 2 3 ]
 [ caput "a" ] -> "a"
 [ ( caput 7 8 ) + 1 ] -> 8
 [ caput ] -> ? "не распознана"
-[ cauda 1 ] -> []
-[ X.L : ( cauda 4 5 6 ) . X.L ] -> [ 5 6 ]
+[ final 1 ] -> []
+[ X.L : ( final 4 5 6 ) . X.L ] -> [ 5 6 ]
 [ Alter.In : [ X ] . Alter.Forma : [ caput ] . Alter : [ ( caput Alter.X ) -> 0 ] ] -> @none
 [ caput 9 ] -> ! "объявили в Forma два фрейма"

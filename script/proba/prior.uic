@@ -1,9 +1,9 @@
 [ Alphabetum.S : "nmlrhgkcsztdbpfvwuoaeiyjqxнмлркхгжщчшсзцтдбпфвюуоёэеиыйяаьъ" ] -> @none
 [ Alphabetum.Ordo : {} . recur { In : ( dstnz Alphabetum.S ) As : Alphabetum.I Corpus : [ Alphabetum.Ordo : ( Alphabetum.Ordo parad ( reduc [ ( Alphabetum.S elmnt Alphabetum.I ) ( Alphabetum.I - 1 ) ] ) ) ] } ] -> @none
-[ Alphabetum.Ordo valor "n" ] -> 0
-[ Alphabetum.Ordo valor "ъ" ] -> 58
+[ Alphabetum.Ordo valut "n" ] -> 0
+[ Alphabetum.Ordo valut "ъ" ] -> 58
 [ Ordinal.In : [ C ] . Ordinal.Ex : Ordinal ] -> @none
-[ Ordinal : [ Ordinal.V : ( Alphabetum.Ordo valor Ordinal.C ) . ( ( ( Ordinal.C = " " ) | ( Ordinal.C = "-" ) ) | ( Ordinal.C = "," ) ) -> [ Ordinal.Ordinal : -1 ] . ( Ordinal.V = @none ) -> [ Ordinal.Ordinal : 10000 ] . Ordinal.Ordinal : Ordinal.V ] ] -> @none
+[ Ordinal : [ Ordinal.V : ( Alphabetum.Ordo valut Ordinal.C ) . ( ( ( Ordinal.C = " " ) | ( Ordinal.C = "-" ) ) | ( Ordinal.C = "," ) ) -> [ Ordinal.Ordinal : -1 ] . ( Ordinal.V = @none ) -> [ Ordinal.Ordinal : 10000 ] . Ordinal.Ordinal : Ordinal.V ] ] -> @none
 [ Ordinal [ "м" ] ] -> 27
 [ Ordinal [ "-" ] ] -> -1
 [ Ordinal [ "1" ] ] -> 10000

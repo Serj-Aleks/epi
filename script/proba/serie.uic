@@ -6,7 +6,7 @@
 [ "abc" quant "" ] -> [ "a" "b" "c" ]
 [ [ "a" "b" ] combi "/" ] -> "a/b"
 [ [] combi "/" ] -> ""
-[ clean "  Ум  " ] -> "Ум"
+[ clear "  Ум  " ] -> "Ум"
 [ "a-b-c" mutnt [ "-" "/" ] ] -> "a/b/c"
 [ divrg "Угол" ] -> "УГОЛ"
 [ nitxt 42 ] -> "42"

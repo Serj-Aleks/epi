@@ -1,6 +1,6 @@
 // epi/script/disp/serie.go
 // serie: интерпретатор рядов — строка (ряд литер) и список (ряд элементов): dstnz, front, post, elmnt, cnctn, cnvrg, reduc, order;
-// строки: index (и в списке), quant, combi, clean, mutnt, divrg; число ↔ текст: nitxt (и дата, время), txnin
+// строки: index (и в списке), quant, combi, clear, mutnt, divrg; число ↔ текст: nitxt (и дата, время), txnin
 package disp
 import ("sort"; "strconv"; "strings"; "unicode/utf8"; "epi/script/format")
 // serieOf: ряд значения — литеры строки или элементы списка; str — строка
@@ -57,7 +57,7 @@ k := map[string]Prep{
 		if a == nil || a.Kind != format.Array || !ok {return none, false}
 		var ps []string
 		for i := range a.Items {p, ok := text(&a.Items[i]); if !ok {return none, false}; ps = append(ps, p)}; return format.Value{Kind: format.String, Text: strings.Join(ps, t)}, true},
-	"clean": func(a, b *format.Value) (format.Value, bool) {
+	"clear": func(a, b *format.Value) (format.Value, bool) {
 		s, ok := text(b)
 		if a != nil || !ok {return none, false}; return format.Value{Kind: format.String, Text: strings.TrimSpace(s)}, true},
 	"mutnt": func(a, b *format.Value) (format.Value, bool) {
