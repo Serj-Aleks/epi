@@ -1,7 +1,7 @@
 // epi/script/proba/proba_test.go
 // proba: общие помощники тестов ядра и тест заскриптованных функций — файлы *.uic, строка «[ предикация ] -> ответ»
 package proba
-import ("os"; "path/filepath"; "strings"; "testing"; "epi/script/disp")
+import ("encoding/json"; "io/fs"; "os"; "path/filepath"; "strings"; "testing"; "unicode/utf8"; "epi/script/disp")
 // runText: интерпретировать текст; ответы на вопросы системы — по очереди из answers
 func runText(t *testing.T, text string, limit int, answers ...bool) (string, *disp.Interp, []string, error) {
 t.Helper()
@@ -27,6 +27,7 @@ for _, f := range files {
 	b, err := os.ReadFile(f)
 	if err != nil {t.Fatal(err)}
 	in, env := disp.New(10000, nil), disp.NewEnv(nil)
+	sdictLoad(t, in, env)
 	in.Root = t.TempDir()
 	var asked []string
 	in.Ask = func(q string) bool {asked = append(asked, q); return false}
@@ -58,3 +59,20 @@ for i, c := range line {
 	case c == '[' || c == '(' || c == '{': depth++
 	case c == ']' || c == ')' || c == '}': depth--
 		if depth == 0 {rest := strings.TrimSpace(line[i+1:]); if !strings.HasPrefix(rest, "->") {return "", "", false}; return strings.TrimSpace(line[1:i]), strings.TrimSpace(rest[2:]), true}}}; return "", "", false }
+// sdictLoad: системные фреймы ../sdict в контекст — параметры из .uic, тело Corpus из .json (как загрузка тем в infra; копий фреймов в тестах нет)
+func sdictLoad(t *testing.T, in *disp.Interp, env *disp.Env) {
+err := filepath.WalkDir("../sdict", func(p string, d fs.DirEntry, err error) error {
+	if err != nil || d.IsDir() || !strings.HasSuffix(p, ".uic") {return err}
+	base := strings.TrimSuffix(filepath.Base(p), ".uic")
+	r, n := utf8.DecodeRuneInString(base)
+	name := strings.ToUpper(string(r)) + base[n:]
+	b, err := os.ReadFile(p)
+	if err != nil {return err}
+	for _, l := range strings.Split(string(b), "\n") {if strings.TrimSpace(l) != "" {if _, err := in.Run(name+"."+l, env); err != nil {return err}}}
+	var j map[string]any
+	if b, err := os.ReadFile(strings.TrimSuffix(p, ".uic") + ".json"); err == nil && json.Unmarshal(b, &j) == nil {
+		if c, ok := j["Corpus"].([]any); ok {
+			var ls []string
+			for _, x := range c {if s, ok := x.(string); ok {ls = append(ls, s)}}
+			if _, err := in.Run(name+" : [ "+strings.Join(ls, " . ")+" ]", env); err != nil {return err}}}; return nil})
+if err != nil {t.Fatal(err)} }

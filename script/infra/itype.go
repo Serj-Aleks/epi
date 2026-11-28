@@ -44,6 +44,8 @@ type Medium struct {
 	pOpts   []string
 	choose  func(text string, opts []string) string // вопрос с выбором в текущей интерпретации
 	cidx    map[string]string // концепты темы: имя (строчными) → файл
+	core    *disp.Interp // интерпретатор ядра: только системные фреймы sdict (тема на ядро не влияет)
+	cenv    *disp.Env
 	tidx    map[string][]string} // трансклюзии темы: имя (строчными) → включаемые концепты
 const limit = 10000
 // corpusKey: ключ тела фрейма в json концепта — список предикаций по порядку импликаций

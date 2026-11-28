@@ -164,7 +164,7 @@ for _, l := range lines {
 if ns := transcl(dst); len(ns) > 0 {q.tidx[strings.ToLower(name)] = ns}
 on, of := q.in.OnParam, q.in.OnFrame
 q.in.OnParam, q.in.OnFrame = nil, nil
-q.loadConceptsIn(dst)
+q.loadConceptsIn(q.in, q.env, dst)
 q.in.OnParam, q.in.OnFrame = on, of }
 // union: union [ Главный Дубль … ] — строки дублей в главный: связи — объединение, Rank — большее,
 // прочее — если у главного нет; json по ключам (занятый — «ключ-2»), md, html, txt, css дописываются, прочие — если нет
@@ -177,7 +177,7 @@ for _, v := range arg.Items {
 	p := q.cidx[strings.ToLower(v.Text)]
 	if p == "" {q.in.RawErr = fmt.Errorf("концепта %s в теме нет", v.Text); return format.Value{}, false}
 	if has(paths, p) {q.in.RawErr = fmt.Errorf("%s — дважды", v.Text); return format.Value{}, false}
-	if len(paths) > 0 && exists(letterPath(filepath.Join(q.dir, "lexic", "radix"), v.Text)) {q.in.RawErr = fmt.Errorf("%s — и корень лексикона, объединять нельзя", v.Text); return format.Value{}, false}
+	if len(paths) > 0 && exists(q.letterPath(filepath.Join(q.dir, "lexic", "radix"), v.Text)) {q.in.RawErr = fmt.Errorf("%s — и корень лексикона, объединять нельзя", v.Text); return format.Value{}, false}
 	paths = append(paths, p)}
 main, mname := paths[0], conceptName(paths[0], "")
 for _, dp := range paths[1:] {
@@ -246,10 +246,10 @@ for i, v := range vs {
 // renameRoot: корень lexic/radix old → name: файл по буквам нового имени, имя заменяется в связях и контенте всех тем; ответ — новое имя
 func (q *Medium) renameRoot(old, name string) (format.Value, bool) {
 rad := filepath.Join(q.dir, "lexic", "radix")
-src := letterPath(rad, old)
+src := q.letterPath(rad, old)
 if !exists(src) {q.in.RawErr = fmt.Errorf("концепта %s в теме нет, корня в лексиконе нет", old); return format.Value{}, false}
 if checkName(name) != nil {q.in.RawErr = fmt.Errorf("имя %s — с прописной буквы, без пробелов", name); return format.Value{}, false}
-dst := letterPath(rad, name)
+dst := q.letterPath(rad, name)
 if exists(dst) && !strings.EqualFold(old, name) {q.in.RawErr = fmt.Errorf("корень %s уже есть", name); return format.Value{}, false}
 old = conceptName(src, "")
 if dst != src {

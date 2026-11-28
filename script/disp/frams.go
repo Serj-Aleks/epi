@@ -1,7 +1,7 @@
 // epi/script/disp/frams.go
 // frams: фреймы — аппликация и вызов (роли In, результат Ex), параметры «Фрейм.Параметр», синонимы
 package disp
-import ("fmt"; "sort"; "strings"; "unicode"; "epi/script/format")
+import ("errors"; "fmt"; "sort"; "strings"; "unicode"; "epi/script/format")
 // apply: аппликация объекта по имени, с аргументами или без; модель «имя -> предикация» интерпретируется при обращении; фрейм с телом отмечается в Used, как интерпретатор
 func (in *Interp) apply(a []format.Value, env *Env) (format.Value, error) {
 b, _ := env.findFrame(a[0].Text)
@@ -123,3 +123,11 @@ for _, v := range pred {
 		if format.SameTerm(v.Text, name) {return true}
 	case format.Array:
 		if hasTerm(v.Items, name) {return true}}}; return false }
+// Invoke: вызов фрейма name из ядра (infra) — позиционные аргументы по ролям In, шаги с нуля, вопросов нет: нераспознанное — ошибка
+func (in *Interp) Invoke(name string, args []format.Value, env *Env) (v format.Value, err error) {
+b, _ := env.findFrame(name)
+if b == nil {return none, fmt.Errorf("нет фрейма %s", name)}
+in.Used, in.steps, in.allowed = nil, 0, in.Limit
+in.caveo++
+defer func() {in.caveo--; if r := recover(); r != nil {c, ok := r.(caught); if !ok {panic(r)}; v, err = none, errors.New(c.msg)}}()
+return in.call(name, b, format.Value{Kind: format.Array, Items: args}, env) }

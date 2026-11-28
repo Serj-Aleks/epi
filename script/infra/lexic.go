@@ -3,7 +3,7 @@ package main
 import ("fmt"; "os"; "path/filepath"; "sort"; "strings"; "epi/script/disp")
 // лексикон: файлы фреймов-интерпретаторов lexic/preposit и алиасы препозиций
 // frameFile: файл фрейма name в классе lexic/<theme>
-func (q *Medium) frameFile(theme, name string) string {return letterPath(filepath.Join(q.dir, "lexic", theme), name) }
+func (q *Medium) frameFile(theme, name string) string {return q.letterPath(filepath.Join(q.dir, "lexic", theme), name) }
 // syncFrame: файл интерпретатора — только «Preposit : [ … ]» (история — в протоколе); нет файла — создаётся
 func (q *Medium) syncFrame(f *disp.Frame) error {
 path := q.frameFile("preposit", f.Name)

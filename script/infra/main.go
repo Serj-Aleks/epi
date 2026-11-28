@@ -1,14 +1,17 @@
 // epi/script/infra/main.go
 package main
-import ("encoding/json"; "flag"; "log"; "net/http"; "os"; "path/filepath"; "runtime"; "strings"; "time"; "epi/script/disp"; "epi/script/format")
+import ("encoding/json"; "flag"; "fmt"; "log"; "net/http"; "os"; "path/filepath"; "runtime"; "strings"; "time"; "epi/script/disp"; "epi/script/format")
 // сервер панели — интерфейс среды: строка предикаций в браузере, ответ диспетчера — следующей строкой диалога
-// данные в папке script: lexic — системный лексикон, thema — темы автора (концепты и протокол prtcl)
+// данные в папке script: sdict — системные фреймы (с кодом, апдейт заменяет), lexic — лексикон, thema — темы автора (концепты и протокол prtcl)
 // запуск из папки script: go run ./infra [-addr localhost:5832]
-// open: среда — фреймы-интерпретаторы lexic/preposit, транслятор trans, препозиции без вычисления операнда
+// open: среда — интерпретатор ядра с системными фреймами sdict (нет Sdir — ошибка запуска), фреймы-интерпретаторы lexic/preposit, транслятор trans, препозиции без вычисления операнда
 // (nexus, qwest, qwizt, clone, rename, import, union); фреймы автора — в теме, алиасы препозиций — общие
 // для всех тем (имя интерпретатора не алиас); контекст — системные алиасы и концепты темы
 func open(dir string) (*Medium, error) {
 q := &Medium{dir: dir}
+q.core, q.cenv = disp.New(limit, nil), disp.NewEnv(nil)
+if err := q.loadConceptsIn(q.core, q.cenv, filepath.Join(dir, "sdict")); err != nil {return nil, err}
+if _, err := q.core.Invoke("Sdir", []format.Value{{Kind: format.String, Text: "A"}}, q.cenv); err != nil {return nil, fmt.Errorf("системный фрейм Sdir (путь концепта из букв имени) в папке sdict: %v — без него ядро не работает; папка sdict приходит с апдейтом, обновите script", err)}
 q.in = disp.New(limit, func(string) bool { return false })
 for _, f := range q.in.Frames {if err := q.syncFrame(f); err != nil {return nil, err}}
 q.in.FrameOf("trans").Kernel["trans"] = q.trans

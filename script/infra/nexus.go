@@ -10,7 +10,7 @@ case "Taxon", "Links", "Attrib", "Preposit": return q.themaDir(), true
 case "Radix": return filepath.Join(q.dir, "lexic", "radix"), true}; return "", false }
 // targetPath: файл цели t связи: концепт темы, если он есть, иначе — в root
 func (q *Medium) targetPath(root, t string) string {
-if p := q.conceptFile(t); exists(p) {return p}; return letterPath(root, t) }
+if p := q.conceptFile(t); exists(p) {return p}; return q.letterPath(root, t) }
 // names: имена из предикации — блок [ A B ] или термы
 func names(vs []format.Value) []string {
 var ns []string
@@ -65,7 +65,7 @@ vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 if err != nil || len(vs) < 2 {return l}; return lineKey(l) + " : " + format.Canon(vs[:1]) }
 // nexusData: синонимы и связи концепта name (прямой и обратный списки) по файлам темы и лексикона; найден ли концепт
 func (q *Medium) nexusData(name string) ([]string, map[string][2][]string, bool) {
-paths := []string{q.conceptFile(name), letterPath(filepath.Join(q.dir, "lexic", "radix"), name)}
+paths := []string{q.conceptFile(name), q.letterPath(filepath.Join(q.dir, "lexic", "radix"), name)}
 found := false
 for _, p := range paths {if exists(p) {found = true}}
 var alias []string

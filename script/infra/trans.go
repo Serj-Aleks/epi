@@ -31,7 +31,7 @@ if b, err := os.ReadFile(path); err == nil {
 	for _, l := range ls {if isParam(l) && format.SameTerm(lineKey(l), capital(w)) {if vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:])); err == nil && len(vs) == 1 && len(vs[0].Items) == 2 {n, _ = strconv.Atoi(vs[0].Items[0].Text); s = vs[0].Items[1].Text}}}}
 return writeParam(path, capital(w), []format.Value{{Kind: format.Array, Items: []format.Value{{Kind: format.Integer, Text: strconv.Itoa(n + 1)}, {Kind: format.String, Text: s}}}}) }
 // dictFile: слово в словаре класса lexic/<класс> — путь из букв, как у концептов
-func (q *Medium) dictFile(class, word string) string { return letterPath(filepath.Join(q.dir, "lexic", class), word) }
+func (q *Medium) dictFile(class, word string) string { return q.letterPath(filepath.Join(q.dir, "lexic", class), word) }
 // conceptIndex: слово → имя концепта в папке root (имя — из файла, синонимы — Alias); своё имя концепта важнее чужого синонима
 func conceptIndex(root string) map[string]string {
 idx, al := map[string]string{}, map[string]string{}
@@ -59,9 +59,9 @@ for _, f := range q.in.Frames {if _, ok := f.Kernel[w]; ok {return "preposit", "
 if p := q.dictFile("numer", w); exists(p) {if l, err := os.ReadFile(p); err == nil {if _, n, ok := strings.Cut(string(l), ":"); ok {return "numer", strings.TrimSpace(n)}}}
 if n, ok := d.obj[w]; ok {return "thema", n}; return "", "" }
 // learnName: слово w — концепт name в папке root: совпало с именем — новый концепт, иначе синоним (Alias)
-func learnName(root, w, name string, idx map[string]string) bool {
+func (q *Medium) learnName(root, w, name string, idx map[string]string) bool {
 if checkName(name) != nil {return false}
-path := letterPath(root, name)
+path := q.letterPath(root, name)
 if strings.EqualFold(name, w) {
 	if !exists(path) {if err := writeLines(path, nil); err != nil {return false}}
 	idx[w] = name; return true}
@@ -84,7 +84,7 @@ if t, ok := strings.CutPrefix(answer, "preposit:"); ok {
 	if err := writeLines(q.dictFile("preposit", w), []string{w + " : " + t}); err != nil {return "", ""}; return "preposit", ""}
 if name, ok := strings.CutPrefix(answer, "thema:"); ok && q.theme != "" {
 	name = capital(strings.TrimSpace(name))
-	if learnName(q.themaDir(), w, name, d.obj) {q.indexConcepts(); return "thema", name}}
+	if q.learnName(q.themaDir(), w, name, d.obj) {q.indexConcepts(); return "thema", name}}
 if n, ok := strings.CutPrefix(answer, "numer:"); ok {
 	n = strings.TrimSpace(n)
 	if vs, err := format.Parse(n); err != nil || len(vs) != 1 || vs[0].Kind != format.Integer && vs[0].Kind != format.Decimal {return "", ""}

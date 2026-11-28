@@ -1,6 +1,6 @@
 // epi/script/infra/cncpt.go
 package main
-import ("encoding/json"; "fmt"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
+import ("encoding/json"; "fmt"; "log"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
 // файлы концептов: модель — одна строка, ключей и индексов нет; путь — из букв имени: <тема>/<буквы>/<имя>.uic
 //
 //	интерпретатор  lexic/preposit/A/R/I/F/M/arifm.uic
@@ -9,10 +9,10 @@ import ("encoding/json"; "fmt"; "os"; "path/filepath"; "sort"; "strings"; "unico
 //	               plus : +
 //	концепт автора thema/<Тема>/X/x.uic
 //	               A : 5
-// letterPath: <корень>/<буквы имени>/<имя>.uic
-func letterPath(root, name string) string {
-parts := []string{root}
-for _, r := range strings.ToUpper(name) {parts = append(parts, string(r))}; return filepath.Join(append(parts, strings.ToLower(name)+".uic")...) }
+// letterPath: <корень>/<путь из букв имени — системный фрейм Sdir>/<имя>.uic; Sdir не ответил — пусто (в журнал)
+func (q *Medium) letterPath(root, name string) string {
+v, err := q.core.Invoke("Sdir", []format.Value{{Kind: format.String, Text: name}}, q.cenv)
+if err != nil || v.Kind != format.String {log.Printf("Sdir %q: %v", name, err); return ""}; return filepath.Join(root, filepath.FromSlash(v.Text), strings.ToLower(name)+".uic") }
 // writeLines: файл целиком через временный файл
 func writeLines(path string, lines []string) error {
 if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {return err}
@@ -20,7 +20,7 @@ tmp := path + ".tmp"
 if err := os.WriteFile(tmp, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {return err}; return os.Rename(tmp, path) }
 // conceptFile: файл концепта темы — по указателю (клон лежит по пути другого концепта), иначе по буквам имени
 func (q *Medium) conceptFile(name string) string {
-if p, ok := q.cidx[strings.ToLower(name)]; ok {return p}; return letterPath(q.themaDir(), name) }
+if p, ok := q.cidx[strings.ToLower(name)]; ok {return p}; return q.letterPath(q.themaDir(), name) }
 // conceptLines: строки концепта «Параметр : предикация»
 func conceptLines(b []byte) ([]string, error) {return disp.Split(string(b)) }
 // lineKey: параметр строки «Параметр : …»
@@ -105,17 +105,17 @@ func bodyLines(path string, lines []string) []string {
 if c, ok := readCorpus(path); ok {return c}
 var body []string
 for _, l := range lines {if !isParam(l) {body = append(body, l)}}; return body }
-// loadConcepts: системные концепты (lexic/constans), концепты системной темы (ACTUS) и концепты текущей темы в контекст;
+// loadConcepts: системные фреймы (sdict), концепты системной темы (ACTUS) и концепты текущей темы в контекст;
 // концепт темы дополняет и переопределяет системный; вопросов при загрузке нет
 func (q *Medium) loadConcepts() error {
 on, of, ak := q.in.OnParam, q.in.OnFrame, q.in.Ask
 q.in.OnParam, q.in.OnFrame, q.in.Ask = nil, nil, nil
 defer func() {q.in.OnParam, q.in.OnFrame, q.in.Ask = on, of, ak}()
-if err := q.loadConceptsIn(filepath.Join(q.dir, "lexic", "constans")); err != nil {return err}
-if t, ok := q.themeExists(sysTheme); ok && !format.SameTerm(t, q.theme) {if err := q.loadConceptsIn(filepath.Join(q.themaRoot(), t)); err != nil {return err}}; return q.loadConceptsIn(q.themaDir()) }
-// loadConceptsIn: концепты в папке root — имя из пути; у связи в контекст — только прямой список; тело — Corpus json,
+if err := q.loadConceptsIn(q.in, q.env, filepath.Join(q.dir, "sdict")); err != nil {return err}
+if t, ok := q.themeExists(sysTheme); ok && !format.SameTerm(t, q.theme) {if err := q.loadConceptsIn(q.in, q.env, filepath.Join(q.themaRoot(), t)); err != nil {return err}}; return q.loadConceptsIn(q.in, q.env, q.themaDir()) }
+// loadConceptsIn: концепты в папке root в контекст env интерпретатора in — имя из пути; у связи в контекст — только прямой список; тело — Corpus json,
 // тело строками файла концепта (прежняя запись) один раз переносится в Corpus
-func (q *Medium) loadConceptsIn(root string) error {return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+func (q *Medium) loadConceptsIn(in *disp.Interp, env *disp.Env, root string) error {return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 	if os.IsNotExist(err) && path == root {return nil}
 	if err != nil {return err}
 	if d.IsDir() && d.Name() == "prtcl" {return filepath.SkipDir}
@@ -130,10 +130,10 @@ func (q *Medium) loadConceptsIn(root string) error {return filepath.WalkDir(root
 		if !isParam(l) {continue}
 		params = append(params, l)
 		if _, ok := q.linkRoot(lineKey(l)); ok {l = directOnly(l)}
-		if _, err := q.in.Run(name+"."+l, q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}
+		if _, err := in.Run(name+"."+l, env); err != nil {return fmt.Errorf("%s: %w", path, err)}}
 	body := bodyLines(path, lines)
 	if _, ok := readCorpus(path); !ok && len(body) > 0 && len(params) < len(lines) {if err := writeCorpus(path, body); err == nil {writeLines(path, params)}}
-	if len(body) > 0 {if _, err := q.in.Run(name+" : [ "+strings.Join(body, " . ")+" ]", q.env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
+	if len(body) > 0 {if _, err := in.Run(name+" : [ "+strings.Join(body, " . ")+" ]", env); err != nil {return fmt.Errorf("%s: %w", path, err)}}; return nil}) }
 // conceptName: имя концепта из имени файла с прописной первой буквой (К/В/А/Д/Р/А/Т/квадрат.uic → Квадрат)
 func conceptName(path, root string) string { return capital(strings.TrimSuffix(filepath.Base(path), ".uic")) }
 // known: файл концепта темы в указатель (новый концепт виден сразу, ссылки на него из контента — в его обратный Links), файлы лексикона — нет
@@ -191,15 +191,15 @@ for _, l := range lines {
 // conceptPath: файл существующего концепта в теме или в лексиконе (radix); "" — концепта нет
 func (q *Medium) conceptPath(name string) string {
 if p := q.conceptFile(name); exists(p) {return p}
-if p := letterPath(filepath.Join(q.dir, "lexic", "radix"), name); exists(p) {return p}; return "" }
+if p := q.letterPath(filepath.Join(q.dir, "lexic", "radix"), name); exists(p) {return p}; return "" }
 // iconFile: картинка концепта — <папка>/<имя>.svg или <папка>/img/<имя>.png|jpg|jpeg|webp|gif|ico
 func (q *Medium) iconFile(name string) string {
 if name == "" || strings.ContainsAny(name, "/\\") {return ""}
 roots := []string{q.themaDir()}
-for _, c := range []string{"radix", "preposit", "constans"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
+for _, c := range []string{"radix", "preposit"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
 base := strings.ToLower(name)
 for _, r := range roots {
-	dir := filepath.Dir(letterPath(r, name))
+	dir := filepath.Dir(q.letterPath(r, name))
 	if r == q.themaDir() {dir = filepath.Dir(q.conceptFile(name))}
 	if p := filepath.Join(dir, base+".svg"); exists(p) {return p}
 	for _, ext := range []string{"png", "jpg", "jpeg", "webp", "gif", "ico"} {if p := filepath.Join(dir, "img", base+"."+ext); exists(p) {return p}}}; return "" }
