@@ -23,7 +23,7 @@ st.textContent = (css || "").replace(/\/\*[\s\S]*?\*\//g, "").split("}").map(r =
 function esc(s) { return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 // refLinks: ссылки [[Имя]] — на концепт (md и html)
 function refLinks(s) { return s.replace(/\[\[([^\]]+)\]\]/g, (_, n) => `<a href="#" class="cref" data-n="${esc(n.trim())}">${esc(n.trim())}</a>`); }
-// mdHtml: md в html — заголовки, списки, таблицы, код, ссылки; картинка файл — из img концепта, /img/файл — из img темы; ячейки таблицы делятся по «|» вне кода
+// mdHtml: md в html — заголовки, списки (нумерованный — с номера первого пункта), таблицы, код, ссылки; картинка файл — из img концепта, /img/файл — из img темы; ячейки таблицы делятся по «|» вне кода
 function mdHtml(md, name) {
 const code = [];
 md = md.replace(/^```[^\n]*\n([\s\S]*?)^```[ \t]*$/gm, (_, c) => { code.push("<pre><code>" + esc(c.replace(/\n$/, "")) + "</code></pre>"); return `\x00C${code.length - 1}\x00`; });
@@ -42,7 +42,7 @@ for (const line of md.split("\n")) {
   endTab();
   let m;
   if ((m = line.match(/^(#{1,3}) (.+)$/))) { endList(); h += `<h${m[1].length}>${inl(m[2])}</h${m[1].length}>`; }
-  else if ((m = line.match(/^[-*] (.+)$/)) || (m = line.match(/^\d+\. (.+)$/))) { const k = /^\d/.test(line) ? "ol" : "ul"; if (list !== k) { endList(); h += `<${k}>`; list = k; } h += "<li>" + inl(m[1]) + "</li>"; }
+  else if ((m = line.match(/^[-*] (.+)$/)) || (m = line.match(/^\d+\. (.+)$/))) { const k = /^\d/.test(line) ? "ol" : "ul"; if (list !== k) { endList(); const s = k === "ol" ? parseInt(line, 10) : 1; h += s > 1 ? `<ol start="${s}">` : `<${k}>`; list = k; } h += "<li>" + inl(m[1]) + "</li>"; }
   else if (/^---+$/.test(line.trim())) { endList(); h += "<hr>"; }
   else if (line.trim() === "") endList();
   else { endList(); h += "<p>" + inl(line) + "</p>"; } }
