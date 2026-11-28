@@ -5,14 +5,14 @@ function el(cls, text) { const d = document.createElement("div"); d.className = 
 function scroll() { log.scrollTop = log.scrollHeight; }
 // addPred: предикация в ленту (replay — лента заново, прокрутка одна в конце)
 function addPred(text, replay) { const t = el("turn"); t.append(el("pred", text)); log.append(t); if (!replay) scroll(); return t; }
-// addAnswer: ответ в ленту; после nexus, clone, rename, union, qwest, qwizt и правки — панель (replay — лента заново, без панели)
+// addAnswer: ответ в ленту; после nexus (не распознан — нет), clone, rename, union, qwest, qwizt и правки — панель (replay — лента заново, без панели)
 function addAnswer(t, turn, replay) {
 const a = el("ans" + (turn.error ? " err" : ""));
 a.append(el("v", turn.answer));
 const f = el("f", (turn.frames || []).join(" ")); f.title = "interpres"; a.append(f);
 t.append(a); if (!replay) scroll();
 if (replay) return;
-if (!turn.error && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice(6));
+if (!turn.error && turn.answer !== "@none" && /^nexus \S+$/.test(turn.pred || "")) cardShow(turn.pred.slice(6));
 else if (!turn.error && /^(clone|rename|union)\s/.test(turn.pred || "") && !/^@/.test(turn.answer || "")) cardShow(turn.answer);
 else if (!turn.error && /^qwest\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1"));
 else if (!turn.error && /^qwizt\s/.test(turn.pred || "")) qwestShow(turn.pred.slice(6).trim().replace(/^"(.*)"$/, "$1"), false, true);
@@ -43,7 +43,7 @@ writable = !!st.current && !st.closed;
 document.getElementById("close").disabled = !writable;
 log.innerHTML = ""; hist = []; asking = null;
 for (const turn of st.turns || []) { const t = addPred(turn.pred, true); addAnswer(t, turn, true); hist.push(turn.pred); }
-if (cardBox.hidden) { const n = (st.turns || []).filter(t => !t.error && /^nexus \S+$/.test(t.pred)).pop(); if (n) cardShow(n.pred.slice(6)); }
+if (cardBox.hidden) { const n = (st.turns || []).filter(t => !t.error && t.answer !== "@none" && /^nexus \S+$/.test(t.pred)).pop(); if (n) cardShow(n.pred.slice(6)); }
 scroll(); hpos = hist.length;
 inp.disabled = !writable;
 if (st.pending && st.pending.question) { inp.disabled = true; respond(addPred(st.pending.pred), { question: st.pending.question, options: st.pending.options }); }

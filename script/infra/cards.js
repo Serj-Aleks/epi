@@ -68,12 +68,12 @@ function cardSet(c, k) { for (const l of c.lines || []) { if (l.startsWith(k + "
 function cardRank(c) { for (const l of c.lines || []) { const m = l.match(/^Rank : (\d+)/); if (m) return +m[1]; } return 0; }
 // cardOpen: собрать карточку отдельно и поставить целиком (правки подряд не дублируют линзы); имя сверяется без учёта регистра (NewSeans — карточка Newseans)
 // та же карточка после правки — на месте, новая — с начала; цвет концепта — в шапке, картинка — во вкладке
-// кнопки линз ◈, ↕, ⊛, E — только при Rank > 0, Tabs, Process, теле Corpus; системный фрейм (sdict) — без ⬡ и ⧉, имя с подсказкой «правка через репозиторий»
+// концепта нет — сообщение, панель остаётся с прежней карточкой; // кнопки линз ◈, ↕, ⊛, E — только при Rank > 0, Tabs, Process, теле Corpus; системный фрейм (sdict) — без ⬡ и ⧉, имя с подсказкой «правка через репозиторий»
 async function cardOpen(name) {
 const gen = ++cardGen, root = document.createElement("div");
 let c;
 try { c = await api("/api/card?name=" + encodeURIComponent(name)); } catch (e) { note.textContent = "ошибка: " + e.message; return; }
-if (!c.found) { note.textContent = "нет концепта " + name; return; }
+if (!c.found) { note.textContent = "нет концепта " + name; if (cardName === name) cardName = cardBox.hidden ? null : cardBox.dataset.name || null; const t = pstack[pstack.length - 1]; if (t && t.k === "c" && t.a === name) pstack.pop(); return; }
 if (!cardName || name.toLowerCase() !== cardName.toLowerCase()) return;
 cardName = c.name;
 const keep = cardBox.dataset.name === c.name ? cardBox.scrollTop : 0; cardBox.dataset.name = c.name;
