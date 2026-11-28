@@ -130,6 +130,7 @@ if (e.key === "ArrowDown") { hpos = Math.min(hist.length, hpos + 1); inp.value =
 document.getElementById("tnew").onclick = () => askName("new");
 document.getElementById("tren").onclick = () => askName("rename");
 document.getElementById("ticon").onclick = () => themeShow();
+{ const si = document.getElementById("sicon"); nxIcon(si, "/api/sdicticon"); si.onclick = () => sdictShow(); }
 document.getElementById("cnew").onclick = () => askName("cnew");
 tsel.onchange = () => { if (tsel.value) act("/api/thema/open", { name: tsel.value }); };
 document.getElementById("new").onclick = () => act("/api/new", {});

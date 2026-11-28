@@ -29,9 +29,9 @@ const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().spl
 flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw(); }
 // themeShow: карточка темы — картинка темы в шапке
 function themeShow(back) { if (!back) pPush({ k: "t", a: "", f: "" }); cardName = null; qwestKey = "\u0000t"; clearTimeout(cardTimer); cardTimer = setTimeout(themeOpen, 0); }
-// themeOpen: сверху текущая тема, щелчок по иконке в шапке — все темы (щелчок по теме — переключить); строка sdict — список системных фреймов вместо концептов темы (щелчок — туда и обратно); ниже концепты текущей темы с фильтром (⬡ — таксон, ▪ — концепт)
+// themeOpen: сверху текущая тема, щелчок по иконке в шапке — все темы (щелчок по теме — переключить); ниже концепты текущей темы с фильтром (⬡ — таксон, ▪ — концепт)
 async function themeOpen() {
-const ts = await api("/api/themes").catch(() => []), rs = last && last.theme ? await api("/api/qwest?q=").catch(() => []) : [], sd = await api("/api/sdict").catch(() => []);
+const ts = await api("/api/themes").catch(() => []), rs = last && last.theme ? await api("/api/qwest?q=").catch(() => []) : [];
 if (qwestKey !== "\u0000t") return;
 cardBox.hidden = false; cardBox.innerHTML = ""; cardBox.scrollTop = 0; cardBox.dataset.name = ""; cardCss("");
 const st = pstack[pstack.length - 1] || {}, head = el("chead"), ic = el("cicon"), cur = ts.find(t => t.name === (last && last.theme));
@@ -42,18 +42,13 @@ const tools = el("ctools"), x = document.createElement("button"); x.textContent 
 const tl = el("clens thlist");
 ts.filter(t => st.all || t.name === (last && last.theme)).forEach(t => { const row = el("throw" + (t.name === (last && last.theme) ? " on" : "")), ti = el("cicon"); nxIcon(ti, t.icon);
   const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.textContent = t.name; a.onclick = async e => { e.preventDefault(); if (t.name !== last.theme) { await act("/api/thema/open", { name: t.name }); themeShow(); } };
-  row.append(ti, a, el("thmeta", `концептов ${t.concepts} · таксонов ${t.taxa} · спутников ${t.sats} · сеансов ${t.seans}` + (t.last ? ` · последний ${t.last}` : ""))); tl.append(row); });
-{ const row = el("throw" + (st.sys ? " on" : "")), ti = el("cicon"); if (sd.length) nxIcon(ti, sd[0].icon);
-  const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.textContent = "sdict"; a.title = "системные фреймы — только чтение, правка через репозиторий"; a.onclick = e => { e.preventDefault(); st.sys = !st.sys; themeOpen(); };
-  row.append(ti, a, el("thmeta", `системных фреймов ${sd.length}`)); tl.append(row); }
-cardBox.append(tl);
+  row.append(ti, a, el("thmeta", `концептов ${t.concepts} · таксонов ${t.taxa} · спутников ${t.sats} · сеансов ${t.seans}` + (t.last ? ` · последний ${t.last}` : ""))); tl.append(row); });cardBox.append(tl);
 const fh = el("thfilter"), flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
 const qa = document.createElement("button"); qa.textContent = "∀"; qa.title = "qwizt"; qa.onclick = () => { const v = flt.value.trim(); if (v) runPred("qwizt \"" + v.replace(/"/g, "") + "\""); };
-const src = st.sys ? sd : rs;
-fh.append(flt, qa, el("thmeta", String(src.length))); cardBox.append(fh);
+fh.append(flt, qa, el("thmeta", String(rs.length))); cardBox.append(fh);
 const list = el("clens qlist"); cardBox.append(list);
 const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
-  const shown = src.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
+  const shown = rs.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
   if (!shown.length) { list.append(el("cempty", "—")); return; }
   shown.forEach(r => { const row = el("qrow"), ic2 = el("cicon"); nxIcon(ic2, r.icon);
     const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.title = qinfo(r); a.innerHTML = mark(r.name, fs); a.onclick = e => { e.preventDefault(); nxGo(r.name); };
@@ -77,3 +72,26 @@ const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), nodes = []; 
 const re = new RegExp("(" + ts.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
 nodes.forEach(n => { if (!re.test(n.textContent)) return; re.lastIndex = 0; const s = document.createElement("span"); s.innerHTML = esc(n.textContent).replace(re, "<mark>$1</mark>"); n.replaceWith(...s.childNodes); });
 const m = root.querySelector("mark"); if (m) setTimeout(() => m.scrollIntoView({ block: "center" }), 50); }
+// sdictShow: список системных фреймов sdict в панели (кнопка S в шапке)
+function sdictShow(back) { if (!back) pPush({ k: "s", a: "", f: "" }); cardName = null; qwestKey = "\u0000s"; clearTimeout(cardTimer); cardTimer = setTimeout(sdictOpen, 0); }
+// sdictOpen: системные фреймы с фильтром — только чтение; ↻ — sdict из репозитория (проверка Sdir, иначе прежний), ответ — в строке сообщений
+async function sdictOpen() {
+const sd = await api("/api/sdict").catch(() => []);
+if (qwestKey !== "\u0000s") return;
+cardBox.hidden = false; cardBox.innerHTML = ""; cardBox.scrollTop = 0; cardBox.dataset.name = ""; cardCss("");
+const st = pstack[pstack.length - 1] || {}, head = el("chead"), ic = el("cicon"); nxIcon(ic, "/api/sdicticon");
+head.append(pBackBtn(), ic, el("cname", "sdict"));
+const tools = el("ctools"), up = document.createElement("button"), x = document.createElement("button");
+up.textContent = "↻"; up.title = "обновить sdict из репозитория"; up.onclick = async () => { up.disabled = true; note.textContent = "sdict: загрузка…";
+  try { const r = await api("/api/sdict/update", {}); note.textContent = "sdict обновлён: фреймов " + r.frames; sdictOpen(); } catch (e) { note.textContent = "sdict: " + e.message; up.disabled = false; } };
+x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(up, x); head.append(tools); cardBox.append(head);
+const fh = el("thfilter"), flt = document.createElement("input"); flt.className = "cval"; flt.placeholder = "filter"; flt.spellcheck = false;
+fh.append(flt, el("thmeta", String(sd.length))); cardBox.append(fh);
+const list = el("clens qlist"); cardBox.append(list);
+const draw = () => { list.innerHTML = ""; const fs = flt.value.toLowerCase().split("&").map(t => t.trim()).filter(Boolean);
+  const shown = sd.filter(r => fs.every(f => r.name.toLowerCase().includes(f)));
+  if (!shown.length) { list.append(el("cempty", "—")); return; }
+  shown.forEach(r => { const row = el("qrow"), ic2 = el("cicon"); nxIcon(ic2, r.icon);
+    const a = document.createElement("a"); a.href = "#"; a.className = "qname"; a.title = qinfo(r); a.innerHTML = mark(r.name, fs); a.onclick = e => { e.preventDefault(); nxGo(r.name); };
+    const top = el("qtop"); top.append(ic2, a); row.append(top); list.append(row); }); };
+flt.value = st.f || ""; flt.oninput = () => { st.f = flt.value; draw(); }; draw(); }

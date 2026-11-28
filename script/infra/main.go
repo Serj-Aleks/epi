@@ -25,7 +25,7 @@ q.in.OnAlias = func(name, target string) {
 q.env = disp.NewEnv(nil)
 if err := q.loadAliases(); err != nil {return nil, err}
 if err := q.startTheme(); err != nil {return nil, err}; return q, nil }
-// serve: запросы панели /api/…; Choice — ответ на вопрос с выбором, Ext — тип спутника
+// serve: запросы панели /api/…; sdict — системные фреймы, sdict/update (POST) — sdict из репозитория, sdicticon — иконка S; Choice — ответ на вопрос с выбором, Ext — тип спутника
 // situation: Text — «объект препозиция объект»; sat: GET читает спутник, POST пишет; img — <папка концепта>/img/<файл>, без name — <тема>/img/<файл>
 // icon с theme — концепт другой темы (qwizt); в новой теме сразу открывается сеанс; закрытый сеанс — файл только для чтения
 // запрос дольше 10 с — стеки всех горутин в hang.txt папки script (диагностика зависания)
@@ -62,6 +62,7 @@ if req.URL.Path == "/api/params" {json.NewEncoder(w).Encode(q.params()); return}
 if req.URL.Path == "/api/dict" {json.NewEncoder(w).Encode(q.dict(req.URL.Query().Get("name"))); return}
 if req.URL.Path == "/api/themes" {json.NewEncoder(w).Encode(q.themesInfo()); return}
 if req.URL.Path == "/api/sdict" {json.NewEncoder(w).Encode(q.sdictList()); return}
+if req.URL.Path == "/api/sdicticon" {p := filepath.Join(q.dir, "sdict", "sdict.svg"); if !exists(p) {http.NotFound(w, req); return}; w.Header().Del("Content-Type"); http.ServeFile(w, req, p); return}
 if req.URL.Path == "/api/themeicon" {n := req.URL.Query().Get("name"); if _, ok := q.themeExists(n); !ok || q.themeIcon(n) == "" {http.NotFound(w, req); return}; w.Header().Del("Content-Type"); http.ServeFile(w, req, q.themeIcon(n)); return}
 if req.URL.Path == "/api/process" {json.NewEncoder(w).Encode(q.process(req.URL.Query().Get("name"))); return}
 if req.URL.Path == "/api/corpus" {a := map[string]string{}; for k, v := range req.URL.Query() {if r, ok := strings.CutPrefix(k, "a."); ok && len(v) > 0 {a[r] = v[0]}}; json.NewEncoder(w).Encode(q.corpus(req.URL.Query().Get("name"), a)); return}
@@ -90,6 +91,7 @@ if req.URL.Path == "/api/icon" {
 	if p == "" {http.NotFound(w, req); return}
 	w.Header().Del("Content-Type"); http.ServeFile(w, req, p); return}
 if q.pending != nil && req.URL.Path != "/api/answer" && req.URL.Path != "/api/state" {fail(http.StatusConflict, "ждёт ответа на вопрос"); return}
+if req.URL.Path == "/api/sdict/update" && req.Method == http.MethodPost {n, err := q.sdictUpdate(); if err != nil {fail(http.StatusBadGateway, err.Error()); return}; json.NewEncoder(w).Encode(map[string]any{"frames": n, "list": q.sdictList()}); return}
 switch req.URL.Path {
 case "/api/state":
 	json.NewEncoder(w).Encode(q.state())

@@ -2,8 +2,8 @@
 // в контенте [[Имя]] — ссылка, {{Имя}} — трансклюзия
 // pPush: вид панели в историю ← (просмотр, без протокола)
 function pPush(s) { const t = pstack[pstack.length - 1]; if (!t || t.k !== s.k || t.a !== s.a) { pstack.push(s); if (pstack.length > 50) pstack.shift(); } }
-// pBack: прежний вид панели — карточка, карточка темы или список qwest
-function pBack() { if (pstack.length < 2) return; pstack.pop(); const s = pstack[pstack.length - 1]; s.k === "c" ? cardShow(s.a, true) : s.k === "t" ? themeShow(true) : qwestShow(s.a, true, s.all); }
+// pBack: прежний вид панели — карточка, карточка темы, список sdict или список qwest
+function pBack() { if (pstack.length < 2) return; pstack.pop(); const s = pstack[pstack.length - 1]; s.k === "c" ? cardShow(s.a, true) : s.k === "t" ? themeShow(true) : s.k === "s" ? sdictShow(true) : qwestShow(s.a, true, s.all); }
 // pBackBtn: кнопка ←
 function pBackBtn() { const b = document.createElement("button"); b.textContent = "←"; b.title = "back"; b.disabled = pstack.length < 2; b.onclick = pBack; return b; }
 // cardShow: открыть карточку концепта

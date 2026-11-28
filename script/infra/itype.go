@@ -92,3 +92,5 @@ type dicts struct{ obj map[string]string }
 var reImg = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)\)|<img[^>]*\ssrc="([^"]+)"`)
 // sysParams: параметры, которые понимает система — связи, роль и вид карточки, оси и списки графа, место
 var sysParams = []string{"Taxon", "Links", "Attrib", "Preposit", "Radix", "Alias", "Rank", "Tabs", "I-sort", "Process", "I-process", "Content", "Color", "Defs", "Deep", "N-west", "West", "S-west", "Nord", "Graph", "List", "Locus"}
+// sdictSource: архив ветки panel — источник обновления sdict (кнопка ↻ в списке sdict)
+const sdictSource = "https://github.com/Serj-Aleks/epi/archive/refs/heads/panel.tar.gz"
