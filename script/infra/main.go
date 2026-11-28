@@ -61,6 +61,7 @@ if req.URL.Path == "/api/taxa" {json.NewEncoder(w).Encode(q.taxa()); return}
 if req.URL.Path == "/api/params" {json.NewEncoder(w).Encode(q.params()); return}
 if req.URL.Path == "/api/dict" {json.NewEncoder(w).Encode(q.dict(req.URL.Query().Get("name"))); return}
 if req.URL.Path == "/api/themes" {json.NewEncoder(w).Encode(q.themesInfo()); return}
+if req.URL.Path == "/api/sdict" {json.NewEncoder(w).Encode(q.sdictList()); return}
 if req.URL.Path == "/api/themeicon" {n := req.URL.Query().Get("name"); if _, ok := q.themeExists(n); !ok || q.themeIcon(n) == "" {http.NotFound(w, req); return}; w.Header().Del("Content-Type"); http.ServeFile(w, req, q.themeIcon(n)); return}
 if req.URL.Path == "/api/process" {json.NewEncoder(w).Encode(q.process(req.URL.Query().Get("name"))); return}
 if req.URL.Path == "/api/corpus" {a := map[string]string{}; for k, v := range req.URL.Query() {if r, ok := strings.CutPrefix(k, "a."); ok && len(v) > 0 {a[r] = v[0]}}; json.NewEncoder(w).Encode(q.corpus(req.URL.Query().Get("name"), a)); return}

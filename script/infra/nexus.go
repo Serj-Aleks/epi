@@ -37,11 +37,11 @@ func without(ns []string, n string) []string {
 var out []string
 for _, x := range ns {if !format.SameTerm(x, n) {out = append(out, x)}}; return out }
 // writeLink: прямой список связи у frame, у целей обратный — добавленные получают frame, убранные теряют
-// strict — только у существующих целей (ссылки контента); цель без frame в обратном получает его и при неизменном прямом; Radix на себя — ошибка
+// strict — только у существующих целей (ссылки контента); цель без frame в обратном получает его и при неизменном прямом; Radix на себя — ошибка — у системного фрейма (sdict) в концепт темы
 func (q *Medium) writeLink(frame, param string, pred []format.Value, root string, strict bool) error {
 if format.SameTerm(param, "Radix") {for _, n := range names(pred) {if format.SameTerm(n, frame) {return fmt.Errorf("%s не может быть своим корнем", frame)}}}
 path := q.conceptPath(frame)
-if path == "" {path = q.conceptFile(frame)}
+if path == "" || q.inSdict(path) {path = q.conceptFile(frame)}
 old, inv := readLink(path, param)
 d := names(pred)
 if err := writeLists(path, param, d, inv); err != nil {return err}

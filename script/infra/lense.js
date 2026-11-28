@@ -2,7 +2,7 @@
 // lensContent: ≡ контент — спутник Content или md, найденное внутри концепта подсвечено; ✎ — редактор спутников
 async function lensContent(box, c) {
 const bar = el("cbar"), body = el("cbody");
-const view = async () => { bar.innerHTML = ""; const b = document.createElement("button"); b.textContent = "✎"; b.title = "redaction"; b.onclick = edit; bar.append(b);
+const view = async () => { bar.innerHTML = ""; const b = document.createElement("button"); b.textContent = "✎"; b.title = "redaction"; b.onclick = edit; if (!c.system) bar.append(b);
   const f = cardFind && cardFind.name.toLowerCase() === c.name.toLowerCase() ? cardFind : null;
   const h = await cardRender(c.name, f && f.ext || c.content, []).catch(() => null); body.innerHTML = h ? h : '<div class="cempty">—</div>'; cardLinks(body); await dictMark(body, c.name); if (f) findMark(body, f.q); };
 const edit = async () => { bar.innerHTML = "";
@@ -146,8 +146,9 @@ go.onclick = async () => { const q = Object.entries(args).map(([k, v]) => "&a." 
   d.lines.forEach(l => row(l.text, l.value, l.error, l.skip ? "cskip" : ""));
   row(d.name, d.result, d.rerror, "ctotal"); out.append(t); }; }
 // lensSlots: ⊞ строки концепта — ✓ отправляет Концепт.Параметр : значение в строку ввода; пустое — «Концепт.Параметр :», у связи — [] (Rank : — не таксон)
-// у связи правится только прямой список, обратный ведёт script; первая строка — имя (rename), вторая — место (Locus), последняя — новый параметр с подбором имени (системные и уже есть в теме)
+// системный фрейм (sdict) — строки без правки; у связи правится только прямой список, обратный ведёт script; первая строка — имя (rename), вторая — место (Locus), последняя — новый параметр с подбором имени (системные и уже есть в теме)
 function lensSlots(box, c) {
+if (c.system) { box.append(el("cbodyline", "системный фрейм sdict — только чтение, правка через репозиторий")); for (const l of c.lines || []) box.append(el("cbodyline", l)); return; }
 const send = (k, v) => { k = k.trim(); v = v.trim(); if (!k) return; inp.value = c.name + "." + k + " :" + (v ? " " + v : linkKeys.includes(k) ? " []" : ""); document.getElementById("f").requestSubmit(); };
 const row = (key, val, inv) => { const r = el("crow");
   const k = document.createElement(key === null ? "input" : "span"); k.className = "ckey"; if (key === null) { k.placeholder = "Param"; k.spellcheck = false; k.setAttribute("list", "pnames"); } else k.textContent = key;

@@ -7,7 +7,7 @@ import ("encoding/json"; "fmt"; "io"; "os"; "path/filepath"; "sort"; "strings"; 
 func (q *Medium) satFile(name, ext string) string {
 p := q.conceptPath(name)
 if p == "" || !has(satTypes, ext) {return ""}; return strings.TrimSuffix(p, ".uic") + "." + ext }
-// card: карточка концепта — имя, картинка, цвет, тип по умолчанию, спутники (нет — пустой список), строки, место (Locus), есть ли тело (corpus — линза E)
+// card: карточка концепта — имя, картинка, цвет, тип по умолчанию, спутники (нет — пустой список), строки, место (Locus), есть ли тело (corpus — линза E), системный ли (sdict — только чтение)
 func (q *Medium) card(name string) map[string]any {
 p := q.conceptPath(name)
 if p == "" {return map[string]any{"found": false}}
@@ -19,12 +19,13 @@ lines := []string{}
 if b, err := os.ReadFile(p); err == nil {lines, _ = conceptLines(b)}
 body, hasBody := readCorpus(p)
 lines = append(lines, body...)
-c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color"), "locus": q.locus(p), "corpus": hasBody && len(body) > 0}
+c := map[string]any{"found": true, "name": conceptName(p, ""), "content": ct, "sats": sats, "lines": lines, "color": setting(p, "Color"), "locus": q.locus(p), "corpus": hasBody && len(body) > 0, "system": q.inSdict(p)}
 if q.iconFile(name) != "" {c["icon"] = "/api/icon?name=" + name}; return c }
 // writeSat: записать спутник; прямой список Links — ссылки [[ ]] спутников md и html вместе (в ссылке не имя концепта — ошибка, Links не меняются), обратные у целей ведёт writeLink; json проверяется на читаемость и перечитывает контекст темы (тело Corpus)
 func (q *Medium) writeSat(name, ext, text string) error {
 p := q.satFile(name, ext)
 if p == "" {return os.ErrNotExist}
+if q.inSdict(p) {return fmt.Errorf("%s — системный фрейм (sdict): спутники меняются через репозиторий", name)}
 if ext == "json" && !json.Valid([]byte(text)) {return fmt.Errorf("json не читается — нужны фигурные скобки { … } вокруг пар «ключ : значение»")}
 if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {return err}
 if err := os.WriteFile(p, []byte(text), 0644); err != nil {return err}

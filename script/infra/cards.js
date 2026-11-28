@@ -68,7 +68,7 @@ function cardSet(c, k) { for (const l of c.lines || []) { if (l.startsWith(k + "
 function cardRank(c) { for (const l of c.lines || []) { const m = l.match(/^Rank : (\d+)/); if (m) return +m[1]; } return 0; }
 // cardOpen: собрать карточку отдельно и поставить целиком (правки подряд не дублируют линзы); имя сверяется без учёта регистра (NewSeans — карточка Newseans)
 // та же карточка после правки — на месте, новая — с начала; цвет концепта — в шапке, картинка — во вкладке
-// кнопки линз ◈, ↕, ⊛, E — только при Rank > 0, Tabs, Process, теле Corpus
+// кнопки линз ◈, ↕, ⊛, E — только при Rank > 0, Tabs, Process, теле Corpus; системный фрейм (sdict) — без ⬡ и ⧉, имя с подсказкой «правка через репозиторий»
 async function cardOpen(name) {
 const gen = ++cardGen, root = document.createElement("div");
 let c;
@@ -78,12 +78,12 @@ if (!cardName || name.toLowerCase() !== cardName.toLowerCase()) return;
 cardName = c.name;
 const keep = cardBox.dataset.name === c.name ? cardBox.scrollTop : 0; cardBox.dataset.name = c.name;
 const head = el("chead"), ic = el("cicon"); nxIcon(ic, c.icon);
-head.append(pBackBtn(), ic, el("cname", c.name));
+head.append(pBackBtn(), ic, el("cname", c.name)); if (c.system) head.querySelector(".cname").title = "системный фрейм (sdict) — правка через репозиторий";
 if (c.color) { head.style.borderBottom = "3px solid " + c.color; head.querySelector(".cname").style.color = c.color; }
 favicon(c.icon);
 const tools = el("ctools");
-[["graph", "✦"], ["taxon", "⬡"], ["content", "≡"], ["process", "⊛"], ["rank", "◈"], ["tabs", "↕"], ["corpus", "E"], ["slots", "⊞"]].filter(([k]) => (k !== "rank" || cardRank(c) > 0) && (k !== "tabs" || cardSet(c, "Tabs")) && (k !== "process" || cardSet(c, "Process")) && (k !== "corpus" || c.corpus)).forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardName = c.name; cardOpen(c.name); }; tools.append(b); });
-const cl = document.createElement("button"); cl.textContent = "⧉"; cl.title = "clone"; cl.onclick = () => { cloneSrc = c.name; askName("clone"); }; tools.prepend(cl);
+[["graph", "✦"], ["taxon", "⬡"], ["content", "≡"], ["process", "⊛"], ["rank", "◈"], ["tabs", "↕"], ["corpus", "E"], ["slots", "⊞"]].filter(([k]) => (k !== "taxon" || !c.system) && (k !== "rank" || cardRank(c) > 0) && (k !== "tabs" || cardSet(c, "Tabs")) && (k !== "process" || cardSet(c, "Process")) && (k !== "corpus" || c.corpus)).forEach(([k, g]) => { const b = document.createElement("button"); b.textContent = g; b.title = k; b.className = lens[k] ? "on" : ""; b.onclick = () => { lens[k] = !lens[k]; cardName = c.name; cardOpen(c.name); }; tools.append(b); });
+const cl = document.createElement("button"); cl.textContent = "⧉"; cl.title = "clone"; cl.onclick = () => { cloneSrc = c.name; askName("clone"); }; if (!c.system) tools.prepend(cl);
 const x = document.createElement("button"); x.textContent = "✕"; x.title = "close"; x.onclick = cardHide; tools.append(x);
 const fi = document.createElement("input"); fi.className = "cval cfind"; fi.placeholder = "find"; fi.spellcheck = false; fi.title = "поиск внутри концепта и его синонимов (md, html, json, xml, txt)";
 const mine = cardFind && cardFind.name.toLowerCase() === c.name.toLowerCase(); if (mine) fi.value = cardFind.q;

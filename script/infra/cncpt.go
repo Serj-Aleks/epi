@@ -1,6 +1,6 @@
 // epi/script/infra/cncpt.go
 package main
-import ("encoding/json"; "fmt"; "log"; "os"; "path/filepath"; "sort"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
+import ("encoding/json"; "fmt"; "log"; "os"; "path/filepath"; "sort"; "strconv"; "strings"; "unicode"; "unicode/utf8"; "epi/script/disp"; "epi/script/format")
 // файлы концептов: модель — одна строка, ключей и индексов нет; путь — из букв имени: <тема>/<буквы>/<имя>.uic
 //
 //	интерпретатор  lexic/preposit/A/R/I/F/M/arifm.uic
@@ -26,14 +26,14 @@ func conceptLines(b []byte) ([]string, error) {return disp.Split(string(b)) }
 // lineKey: параметр строки «Параметр : …»
 func lineKey(line string) string {
 k, _, _ := strings.Cut(line, " "); return k }
-// writeConcept: параметр фрейма автора строкой в файле концепта (темы или корня lexic/radix), повторное определение заменяет строку; синонимы — группа
+// writeConcept: параметр фрейма автора строкой в файле концепта (темы или корня lexic/radix) — у системного фрейма (sdict) в концепт темы, повторное определение заменяет строку; синонимы — группа
 func (q *Medium) writeConcept(frame, param string, pred []format.Value) error {
 if q.theme == "" {return nil}
 if root, ok := q.linkRoot(param); ok {return q.writeLink(frame, param, pred, root, false)}
 if format.SameTerm(param, "Rank") {return q.writeRank(frame, pred)}
 if format.SameTerm(param, "Locus") {return q.writeLocus(frame, pred)}
 path := q.conceptPath(frame)
-if path == "" {path = q.conceptFile(frame)}
+if path == "" || q.inSdict(path) {path = q.conceptFile(frame)}
 if !format.SameTerm(param, "Alias") {q.known(path); return writeParam(path, param, pred)}
 old, _ := readLink(path, "Alias")
 if err := writeParam(path, "Alias", pred); err != nil {return err}
@@ -188,14 +188,22 @@ for _, l := range lines {
 	if !isParam(l) || !format.SameTerm(lineKey(l), key) {continue}
 	vs, err := format.Parse(strings.TrimSpace(l[strings.Index(l, ":")+1:]))
 	if err == nil && len(vs) == 1 {return vs[0].Text}}; return "" }
-// conceptPath: файл существующего концепта в теме или в лексиконе (radix); "" — концепта нет
+// sdictFile: файл системного фрейма — sdict/<первая буква>/<имя>.uic; нет — пусто
+func (q *Medium) sdictFile(name string) string {
+r, n := utf8.DecodeRuneInString(name)
+if n == 0 {return ""}
+if p := filepath.Join(q.dir, "sdict", strings.ToUpper(string(r)), strings.ToLower(name)+".uic"); exists(p) {return p}; return "" }
+// inSdict: файл лежит в системной папке sdict (не меняется в script)
+func (q *Medium) inSdict(p string) bool { return p != "" && strings.HasPrefix(p, filepath.Join(q.dir, "sdict")+string(filepath.Separator)) }
+// conceptPath: файл существующего концепта в теме, в лексиконе (radix) или системный фрейм (sdict); "" — концепта нет
 func (q *Medium) conceptPath(name string) string {
 if p := q.conceptFile(name); exists(p) {return p}
-if p := q.letterPath(filepath.Join(q.dir, "lexic", "radix"), name); exists(p) {return p}; return "" }
-// iconFile: картинка концепта — <папка>/<имя>.svg или <папка>/img/<имя>.png|jpg|jpeg|webp|gif|ico
+if p := q.letterPath(filepath.Join(q.dir, "lexic", "radix"), name); exists(p) {return p}; return q.sdictFile(name) }
+// iconFile: картинка концепта — <папка>/<имя>.svg или <папка>/img/<имя>.png|jpg|jpeg|webp|gif|ico; системный фрейм — своя svg или общая sdict/sdict.svg
 func (q *Medium) iconFile(name string) string {
 if name == "" || strings.ContainsAny(name, "/\\") {return ""}
 roots := []string{q.themaDir()}
+if p := q.sdictFile(name); p != "" {if s := strings.TrimSuffix(p, ".uic") + ".svg"; exists(s) {return s}; if s := filepath.Join(q.dir, "sdict", "sdict.svg"); exists(s) {return s}}
 for _, c := range []string{"radix", "preposit"} {roots = append(roots, filepath.Join(q.dir, "lexic", c))}
 base := strings.ToLower(name)
 for _, r := range roots {
@@ -216,3 +224,15 @@ for _, l := range lines {
 func exists(path string) bool {_, err := os.Stat(path); return err == nil }
 // capital: имя объекта с прописной
 func capital(w string) string {r, n := utf8.DecodeRuneInString(w); return string(unicode.ToUpper(r)) + w[n:] }
+// sdictList: системные фреймы для карточки темы — имя, картинка, число параметров, спутники; в алфавите темы
+func (q *Medium) sdictList() []map[string]string {
+out := []map[string]string{}
+filepath.WalkDir(filepath.Join(q.dir, "sdict"), func(p string, d os.DirEntry, err error) error {
+	if err != nil || d.IsDir() || !strings.HasSuffix(p, ".uic") {return nil}
+	name, np, sats := conceptName(p, ""), 0, []string{}
+	if b, err := os.ReadFile(p); err == nil {ls, _ := conceptLines(b); for _, l := range ls {if isParam(l) {np++}}}
+	for _, t := range satTypes {if exists(strings.TrimSuffix(p, ".uic") + "." + t) {sats = append(sats, t)}}
+	r := map[string]string{"name": name, "params": strconv.Itoa(np), "sats": strings.Join(sats, " ")}
+	if q.iconFile(name) != "" {r["icon"] = "/api/icon?name=" + name}
+	out = append(out, r); return nil})
+sort.Slice(out, func(i, j int) bool {return aLess(out[i]["name"], out[j]["name"])}); return out }
