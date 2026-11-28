@@ -2,7 +2,7 @@
 package main
 import ("embed"; "regexp"; "sync"; "epi/script/disp")
 // страница панели: разметка, стили, код
-//go:embed index.html style.css *.js
+//go:embed index.html style.css favicon.svg *.js
 var page embed.FS
 // Turn — шаг диалога: предикация, интерпретация, фреймы-интерпретаторы
 type Turn struct {

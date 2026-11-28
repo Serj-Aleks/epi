@@ -10,8 +10,8 @@ function pBackBtn() { const b = document.createElement("button"); b.textContent 
 function cardShow(name, back) { if (!back) pPush({ k: "c", a: name }); cardName = name; qwestKey = null; clearTimeout(cardTimer); cardTimer = setTimeout(() => cardOpen(cardName), 0); }
 // cardHide: закрыть панель
 function cardHide() { cardName = null; qwestKey = null; pstack = []; cardBox.hidden = true; cardBox.innerHTML = ""; cardCss(""); favicon(""); }
-// favicon: картинка вкладки браузера — концепта открытой карточки
-function favicon(url) { let l = document.querySelector("link[rel=icon]"); if (!l) { l = document.createElement("link"); l.rel = "icon"; document.head.append(l); } l.href = url || "data:,"; }
+// favicon: картинка вкладки браузера — концепта открытой карточки, без неё — знак APOTHEOS (favicon.svg)
+function favicon(url) { let l = document.querySelector("link[rel=icon]"); if (!l) { l = document.createElement("link"); l.rel = "icon"; document.head.append(l); } l.href = url || "/favicon.svg"; }
 // cardCss: стиль концепта (спутник css) — body, html, :root относятся к карточке, остальное внутри неё
 function cardCss(css) {
 let st = document.getElementById("ccss");
